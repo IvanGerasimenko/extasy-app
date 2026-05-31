@@ -114,7 +114,10 @@ export default function NotificationsScreen() {
 
   if (isLoading) {
     return (
-      <ImageBackground source={require("../../assets/bg.png")} style={styles.background}>
+      <ImageBackground
+        source={require("../../../assets/bg.png")}
+        style={styles.background}
+      >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#111" />
         </View>
@@ -123,14 +126,22 @@ export default function NotificationsScreen() {
   }
 
   return (
-    <ImageBackground source={require("../../assets/bg.png")} style={styles.background}>
+    <ImageBackground
+      source={require("../../../assets/bg.png")}
+      style={styles.background}
+    >
       <ScrollView contentContainerStyle={styles.container}>
-        <TouchableOpacity style={styles.navButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.navButton}
+          onPress={() => router.back()}
+        >
           <Text style={styles.navText}>Back</Text>
         </TouchableOpacity>
 
         <Text style={styles.title}>Notifications</Text>
-        <Text style={styles.subtitle}>Accept likes to open a chat, or skip them.</Text>
+        <Text style={styles.subtitle}>
+          Accept likes to open a chat, or skip them.
+        </Text>
 
         {message ? <Text style={styles.message}>{message}</Text> : null}
 
@@ -164,7 +175,9 @@ export default function NotificationsScreen() {
                 {request.status === "accepted" && request.matchId ? (
                   <TouchableOpacity
                     style={styles.chatButton}
-                    onPress={() => router.push(`/chat?matchId=${request.matchId}`)}
+                    onPress={() =>
+                      router.push(`/chat?matchId=${request.matchId}`)
+                    }
                   >
                     <Text style={styles.chatText}>Open Chat</Text>
                   </TouchableOpacity>
@@ -174,7 +187,9 @@ export default function NotificationsScreen() {
           ) : (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyTitle}>No answers yet</Text>
-              <Text style={styles.emptyText}>When someone accepts or skips your like, it appears here.</Text>
+              <Text style={styles.emptyText}>
+                When someone accepts or skips your like, it appears here.
+              </Text>
             </View>
           )}
         </View>
@@ -192,7 +207,7 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
     paddingTop: 64,
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
 
   loadingContainer: {

@@ -61,7 +61,7 @@ export default function ChatsScreen() {
   if (isLoading) {
     return (
       <ImageBackground
-        source={require("../../assets/bg.png")}
+        source={require("../../../assets/bg.png")}
         style={styles.background}
       >
         <View style={styles.loadingContainer}>
@@ -73,7 +73,7 @@ export default function ChatsScreen() {
 
   return (
     <ImageBackground
-      source={require("../../assets/bg.png")}
+      source={require("../../../assets/bg.png")}
       style={styles.background}
     >
       <ScrollView contentContainerStyle={styles.container}>
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
     paddingTop: 64,
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
 
   loadingContainer: {

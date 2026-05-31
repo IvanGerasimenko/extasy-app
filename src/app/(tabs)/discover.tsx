@@ -1,8 +1,5 @@
 import {
-  clearSession,
-  getIncomingLikeRequestsForCurrentUser,
   getLikedUserKeysForCurrentUser,
-  getLikeResponseNotificationsForCurrentUser,
   getLocalAccountUsers,
   getSessionUser,
   getUserKey,
@@ -144,7 +141,6 @@ export default function DiscoverScreen() {
   const [reaction, setReaction] = useState("");
   const [matchChatId, setMatchChatId] = useState<string | null>(null);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(0);
 
   const activeMatch = useMemo(
     () => deck[activeIndex] ?? null,
@@ -168,10 +164,6 @@ export default function DiscoverScreen() {
 
       const localUsers = await getLocalAccountUsers();
       const likedUserKeys = await getLikedUserKeysForCurrentUser();
-      const [incomingLikes, likeResponses] = await Promise.all([
-        getIncomingLikeRequestsForCurrentUser(),
-        getLikeResponseNotificationsForCurrentUser(),
-      ]);
       const discoverProfiles = localUsers
         .filter((localUser) => hasCompleteProfile(localUser))
         .filter((localUser) => !isSameUser(localUser, sessionUser))
@@ -184,7 +176,6 @@ export default function DiscoverScreen() {
       setDeck(discoverProfiles);
       setActiveIndex(0);
       setPhotoIndex(0);
-      setNotificationCount(incomingLikes.length + likeResponses.length);
       setIsLoading(false);
     }
 
@@ -194,11 +185,6 @@ export default function DiscoverScreen() {
       isMounted = false;
     };
   }, []);
-
-  async function handleLogout() {
-    await clearSession();
-    router.replace("/welcome");
-  }
 
   async function handleDecision(nextReaction: string) {
     setReaction(nextReaction);
@@ -260,7 +246,7 @@ export default function DiscoverScreen() {
   if (isLoading) {
     return (
       <ImageBackground
-        source={require("../../assets/bg.png")}
+        source={require("../../../assets/bg.png")}
         style={styles.background}
         resizeMode="cover"
       >
@@ -273,7 +259,7 @@ export default function DiscoverScreen() {
 
   return (
     <ImageBackground
-      source={require("../../assets/bg.png")}
+      source={require("../../../assets/bg.png")}
       style={styles.background}
       resizeMode="cover"
     >
@@ -286,37 +272,6 @@ export default function DiscoverScreen() {
           <View>
             <Text style={styles.eyebrow}>Extasy</Text>
             <Text style={styles.title}>Discover</Text>
-          </View>
-
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={() => router.push("/notifications")}
-            >
-              <Text style={styles.notificationIcon}>!</Text>
-              {notificationCount > 0 ? (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{notificationCount}</Text>
-                </View>
-              ) : null}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={() => router.push("/profile")}
-            >
-              <Image
-                source={require("../../assets/profile.png")}
-                style={styles.headerIcon}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.iconButton} onPress={handleLogout}>
-              <Image
-                source={require("../../assets/logout.png")}
-                style={styles.headerIcon}
-              />
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -518,7 +473,7 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
     paddingTop: 64,
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
 
   loadingContainer: {
@@ -564,31 +519,6 @@ const styles = StyleSheet.create({
   headerIcon: {
     width: 22,
     height: 22,
-  },
-
-  notificationIcon: {
-    color: "#111",
-    fontSize: 20,
-    fontFamily: "Satoshi-Bold",
-  },
-
-  badge: {
-    position: "absolute",
-    top: -5,
-    right: -5,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: "#111",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 5,
-  },
-
-  badgeText: {
-    color: "#FFF",
-    fontSize: 11,
-    fontFamily: "Satoshi-Bold",
   },
 
   matchCard: {

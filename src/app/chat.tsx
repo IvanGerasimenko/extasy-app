@@ -1,3 +1,4 @@
+import BottomMenu from "@/components/BottomMenu";
 import {
   getChatMessages,
   getMatchById,
@@ -207,6 +208,8 @@ export default function ChatScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      <BottomMenu />
     </ImageBackground>
   );
 }
@@ -295,7 +298,8 @@ const styles = StyleSheet.create({
 
   messagesContent: {
     paddingHorizontal: 18,
-    paddingVertical: 18,
+    paddingTop: 18,
+    paddingBottom: 110,
   },
 
   messageBubble: {
@@ -362,7 +366,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     padding: 14,
-    paddingBottom: 22,
+    paddingBottom: 96,
     backgroundColor: "rgba(255, 255, 255, 0.72)",
   },
 

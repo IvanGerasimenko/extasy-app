@@ -1,3 +1,4 @@
+import BottomMenu from "@/components/BottomMenu";
 import {
   getLocalAccountUsers,
   getUserKey,
@@ -193,6 +194,8 @@ export default function UserProfileScreen() {
         )}
       </ScrollView>
 
+      <BottomMenu />
+
       <Modal visible={fullscreenOpen} transparent animationType="fade">
         <View style={styles.fullscreen}>
           <TouchableOpacity
@@ -244,7 +247,7 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
     paddingTop: 64,
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
 
   loadingContainer: {

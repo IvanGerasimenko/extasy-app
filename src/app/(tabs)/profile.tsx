@@ -1,10 +1,4 @@
-import {
-  clearSession,
-  getIncomingLikeRequestsForCurrentUser,
-  getLikeResponseNotificationsForCurrentUser,
-  getSessionUser,
-  type SessionUser,
-} from "@/services/auth/session";
+import { getSessionUser, type SessionUser } from "@/services/auth/session";
 import { router } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -24,7 +18,10 @@ export default function ProfileScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(0);
+  let locationText = "Add your city and country so nearby people can find you.";
+  if (user?.city && user?.country) {
+    locationText = `${user.city}, ${user.country}`;
+  }
 
   const photos = useMemo(() => {
     if (!user) {
@@ -56,13 +53,7 @@ export default function ProfileScreen() {
         return;
       }
 
-      const [incomingLikes, likeResponses] = await Promise.all([
-        getIncomingLikeRequestsForCurrentUser(),
-        getLikeResponseNotificationsForCurrentUser(),
-      ]);
-
       setUser(sessionUser);
-      setNotificationCount(incomingLikes.length + likeResponses.length);
       setIsLoading(false);
     }
 
@@ -72,11 +63,6 @@ export default function ProfileScreen() {
       isMounted = false;
     };
   }, []);
-
-  async function handleLogout() {
-    await clearSession();
-    router.replace("/welcome");
-  }
 
   function changePhoto(direction: -1 | 1) {
     if (!photos.length) {
@@ -92,7 +78,7 @@ export default function ProfileScreen() {
   if (isLoading) {
     return (
       <ImageBackground
-        source={require("../../assets/bg.png")}
+        source={require("../../../assets/bg.png")}
         style={styles.background}
         resizeMode="cover"
       >
@@ -105,7 +91,7 @@ export default function ProfileScreen() {
 
   return (
     <ImageBackground
-      source={require("../../assets/bg.png")}
+      source={require("../../../assets/bg.png")}
       style={styles.background}
       resizeMode="cover"
     >
@@ -114,15 +100,6 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.topbar}>
-          <TouchableOpacity style={styles.iconButton} onPress={handleLogout}>
-            <Image
-              source={require("../../assets/logout.png")}
-              style={styles.iconButton}
-            />
-          </TouchableOpacity>
-        </View>
-
         <View style={styles.hero}>
           {photos[0] ? (
             <View style={styles.avatarWrap}>
@@ -174,11 +151,7 @@ export default function ProfileScreen() {
             {user?.gender ?? "Profile"} looking for{" "}
             {user?.lookingFor ?? "matches"}
           </Text>
-          {user?.city && user.country ? (
-            <Text style={styles.locationText}>
-              {user.city}, {user.country}
-            </Text>
-          ) : null}
+          <Text style={styles.bodyText}>{locationText}</Text>
         </View>
 
         <View style={styles.statsRow}>
@@ -194,38 +167,6 @@ export default function ProfileScreen() {
             <Text style={styles.statNumber}>{photos.length}</Text>
             <Text style={styles.statLabel}>Photos</Text>
           </View>
-        </View>
-
-        <View style={styles.sectionbuttons}>
-          <TouchableOpacity
-            style={styles.notificationButton}
-            onPress={() => router.push("/notifications")}
-          >
-            <Text style={styles.notificationButtonText}>
-              Notifications{notificationCount ? ` (${notificationCount})` : ""}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.chatButton}
-            onPress={() => router.push("/chats")}
-          >
-            <Text style={styles.chatButtonText}>Open Chats</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.likedButton}
-            onPress={() => router.push("/liked")}
-          >
-            <Text style={styles.likedButtonText}>Liked Profiles</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.primaryText}>Search for love</Text>
-          </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
@@ -285,13 +226,6 @@ export default function ProfileScreen() {
             </ScrollView>
           </View>
         ) : null}
-
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={() => router.push("/onboarding")}
-        >
-          <Text style={styles.primaryText}>Edit Profile</Text>
-        </TouchableOpacity>
       </ScrollView>
 
       <Modal visible={fullscreenOpen} transparent animationType="fade">
@@ -349,13 +283,9 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
     paddingTop: 64,
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
 
-  sectionbuttons: {
-    marginTop: 25,
-    marginBottom: 23,
-  },
   iconButton: {
     width: 22,
     height: 22,
@@ -511,52 +441,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     marginBottom: 18,
-  },
-
-  chatButton: {
-    height: 54,
-    borderRadius: 18,
-    backgroundColor: "#111",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 5,
-  },
-
-  notificationButton: {
-    height: 54,
-    borderRadius: 18,
-    backgroundColor: "#111",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-
-  notificationButtonText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontFamily: "Satoshi-Bold",
-  },
-
-  chatButtonText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontFamily: "Satoshi-Bold",
-  },
-
-  likedButton: {
-    height: 54,
-    borderRadius: 18,
-    backgroundColor: "#111",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-    marginTop: 22,
-  },
-
-  likedButtonText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontFamily: "Satoshi-Bold",
   },
 
   statBox: {
