@@ -2,6 +2,7 @@ import * as ExpoImagePicker from "expo-image-picker";
 import React from "react";
 import {
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,6 +19,19 @@ export default function ImagePicker({
   photos,
   onPhotosChange,
 }: ImagePickerProps) {
+  async function createPersistentPhoto(asset: ExpoImagePicker.ImagePickerAsset) {
+    if (Platform.OS === "web") {
+      return resizeWebImage(asset.uri);
+    }
+
+    if (asset.base64) {
+      const mimeType = asset.mimeType ?? "image/jpeg";
+      return `data:${mimeType};base64,${asset.base64}`;
+    }
+
+    return asset.uri;
+  }
+
   async function pickImage() {
     const permission =
       await ExpoImagePicker.requestMediaLibraryPermissionsAsync();
@@ -30,11 +44,15 @@ export default function ImagePicker({
     const result = await ExpoImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: true,
-      quality: 0.8,
+      base64: true,
+      quality: 0.45,
     });
 
     if (!result.canceled) {
-      onPhotosChange([...photos, result.assets[0].uri]);
+      const asset = result.assets[0];
+      const persistentPhoto = await createPersistentPhoto(asset);
+
+      onPhotosChange([...photos, persistentPhoto]);
     }
   }
 
@@ -68,6 +86,35 @@ export default function ImagePicker({
   );
 }
 
+async function resizeWebImage(uri: string) {
+  const response = await fetch(uri);
+  const blob = await response.blob();
+  const imageUrl = URL.createObjectURL(blob);
+
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const nextImage = new window.Image();
+      nextImage.onload = () => resolve(nextImage);
+      nextImage.onerror = reject;
+      nextImage.src = imageUrl;
+    });
+
+    const maxSize = 520;
+    const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
+    const canvas = document.createElement("canvas");
+
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext("2d")?.drawImage(image, 0, 0, width, height);
+
+    return canvas.toDataURL("image/jpeg", 0.55);
+  } finally {
+    URL.revokeObjectURL(imageUrl);
+  }
+}
+
 const styles = StyleSheet.create({
   photosRow: {
     flexDirection: "row",
@@ -95,7 +142,6 @@ const styles = StyleSheet.create({
 
   addPhotoText: {
     fontSize: 12,
-    fontFamily: "Satoshi-Regular",
     marginTop: 6,
   },
 
@@ -126,6 +172,5 @@ const styles = StyleSheet.create({
   removeText: {
     color: "#FFF",
     fontSize: 13,
-    fontFamily: "Satoshi-Bold",
   },
 });

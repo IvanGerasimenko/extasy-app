@@ -111,11 +111,13 @@ function isNearbyProfile(currentUser: SessionUser, localUser: SessionUser) {
 }
 
 function profileFromUser(user: SessionUser): DiscoverProfile {
-  const rawPhotos = user.photos?.length
-    ? user.photos
-    : user.picture
-      ? [user.picture]
-      : [];
+  let rawPhotos: string[] = [];
+
+  if (user.photos?.length) {
+    rawPhotos = user.photos;
+  } else if (user.picture) {
+    rawPhotos = [user.picture];
+  }
 
   return {
     id: `user-${user.id}`,
@@ -191,7 +193,18 @@ export default function DiscoverScreen() {
     setMatchChatId(null);
 
     if (nextReaction === "Liked" && activeMatch) {
-      const likeResult = await recordProfileLike(activeMatch.user);
+      let likeResult = null;
+
+      try {
+        likeResult = await recordProfileLike(activeMatch.user);
+      } catch (error) {
+        setReaction(
+          error instanceof Error
+            ? error.message
+            : "Could not save this like. Try again.",
+        );
+        return;
+      }
 
       if (likeResult?.user) {
         setUser(likeResult.user);
@@ -381,24 +394,6 @@ export default function DiscoverScreen() {
           </View>
         ) : null}
 
-        <View style={styles.actionsRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.passButton]}
-            onPress={() => handleDecision("Passed for now")}
-            disabled={!activeMatch}
-          >
-            <Text style={styles.passText}>x</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.likeButton]}
-            onPress={() => handleDecision("Liked")}
-            disabled={!activeMatch}
-          >
-            <Text style={styles.likeText}>Like</Text>
-          </TouchableOpacity>
-        </View>
-
         {reaction ? <Text style={styles.reactionText}>{reaction}</Text> : null}
 
         {matchChatId ? (
@@ -409,14 +404,28 @@ export default function DiscoverScreen() {
             <Text style={styles.chatButtonText}>Open Chat</Text>
           </TouchableOpacity>
         ) : null}
+      </ScrollView>
+
+      <View style={styles.floatingActions}>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.passButton]}
+          onPress={() => handleDecision("Passed for now")}
+          disabled={!activeMatch}
+        >
+          <Text style={styles.passText}>×</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.editButton}
-          onPress={() => router.push("/onboarding")}
+          style={[styles.actionButton, styles.likeButton]}
+          onPress={() => handleDecision("Liked")}
+          disabled={!activeMatch}
         >
-          <Text style={styles.editText}>Edit Profile</Text>
+          <Image
+            source={require("../../../assets/lovesearch.png")}
+            style={styles.likeIcon}
+          />
         </TouchableOpacity>
-      </ScrollView>
+      </View>
 
       <Modal visible={fullscreenOpen} transparent animationType="fade">
         <View style={styles.fullscreen}>
@@ -492,13 +501,11 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: "#6E6E73",
     fontSize: 13,
-    fontFamily: "Satoshi-Bold",
     letterSpacing: 0,
   },
 
   title: {
     fontSize: 36,
-    fontFamily: "Satoshi-Bold",
     color: "#111",
   },
 
@@ -548,7 +555,6 @@ const styles = StyleSheet.create({
   emptyTitle: {
     color: "#111",
     fontSize: 28,
-    fontFamily: "Satoshi-Bold",
     textAlign: "center",
   },
 
@@ -556,7 +562,6 @@ const styles = StyleSheet.create({
     color: "#6E6E73",
     fontSize: 15,
     lineHeight: 22,
-    fontFamily: "Satoshi-Regular",
     textAlign: "center",
     marginTop: 10,
   },
@@ -573,7 +578,6 @@ const styles = StyleSheet.create({
   resetText: {
     color: "#FFF",
     fontSize: 15,
-    fontFamily: "Satoshi-Bold",
   },
 
   profileImage: {
@@ -610,7 +614,6 @@ const styles = StyleSheet.create({
   photoNavText: {
     color: "#111",
     fontSize: 34,
-    fontFamily: "Satoshi-Bold",
     lineHeight: 38,
   },
 
@@ -629,7 +632,6 @@ const styles = StyleSheet.create({
   photoCounterText: {
     color: "#FFF",
     fontSize: 12,
-    fontFamily: "Satoshi-Bold",
   },
 
   expandButton: {
@@ -647,7 +649,6 @@ const styles = StyleSheet.create({
   expandText: {
     color: "#FFF",
     fontSize: 12,
-    fontFamily: "Satoshi-Bold",
   },
 
   matchInfo: {
@@ -668,7 +669,6 @@ const styles = StyleSheet.create({
     flex: 1,
     color: "#FFF",
     fontSize: 34,
-    fontFamily: "Satoshi-Bold",
   },
 
   onlineBadge: {
@@ -682,21 +682,18 @@ const styles = StyleSheet.create({
   onlineText: {
     color: "#126B36",
     fontSize: 12,
-    fontFamily: "Satoshi-Bold",
   },
 
   matchMeta: {
     marginTop: 8,
     color: "rgba(255, 255, 255, 0.82)",
     fontSize: 15,
-    fontFamily: "Satoshi-Bold",
   },
 
   locationText: {
     marginTop: 8,
     color: "rgba(255, 255, 255, 0.9)",
     fontSize: 14,
-    fontFamily: "Satoshi-Bold",
   },
 
   about: {
@@ -704,7 +701,6 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontSize: 15,
     lineHeight: 22,
-    fontFamily: "Satoshi-Regular",
   },
 
   tags: {
@@ -725,14 +721,15 @@ const styles = StyleSheet.create({
   tagText: {
     color: "#111",
     fontSize: 12,
-    fontFamily: "Satoshi-Bold",
   },
 
-  actionsRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 18,
-    marginTop: 24,
+  floatingActions: {
+    position: "absolute",
+    right: 18,
+    top: "43%",
+    zIndex: 12,
+    gap: 12,
+    alignItems: "center",
   },
 
   gallerySection: {
@@ -742,7 +739,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: "#111",
     fontSize: 18,
-    fontFamily: "Satoshi-Bold",
     marginBottom: 12,
   },
 
@@ -764,11 +760,13 @@ const styles = StyleSheet.create({
   },
 
   actionButton: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.9)",
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -780,24 +778,27 @@ const styles = StyleSheet.create({
   },
 
   passButton: {
-    backgroundColor: "#FFF",
+    backgroundColor: "rgba(255, 255, 255, 0.84)",
   },
 
   likeButton: {
-    width: 132,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
     backgroundColor: "#111",
   },
 
   passText: {
     color: "#111",
     fontSize: 30,
-    fontFamily: "Satoshi-Bold",
+    lineHeight: 32,
   },
 
-  likeText: {
-    color: "#FFF",
-    fontSize: 18,
-    fontFamily: "Satoshi-Bold",
+  likeIcon: {
+    width: 25,
+    height: 25,
+    resizeMode: "contain",
+    tintColor: "#FFF",
   },
 
   reactionText: {
@@ -805,7 +806,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#111",
     fontSize: 15,
-    fontFamily: "Satoshi-Bold",
   },
 
   chatButton: {
@@ -821,23 +821,6 @@ const styles = StyleSheet.create({
   chatButtonText: {
     color: "#FFF",
     fontSize: 16,
-    fontFamily: "Satoshi-Bold",
-  },
-
-  editButton: {
-    height: 50,
-    alignSelf: "center",
-    paddingHorizontal: 26,
-    borderRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-    justifyContent: "center",
-    marginTop: 20,
-  },
-
-  editText: {
-    color: "#111",
-    fontSize: 15,
-    fontFamily: "Satoshi-Bold",
   },
 
   fullscreen: {
@@ -867,7 +850,6 @@ const styles = StyleSheet.create({
   fullscreenCloseText: {
     color: "#FFF",
     fontSize: 14,
-    fontFamily: "Satoshi-Bold",
   },
 
   fullscreenControls: {
@@ -890,13 +872,11 @@ const styles = StyleSheet.create({
   fullscreenNavText: {
     color: "#FFF",
     fontSize: 36,
-    fontFamily: "Satoshi-Bold",
     lineHeight: 40,
   },
 
   fullscreenCounter: {
     color: "#FFF",
     fontSize: 15,
-    fontFamily: "Satoshi-Bold",
   },
 });

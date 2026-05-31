@@ -67,16 +67,13 @@ const styles = StyleSheet.create({
 
   text: {
     fontSize: 16,
-    fontFamily: "Satoshi-Bold",
   },
 
   lightText: {
     color: "#ffffff",
-    fontFamily: "Satoshi-Regular",
   },
 
   darkText: {
     color: "#000000",
-    fontFamily: "Satoshi-Regular",
   },
 });

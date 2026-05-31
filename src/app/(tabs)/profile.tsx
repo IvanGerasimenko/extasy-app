@@ -6,12 +6,23 @@ import {
   Image,
   ImageBackground,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+
+const systemFont = Platform.select({
+  ios: "System",
+  web: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif",
+});
+
+const systemFontBold = Platform.select({
+  ios: "System",
+  web: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif",
+});
 
 export default function ProfileScreen() {
   const [user, setUser] = useState<SessionUser | null>(null);
@@ -100,6 +111,18 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.topbar}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => router.push("/onboarding")}
+          >
+            <Image
+              source={require("../../../assets/edit.png")}
+              style={styles.iconImage}
+            />
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.hero}>
           {photos[0] ? (
             <View style={styles.avatarWrap}>
@@ -143,15 +166,17 @@ export default function ProfileScreen() {
             </View>
           )}
 
-          <Text style={styles.name}>
-            {user?.name ?? "Your profile"}
-            {user?.age ? `, ${user.age}` : ""}
-          </Text>
-          <Text style={styles.meta}>
-            {user?.gender ?? "Profile"} looking for{" "}
-            {user?.lookingFor ?? "matches"}
-          </Text>
-          <Text style={styles.bodyText}>{locationText}</Text>
+          <View style={styles.summaryCard}>
+            <Text style={styles.name}>
+              {user?.name ?? "Your profile"}
+              {user?.age ? `, ${user.age}` : ""}
+            </Text>
+            <Text style={styles.meta}>
+              {user?.gender ?? "Profile"} looking for{" "}
+              {user?.lookingFor ?? "matches"}
+            </Text>
+            <Text style={styles.summaryLocation}>{locationText}</Text>
+          </View>
         </View>
 
         <View style={styles.statsRow}>
@@ -212,7 +237,10 @@ export default function ProfileScreen() {
               {photos.map((photo, index) => (
                 <TouchableOpacity
                   key={`${photo}-${index}`}
-                  onPress={() => setPhotoIndex(index)}
+                  onPress={() => {
+                    setPhotoIndex(index);
+                    setFullscreenOpen(true);
+                  }}
                 >
                   <Image
                     source={{ uri: photo }}
@@ -287,12 +315,18 @@ const styles = StyleSheet.create({
   },
 
   iconButton: {
-    width: 22,
-    height: 22,
+    width: 44,
+    height: 44,
     borderRadius: 16,
     backgroundColor: "rgba(255, 255, 255, 0.78)",
     alignItems: "center",
     justifyContent: "center",
+  },
+
+  iconImage: {
+    width: 22,
+    height: 22,
+    resizeMode: "contain",
   },
 
   loadingContainer: {
@@ -317,7 +351,7 @@ const styles = StyleSheet.create({
   topbarText: {
     color: "#111",
     fontSize: 14,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
   },
 
   hero: {
@@ -362,7 +396,7 @@ const styles = StyleSheet.create({
   photoNavText: {
     color: "#111",
     fontSize: 28,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
     lineHeight: 32,
   },
 
@@ -379,7 +413,7 @@ const styles = StyleSheet.create({
   photoCounterText: {
     color: "#FFF",
     fontSize: 11,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
   },
 
   expandButton: {
@@ -395,7 +429,7 @@ const styles = StyleSheet.create({
   expandText: {
     color: "#FFF",
     fontSize: 12,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
   },
 
   avatarPlaceholder: {
@@ -410,14 +444,24 @@ const styles = StyleSheet.create({
   avatarInitial: {
     color: "#FFF",
     fontSize: 44,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
+  },
+
+  summaryCard: {
+    width: "100%",
+    borderRadius: 26,
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.82)",
+    padding: 18,
+    marginTop: 16,
   },
 
   name: {
-    marginTop: 16,
     color: "#111",
-    fontSize: 32,
-    fontFamily: "Satoshi-Bold",
+    fontSize: 31,
+    fontFamily: systemFontBold,
+    fontWeight: "700",
     textAlign: "center",
   },
 
@@ -425,15 +469,16 @@ const styles = StyleSheet.create({
     marginTop: 6,
     color: "#6E6E73",
     fontSize: 15,
-    fontFamily: "Satoshi-Regular",
+    fontFamily: systemFont,
     textAlign: "center",
   },
 
-  locationText: {
-    marginTop: 8,
+  summaryLocation: {
+    marginTop: 12,
     color: "#111",
     fontSize: 14,
-    fontFamily: "Satoshi-Bold",
+    lineHeight: 20,
+    fontFamily: systemFont,
     textAlign: "center",
   },
 
@@ -455,24 +500,31 @@ const styles = StyleSheet.create({
   statNumber: {
     color: "#111",
     fontSize: 24,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
+    fontWeight: "700",
   },
 
   statLabel: {
     marginTop: 4,
     color: "#6E6E73",
     fontSize: 13,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFont,
   },
 
   section: {
     marginTop: 18,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.68)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.82)",
+    padding: 16,
   },
 
   sectionTitle: {
     color: "#111",
     fontSize: 18,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
+    fontWeight: "700",
     marginBottom: 10,
   },
 
@@ -480,10 +532,7 @@ const styles = StyleSheet.create({
     color: "#111",
     fontSize: 15,
     lineHeight: 22,
-    fontFamily: "Satoshi-Regular",
-    backgroundColor: "rgba(255, 255, 255, 0.72)",
-    borderRadius: 18,
-    padding: 16,
+    fontFamily: systemFont,
   },
 
   tags: {
@@ -503,7 +552,8 @@ const styles = StyleSheet.create({
   tagText: {
     color: "#FFF",
     fontSize: 13,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
+    fontWeight: "700",
   },
 
   photosRow: {
@@ -550,7 +600,7 @@ const styles = StyleSheet.create({
   fullscreenCloseText: {
     color: "#FFF",
     fontSize: 14,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
   },
 
   fullscreenControls: {
@@ -573,14 +623,14 @@ const styles = StyleSheet.create({
   fullscreenNavText: {
     color: "#FFF",
     fontSize: 36,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
     lineHeight: 40,
   },
 
   fullscreenCounter: {
     color: "#FFF",
     fontSize: 15,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
   },
 
   primaryButton: {
@@ -595,7 +645,7 @@ const styles = StyleSheet.create({
   primaryText: {
     color: "#FFF",
     fontSize: 16,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
   },
 
   secondaryButton: {
@@ -610,6 +660,6 @@ const styles = StyleSheet.create({
   secondaryText: {
     color: "#111",
     fontSize: 15,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
   },
 });

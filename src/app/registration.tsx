@@ -148,20 +148,18 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 70,
-    paddingBottom: 40,
+    paddingTop: Platform.OS === "web" ? 110 : 70,
+    paddingBottom: Platform.OS === "web" ? 160 : 40,
   },
 
   title: {
     fontSize: 34,
-    fontFamily: "Satoshi-Bold",
     color: "#111",
     marginTop: 20,
   },
 
   subtitle: {
     fontSize: 16,
-    fontFamily: "Satoshi-Regular",
     color: "#6E6E73",
     lineHeight: 24,
     marginTop: 10,
@@ -176,7 +174,6 @@ const styles = StyleSheet.create({
 
   label: {
     fontSize: 15,
-    fontFamily: "Satoshi-Bold",
     color: "#111",
     marginBottom: 10,
     marginTop: 18,
@@ -188,7 +185,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
     paddingHorizontal: 16,
     fontSize: 16,
-    fontFamily: "Satoshi-Regular",
     color: "#111",
     borderWidth: 1,
     borderColor: "#E5DED7",
@@ -198,7 +194,6 @@ const styles = StyleSheet.create({
     color: "#7A1F1F",
     fontSize: 13,
     lineHeight: 20,
-    fontFamily: "Satoshi-Bold",
     marginTop: 18,
   },
 
@@ -214,6 +209,5 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#FFF",
     fontSize: 17,
-    fontFamily: "Satoshi-Bold",
   },
 });

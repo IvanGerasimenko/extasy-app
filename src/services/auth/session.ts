@@ -5,6 +5,7 @@ const SESSION_USER_KEY = "extasy.session.user";
 const LOCAL_ACCOUNTS_KEY = "extasy.local.accounts";
 const LIKES_KEY = "extasy.likes";
 const LIKE_REQUESTS_KEY = "extasy.like.requests";
+const VIEWED_NOTIFICATIONS_KEY = "extasy.viewed.notifications";
 const MATCHES_KEY = "extasy.matches";
 const MESSAGES_KEY = "extasy.messages";
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -437,7 +438,12 @@ export async function recordProfileLike(targetUser: SessionUser) {
 
   if (!currentLikes.includes(targetUserKey)) {
     likes[currentUserKey] = [...currentLikes, targetUserKey];
-    await saveLikes(likes);
+
+    try {
+      await saveLikes(likes);
+    } catch {
+      throw new Error("Storage is full. Clear old Safari data and try again.");
+    }
   }
 
   const updatedUser = await updateSessionStats({ likesDelta: 1 });
@@ -445,13 +451,17 @@ export async function recordProfileLike(targetUser: SessionUser) {
     id: `${currentUserKey}__${targetUserKey}`,
     fromUserKey: currentUserKey,
     toUserKey: targetUserKey,
-    fromUser: updatedUser ?? currentUser,
-    toUser: targetUser,
+    fromUser: compactUserForRelationStorage(updatedUser ?? currentUser),
+    toUser: compactUserForRelationStorage(targetUser),
     status: "pending",
     createdAt: new Date().toISOString(),
   };
 
-  await saveLikeRequests([...likeRequests, request]);
+  try {
+    await saveLikeRequests([...likeRequests, request]);
+  } catch {
+    throw new Error("Storage is full. Clear old Safari data and try again.");
+  }
 
   return {
     isMatch: false,
@@ -493,6 +503,41 @@ export async function getLikeResponseNotificationsForCurrentUser() {
   );
 }
 
+export async function getUnreadNotificationCountForCurrentUser() {
+  const currentUser = await getSessionUser();
+
+  if (!currentUser) {
+    return 0;
+  }
+
+  const currentUserKey = getUserKey(currentUser);
+  const notificationKeys = await getNotificationKeysForUser(currentUserKey);
+  const viewedNotifications = await getViewedNotifications();
+  const viewedKeys = viewedNotifications[currentUserKey] ?? [];
+
+  return notificationKeys.filter((key) => !viewedKeys.includes(key)).length;
+}
+
+export async function markNotificationsSeenForCurrentUser() {
+  const currentUser = await getSessionUser();
+
+  if (!currentUser) {
+    return;
+  }
+
+  const currentUserKey = getUserKey(currentUser);
+  const notificationKeys = await getNotificationKeysForUser(currentUserKey);
+  const viewedNotifications = await getViewedNotifications();
+  const viewedKeys = new Set(viewedNotifications[currentUserKey] ?? []);
+
+  notificationKeys.forEach((key) => viewedKeys.add(key));
+
+  await saveViewedNotifications({
+    ...viewedNotifications,
+    [currentUserKey]: Array.from(viewedKeys),
+  });
+}
+
 export async function acceptIncomingLikeRequest(requestId: string) {
   const currentUser = await getSessionUser();
 
@@ -517,7 +562,8 @@ export async function acceptIncomingLikeRequest(requestId: string) {
     item.id === requestId
       ? {
           ...item,
-          toUser: currentUser,
+          fromUser: compactUserForRelationStorage(item.fromUser),
+          toUser: compactUserForRelationStorage(currentUser),
           status: "accepted" as const,
           respondedAt: new Date().toISOString(),
           matchId: match.id,
@@ -556,7 +602,8 @@ export async function skipIncomingLikeRequest(requestId: string) {
 
   const updatedRequest: LikeRequestRecord = {
     ...request,
-    toUser: currentUser,
+    fromUser: compactUserForRelationStorage(request.fromUser),
+    toUser: compactUserForRelationStorage(currentUser),
     status: "skipped",
     respondedAt: new Date().toISOString(),
   };
@@ -640,7 +687,18 @@ async function getLikeRequests() {
   }
 
   try {
-    return JSON.parse(rawRequests) as LikeRequestRecord[];
+    const requests = JSON.parse(rawRequests) as LikeRequestRecord[];
+    const compactRequests = requests.map((request) => ({
+      ...request,
+      fromUser: compactUserForRelationStorage(request.fromUser),
+      toUser: compactUserForRelationStorage(request.toUser),
+    }));
+
+    if (JSON.stringify(requests) !== JSON.stringify(compactRequests)) {
+      await saveLikeRequests(compactRequests);
+    }
+
+    return compactRequests;
   } catch {
     await deleteItem(LIKE_REQUESTS_KEY);
     return [] as LikeRequestRecord[];
@@ -648,7 +706,52 @@ async function getLikeRequests() {
 }
 
 async function saveLikeRequests(requests: LikeRequestRecord[]) {
-  await setItem(LIKE_REQUESTS_KEY, JSON.stringify(requests));
+  const compactRequests = requests.map((request) => ({
+    ...request,
+    fromUser: compactUserForRelationStorage(request.fromUser),
+    toUser: compactUserForRelationStorage(request.toUser),
+  }));
+
+  await setItem(LIKE_REQUESTS_KEY, JSON.stringify(compactRequests));
+}
+
+async function getNotificationKeysForUser(userKey: string) {
+  const likeRequests = await getLikeRequests();
+
+  return likeRequests
+    .filter(
+      (request) =>
+        (request.toUserKey === userKey && request.status === "pending") ||
+        (request.fromUserKey === userKey && request.status !== "pending"),
+    )
+    .map((request) => {
+      if (request.toUserKey === userKey) {
+        return `incoming:${request.id}`;
+      }
+
+      return `response:${request.id}:${request.status}`;
+    });
+}
+
+async function getViewedNotifications() {
+  const rawViewedNotifications = await getItem(VIEWED_NOTIFICATIONS_KEY);
+
+  if (!rawViewedNotifications) {
+    return {} as Record<string, string[]>;
+  }
+
+  try {
+    return JSON.parse(rawViewedNotifications) as Record<string, string[]>;
+  } catch {
+    await deleteItem(VIEWED_NOTIFICATIONS_KEY);
+    return {} as Record<string, string[]>;
+  }
+}
+
+async function saveViewedNotifications(
+  viewedNotifications: Record<string, string[]>,
+) {
+  await setItem(VIEWED_NOTIFICATIONS_KEY, JSON.stringify(viewedNotifications));
 }
 
 async function getMatches() {
@@ -659,7 +762,22 @@ async function getMatches() {
   }
 
   try {
-    return JSON.parse(rawMatches) as MatchRecord[];
+    const matches = JSON.parse(rawMatches) as MatchRecord[];
+    const compactMatches = matches.map((match) => ({
+      ...match,
+      users: Object.fromEntries(
+        Object.entries(match.users).map(([userKey, user]) => [
+          userKey,
+          compactUserForRelationStorage(user),
+        ]),
+      ),
+    }));
+
+    if (JSON.stringify(matches) !== JSON.stringify(compactMatches)) {
+      await saveMatches(compactMatches);
+    }
+
+    return compactMatches;
   } catch {
     await deleteItem(MATCHES_KEY);
     return [] as MatchRecord[];
@@ -667,7 +785,17 @@ async function getMatches() {
 }
 
 async function saveMatches(matches: MatchRecord[]) {
-  await setItem(MATCHES_KEY, JSON.stringify(matches));
+  const compactMatches = matches.map((match) => ({
+    ...match,
+    users: Object.fromEntries(
+      Object.entries(match.users).map(([userKey, user]) => [
+        userKey,
+        compactUserForRelationStorage(user),
+      ]),
+    ),
+  }));
+
+  await setItem(MATCHES_KEY, JSON.stringify(compactMatches));
 }
 
 async function getMessages() {
@@ -708,8 +836,8 @@ async function createOrGetMatch(
     id: matchId,
     userKeys,
     users: {
-      [firstUserKey]: firstUser,
-      [secondUserKey]: secondUser,
+      [firstUserKey]: compactUserForRelationStorage(firstUser),
+      [secondUserKey]: compactUserForRelationStorage(secondUser),
     },
     createdAt: new Date().toISOString(),
   };
@@ -786,6 +914,14 @@ function mergeSessionUsers(baseUser: SessionUser, nextUser: SessionUser) {
       : baseUser.interests,
     likesCount: nextUser.likesCount ?? baseUser.likesCount,
     matchesCount: nextUser.matchesCount ?? baseUser.matchesCount,
+  };
+}
+
+function compactUserForRelationStorage(user: SessionUser) {
+  return {
+    ...user,
+    picture: undefined,
+    photos: undefined,
   };
 }
 

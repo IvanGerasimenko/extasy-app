@@ -115,7 +115,7 @@ export default function ChatScreen() {
             style={styles.navButton}
             onPress={() => router.back()}
           >
-            <Text style={styles.navText}>Back</Text>
+            <Text style={styles.navText}>‹</Text>
           </TouchableOpacity>
 
           {photo ? (
@@ -240,17 +240,18 @@ const styles = StyleSheet.create({
   },
 
   navButton: {
-    height: 40,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    borderRadius: 18,
     backgroundColor: "rgba(255, 255, 255, 0.78)",
+    alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 14,
   },
 
   navText: {
     color: "#111",
-    fontSize: 14,
-    fontFamily: "Satoshi-Bold",
+    fontSize: 34,
+    lineHeight: 36,
   },
 
   avatar: {
@@ -272,7 +273,6 @@ const styles = StyleSheet.create({
   avatarInitial: {
     color: "#FFF",
     fontSize: 18,
-    fontFamily: "Satoshi-Bold",
   },
 
   headerCopy: {
@@ -282,13 +282,11 @@ const styles = StyleSheet.create({
   title: {
     color: "#111",
     fontSize: 20,
-    fontFamily: "Satoshi-Bold",
   },
 
   subtitle: {
     color: "#6E6E73",
     fontSize: 13,
-    fontFamily: "Satoshi-Regular",
     marginTop: 2,
   },
 
@@ -325,7 +323,6 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: 15,
     lineHeight: 21,
-    fontFamily: "Satoshi-Regular",
   },
 
   myMessageText: {
@@ -349,7 +346,6 @@ const styles = StyleSheet.create({
   emptyTitle: {
     color: "#111",
     fontSize: 28,
-    fontFamily: "Satoshi-Bold",
     textAlign: "center",
   },
 
@@ -357,7 +353,6 @@ const styles = StyleSheet.create({
     color: "#6E6E73",
     fontSize: 15,
     lineHeight: 22,
-    fontFamily: "Satoshi-Regular",
     textAlign: "center",
     marginTop: 10,
   },
@@ -378,7 +373,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     color: "#111",
     fontSize: 15,
-    fontFamily: "Satoshi-Regular",
   },
 
   sendButton: {
@@ -393,6 +387,5 @@ const styles = StyleSheet.create({
   sendText: {
     color: "#FFF",
     fontSize: 15,
-    fontFamily: "Satoshi-Bold",
   },
 });

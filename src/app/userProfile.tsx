@@ -11,12 +11,23 @@ import {
   Image,
   ImageBackground,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+
+const systemFont = Platform.select({
+  ios: "System",
+  web: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif",
+});
+
+const systemFontBold = Platform.select({
+  ios: "System",
+  web: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif",
+});
 
 export default function UserProfileScreen() {
   const { userKey } = useLocalSearchParams<{ userKey?: string }>();
@@ -80,7 +91,7 @@ export default function UserProfileScreen() {
     <ImageBackground source={require("../../assets/bg.png")} style={styles.background}>
       <ScrollView contentContainerStyle={styles.container}>
         <TouchableOpacity style={styles.navButton} onPress={() => router.back()}>
-          <Text style={styles.navText}>Back</Text>
+          <Text style={styles.navText}>‹</Text>
         </TouchableOpacity>
 
         {!user ? (
@@ -257,19 +268,21 @@ const styles = StyleSheet.create({
   },
 
   navButton: {
-    height: 40,
+    width: 44,
+    height: 44,
     alignSelf: "flex-start",
-    borderRadius: 14,
+    borderRadius: 18,
     backgroundColor: "rgba(255, 255, 255, 0.78)",
+    alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 16,
     marginBottom: 18,
   },
 
   navText: {
     color: "#111",
-    fontSize: 14,
-    fontFamily: "Satoshi-Bold",
+    fontSize: 34,
+    lineHeight: 36,
+    fontFamily: systemFontBold,
   },
 
   heroCard: {
@@ -291,28 +304,35 @@ const styles = StyleSheet.create({
   },
 
   heroCopy: {
-    flex: 1,
-    justifyContent: "flex-end",
-    padding: 22,
+    position: "absolute",
+    left: 18,
+    right: 18,
+    bottom: 18,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.72)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.84)",
+    padding: 18,
   },
 
   name: {
-    color: "#FFF",
+    color: "#111",
     fontSize: 34,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
+    fontWeight: "700",
   },
 
   meta: {
-    color: "rgba(255, 255, 255, 0.84)",
+    color: "#6E6E73",
     fontSize: 15,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFont,
     marginTop: 8,
   },
 
   locationText: {
-    color: "rgba(255, 255, 255, 0.9)",
+    color: "#111",
     fontSize: 14,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFont,
     marginTop: 8,
   },
 
@@ -339,7 +359,7 @@ const styles = StyleSheet.create({
   photoNavText: {
     color: "#111",
     fontSize: 34,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
     lineHeight: 38,
   },
 
@@ -358,17 +378,23 @@ const styles = StyleSheet.create({
   expandText: {
     color: "#FFF",
     fontSize: 12,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
   },
 
   section: {
     marginTop: 22,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.68)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.82)",
+    padding: 16,
   },
 
   sectionTitle: {
     color: "#111",
     fontSize: 18,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
+    fontWeight: "700",
     marginBottom: 10,
   },
 
@@ -376,10 +402,7 @@ const styles = StyleSheet.create({
     color: "#111",
     fontSize: 15,
     lineHeight: 22,
-    fontFamily: "Satoshi-Regular",
-    backgroundColor: "rgba(255, 255, 255, 0.72)",
-    borderRadius: 18,
-    padding: 16,
+    fontFamily: systemFont,
   },
 
   tags: {
@@ -399,7 +422,8 @@ const styles = StyleSheet.create({
   tagText: {
     color: "#FFF",
     fontSize: 13,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
+    fontWeight: "700",
   },
 
   photosRow: {
@@ -431,7 +455,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     color: "#111",
     fontSize: 26,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
     textAlign: "center",
   },
 
@@ -462,7 +486,7 @@ const styles = StyleSheet.create({
   fullscreenCloseText: {
     color: "#FFF",
     fontSize: 14,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
   },
 
   fullscreenControls: {
@@ -485,13 +509,13 @@ const styles = StyleSheet.create({
   fullscreenNavText: {
     color: "#FFF",
     fontSize: 36,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
     lineHeight: 40,
   },
 
   fullscreenCounter: {
     color: "#FFF",
     fontSize: 15,
-    fontFamily: "Satoshi-Bold",
+    fontFamily: systemFontBold,
   },
 });

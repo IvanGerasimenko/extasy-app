@@ -3,6 +3,7 @@ import {
   getIncomingLikeRequestsForCurrentUser,
   getLikeResponseNotificationsForCurrentUser,
   getUserKey,
+  markNotificationsSeenForCurrentUser,
   skipIncomingLikeRequest,
   type LikeRequestRecord,
 } from "@/services/auth/session";
@@ -38,6 +39,7 @@ export default function NotificationsScreen() {
     setIncomingLikes(incomingRecords);
     setResponses(responseRecords);
     setIsLoading(false);
+    await markNotificationsSeenForCurrentUser();
   }
 
   async function handleAccept(request: LikeRequestRecord) {
@@ -135,7 +137,7 @@ export default function NotificationsScreen() {
           style={styles.navButton}
           onPress={() => router.back()}
         >
-          <Text style={styles.navText}>Back</Text>
+          <Text style={styles.navText}>‹</Text>
         </TouchableOpacity>
 
         <Text style={styles.title}>Notifications</Text>
@@ -217,32 +219,31 @@ const styles = StyleSheet.create({
   },
 
   navButton: {
-    height: 40,
+    width: 44,
+    height: 44,
     alignSelf: "flex-start",
-    borderRadius: 14,
+    borderRadius: 18,
     backgroundColor: "rgba(255, 255, 255, 0.78)",
+    alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 16,
     marginBottom: 18,
   },
 
   navText: {
     color: "#111",
-    fontSize: 14,
-    fontFamily: "Satoshi-Bold",
+    fontSize: 34,
+    lineHeight: 36,
   },
 
   title: {
     color: "#111",
     fontSize: 36,
-    fontFamily: "Satoshi-Bold",
   },
 
   subtitle: {
     color: "#6E6E73",
     fontSize: 15,
     lineHeight: 22,
-    fontFamily: "Satoshi-Regular",
     marginTop: 6,
   },
 
@@ -250,7 +251,6 @@ const styles = StyleSheet.create({
     marginTop: 14,
     color: "#111",
     fontSize: 14,
-    fontFamily: "Satoshi-Bold",
   },
 
   section: {
@@ -260,7 +260,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: "#111",
     fontSize: 19,
-    fontFamily: "Satoshi-Bold",
     marginBottom: 12,
   },
 
@@ -293,7 +292,6 @@ const styles = StyleSheet.create({
   avatarInitial: {
     color: "#FFF",
     fontSize: 22,
-    fontFamily: "Satoshi-Bold",
   },
 
   copy: {
@@ -303,13 +301,11 @@ const styles = StyleSheet.create({
   name: {
     color: "#111",
     fontSize: 17,
-    fontFamily: "Satoshi-Bold",
   },
 
   location: {
     color: "#111",
     fontSize: 12,
-    fontFamily: "Satoshi-Bold",
     marginTop: 4,
   },
 
@@ -317,7 +313,6 @@ const styles = StyleSheet.create({
     color: "#6E6E73",
     fontSize: 13,
     lineHeight: 18,
-    fontFamily: "Satoshi-Regular",
     marginTop: 4,
   },
 
@@ -345,13 +340,11 @@ const styles = StyleSheet.create({
   acceptText: {
     color: "#FFF",
     fontSize: 13,
-    fontFamily: "Satoshi-Bold",
   },
 
   skipText: {
     color: "#111",
     fontSize: 13,
-    fontFamily: "Satoshi-Bold",
   },
 
   responseCard: {
@@ -364,14 +357,12 @@ const styles = StyleSheet.create({
   responseTitle: {
     color: "#111",
     fontSize: 17,
-    fontFamily: "Satoshi-Bold",
   },
 
   responseText: {
     color: "#6E6E73",
     fontSize: 14,
     lineHeight: 20,
-    fontFamily: "Satoshi-Regular",
     marginTop: 5,
   },
 
@@ -388,7 +379,6 @@ const styles = StyleSheet.create({
   chatText: {
     color: "#FFF",
     fontSize: 14,
-    fontFamily: "Satoshi-Bold",
   },
 
   emptyCard: {
@@ -403,7 +393,6 @@ const styles = StyleSheet.create({
   emptyTitle: {
     color: "#111",
     fontSize: 20,
-    fontFamily: "Satoshi-Bold",
     textAlign: "center",
   },
 
@@ -411,7 +400,6 @@ const styles = StyleSheet.create({
     color: "#6E6E73",
     fontSize: 14,
     lineHeight: 20,
-    fontFamily: "Satoshi-Regular",
     textAlign: "center",
     marginTop: 8,
   },

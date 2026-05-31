@@ -116,7 +116,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#6E6E73",
     marginTop: 72,
-    fontFamily: "Satoshi-Regular",
     backgroundColor: "rgba(255, 255, 255, 0.75)",
     borderRadius: 20,
     padding: 20,
@@ -132,13 +131,11 @@ const styles = StyleSheet.create({
     color: "#6E6E73",
     fontSize: 15,
     lineHeight: 22,
-    fontFamily: "Satoshi-Regular",
   },
 
   signupText: {
     color: "#111",
     fontSize: 16,
-    fontFamily: "Satoshi-Bold",
     textDecorationLine: "underline",
     marginTop: 4,
   },

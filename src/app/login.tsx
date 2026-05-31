@@ -441,14 +441,14 @@ const styles = StyleSheet.create({
   },
 
   container: {
+    flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 70,
-    paddingBottom: 40,
+    paddingTop: Platform.OS === "web" ? 110 : 70,
+    paddingBottom: Platform.OS === "web" ? 160 : 40,
   },
 
   title: {
     fontSize: 34,
-    fontFamily: "Satoshi-Bold",
     color: "#111",
     marginTop: 20,
   },
@@ -456,7 +456,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     lineHeight: 24,
-    fontFamily: "Satoshi-Regular",
     color: "#6E6E73",
     marginTop: 10,
     marginBottom: 28,
@@ -490,7 +489,6 @@ const styles = StyleSheet.create({
 
   modeText: {
     fontSize: 15,
-    fontFamily: "Satoshi-Bold",
     color: "#111",
   },
 
@@ -500,7 +498,6 @@ const styles = StyleSheet.create({
 
   label: {
     fontSize: 15,
-    fontFamily: "Satoshi-Bold",
     color: "#111",
     marginBottom: 10,
     marginTop: 18,
@@ -521,7 +518,6 @@ const styles = StyleSheet.create({
   selectText: {
     flex: 1,
     fontSize: 16,
-    fontFamily: "Satoshi-Regular",
     color: "#111",
   },
 
@@ -537,7 +533,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
     paddingHorizontal: 16,
     fontSize: 16,
-    fontFamily: "Satoshi-Regular",
     color: "#111",
     borderWidth: 1,
     borderColor: "#E5DED7",
@@ -546,7 +541,6 @@ const styles = StyleSheet.create({
   message: {
     fontSize: 13,
     lineHeight: 20,
-    fontFamily: "Satoshi-Regular",
     color: "#111",
     marginTop: 18,
   },
@@ -567,7 +561,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#FFF",
     fontSize: 17,
-    fontFamily: "Satoshi-Bold",
   },
 
   secondaryButton: {
@@ -578,7 +571,6 @@ const styles = StyleSheet.create({
   secondaryText: {
     color: "#111",
     fontSize: 15,
-    fontFamily: "Satoshi-Bold",
     textDecorationLine: "underline",
   },
 
@@ -607,13 +599,11 @@ const styles = StyleSheet.create({
 
   modalTitle: {
     fontSize: 20,
-    fontFamily: "Satoshi-Bold",
     color: "#111",
   },
 
   modalClose: {
     fontSize: 15,
-    fontFamily: "Satoshi-Bold",
     color: "#111",
   },
 
@@ -630,13 +620,11 @@ const styles = StyleSheet.create({
   countryOptionName: {
     flex: 1,
     fontSize: 15,
-    fontFamily: "Satoshi-Regular",
     color: "#111",
   },
 
   countryOptionCode: {
     fontSize: 15,
-    fontFamily: "Satoshi-Bold",
     color: "#111",
   },
 });

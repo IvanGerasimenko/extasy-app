@@ -8,6 +8,7 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ImageBackground,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -72,6 +73,36 @@ export default function OnboardingScreen() {
   const [interests, setInterests] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [webViewportHeight, setWebViewportHeight] = useState<number | null>(
+    null,
+  );
+  const [isWebKeyboardOpen, setIsWebKeyboardOpen] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof window === "undefined") {
+      return;
+    }
+
+    function syncVisualViewport() {
+      const visualViewport = window.visualViewport;
+      const viewportHeight = visualViewport?.height ?? window.innerHeight;
+
+      setWebViewportHeight(viewportHeight);
+      setIsWebKeyboardOpen(viewportHeight < window.innerHeight - 120);
+    }
+
+    syncVisualViewport();
+
+    window.visualViewport?.addEventListener("resize", syncVisualViewport);
+    window.visualViewport?.addEventListener("scroll", syncVisualViewport);
+    window.addEventListener("resize", syncVisualViewport);
+
+    return () => {
+      window.visualViewport?.removeEventListener("resize", syncVisualViewport);
+      window.visualViewport?.removeEventListener("scroll", syncVisualViewport);
+      window.removeEventListener("resize", syncVisualViewport);
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -167,18 +198,30 @@ export default function OnboardingScreen() {
     setIsSaving(true);
     setError("");
 
-    const updatedUser = await completeSessionOnboarding({
-      name: name.trim() || undefined,
-      age: age.trim() || undefined,
-      city: city.trim() || undefined,
-      country: country || undefined,
-      about: about.trim() || undefined,
-      picture: photos[0],
-      photos,
-      gender: gender || undefined,
-      lookingFor: lookingFor || undefined,
-      interests,
-    });
+    let updatedUser = null;
+
+    try {
+      const storagePhotos = await preparePhotosForStorage(photos);
+
+      updatedUser = await completeSessionOnboarding({
+        name: name.trim() || undefined,
+        age: age.trim() || undefined,
+        city: city.trim() || undefined,
+        country: country || undefined,
+        about: about.trim() || undefined,
+        picture: storagePhotos[0],
+        photos: storagePhotos,
+        gender: gender || undefined,
+        lookingFor: lookingFor || undefined,
+        interests,
+      });
+    } catch (error) {
+      setIsSaving(false);
+      setError(
+        "Profile photo is too large for Safari storage. Remove it and add it again.",
+      );
+      return;
+    }
 
     setIsSaving(false);
 
@@ -214,12 +257,22 @@ export default function OnboardingScreen() {
   return (
     <ImageBackground
       source={require("../../assets/bg.png")}
-      style={styles.background}
+      style={[
+        styles.background,
+        webViewportHeight ? { height: webViewportHeight } : null,
+      ]}
       resizeMode="cover"
     >
       <ScrollView
-        style={styles.screen}
-        contentContainerStyle={styles.container}
+        style={[
+          styles.screen,
+          webViewportHeight ? { height: webViewportHeight } : null,
+        ]}
+        contentContainerStyle={[
+          styles.container,
+          isWebKeyboardOpen && styles.keyboardOpenContainer,
+        ]}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <BackButton to="/welcome" />
@@ -339,10 +392,44 @@ export default function OnboardingScreen() {
   );
 }
 
+async function preparePhotosForStorage(photos: string[]) {
+  if (Platform.OS !== "web") {
+    return photos;
+  }
+
+  return Promise.all(photos.map((photo) => resizePhotoForSafariStorage(photo)));
+}
+
+async function resizePhotoForSafariStorage(photo: string) {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return photo;
+  }
+
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const nextImage = new window.Image();
+    nextImage.onload = () => resolve(nextImage);
+    nextImage.onerror = reject;
+    nextImage.src = photo;
+  });
+  const maxSize = 520;
+  const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+  const width = Math.max(1, Math.round(image.width * scale));
+  const height = Math.max(1, Math.round(image.height * scale));
+  const canvas = document.createElement("canvas");
+
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext("2d")?.drawImage(image, 0, 0, width, height);
+
+  return canvas.toDataURL("image/jpeg", 0.55);
+}
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    width: "100%",
     maxWidth: 500,
+    alignSelf: "center",
   },
 
   section: {
@@ -354,27 +441,30 @@ const styles = StyleSheet.create({
 
   background: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    width: "100%",
     maxWidth: "100%",
   },
 
   container: {
+    flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 70,
-    paddingBottom: 40,
+    paddingTop: Platform.OS === "web" ? 110 : 70,
+    paddingBottom: Platform.OS === "web" ? 160 : 40,
+  },
+
+  keyboardOpenContainer: {
+    paddingTop: 28,
+    paddingBottom: 320,
   },
 
   title: {
     fontSize: 22,
-    fontFamily: "Satoshi-Bold",
     color: "#111",
     textAlign: "center",
   },
 
   subtitle: {
     fontSize: 13,
-    fontFamily: "Satoshi-Regular",
     color: "#777",
     textAlign: "center",
     marginTop: 8,
@@ -383,7 +473,6 @@ const styles = StyleSheet.create({
 
   label: {
     fontSize: 13,
-    fontFamily: "Satoshi-Bold",
     color: "#111",
     marginBottom: 10,
     marginTop: 18,
@@ -395,7 +484,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
     paddingHorizontal: 16,
     fontSize: 13,
-    fontFamily: "Satoshi-Regular",
     borderWidth: 1,
     borderColor: "#E5DED7",
   },
@@ -406,7 +494,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
     padding: 16,
     fontSize: 13,
-    fontFamily: "Satoshi-Regular",
     borderWidth: 1,
     borderColor: "#E5DED7",
     textAlignVertical: "top",
@@ -440,7 +527,6 @@ const styles = StyleSheet.create({
 
   optionText: {
     fontSize: 12,
-    fontFamily: "Satoshi-Regular",
     color: "#111",
   },
 
@@ -462,7 +548,6 @@ const styles = StyleSheet.create({
 
   tagText: {
     fontSize: 12,
-    fontFamily: "Satoshi-Regular",
     color: "#111",
   },
 
@@ -502,13 +587,11 @@ const styles = StyleSheet.create({
     color: "#7A1F1F",
     fontSize: 13,
     lineHeight: 20,
-    fontFamily: "Satoshi-Bold",
     marginTop: 8,
   },
 
   buttonText: {
     color: "#FFF",
     fontSize: 13,
-    fontFamily: "Satoshi-Bold",
   },
 });

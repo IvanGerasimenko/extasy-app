@@ -115,13 +115,11 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: "#6E6E73",
     fontSize: 13,
-    fontFamily: "Satoshi-Bold",
   },
 
   title: {
     color: "#111",
     fontSize: 36,
-    fontFamily: "Satoshi-Bold",
     marginTop: 4,
   },
 
@@ -135,14 +133,12 @@ const styles = StyleSheet.create({
   cardTitle: {
     color: "#111",
     fontSize: 22,
-    fontFamily: "Satoshi-Bold",
   },
 
   cardText: {
     color: "#6E6E73",
     fontSize: 15,
     lineHeight: 22,
-    fontFamily: "Satoshi-Regular",
     marginTop: 8,
   },
 
@@ -158,7 +154,6 @@ const styles = StyleSheet.create({
   secondaryText: {
     color: "#111",
     fontSize: 16,
-    fontFamily: "Satoshi-Bold",
   },
 
   signOutButton: {
@@ -173,6 +168,5 @@ const styles = StyleSheet.create({
   signOutText: {
     color: "#FFF",
     fontSize: 17,
-    fontFamily: "Satoshi-Bold",
   },
 });

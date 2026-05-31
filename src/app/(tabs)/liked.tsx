@@ -65,7 +65,7 @@ export default function LikedScreen() {
             style={styles.navButton}
             onPress={() => router.back()}
           >
-            <Text style={styles.navText}>Back</Text>
+            <Text style={styles.navText}>‹</Text>
           </TouchableOpacity>
           <Text style={styles.title}>Liked</Text>
           <Text style={styles.subtitle}>People you already liked.</Text>
@@ -190,31 +190,30 @@ const styles = StyleSheet.create({
   },
 
   navButton: {
-    height: 40,
+    width: 44,
+    height: 44,
     alignSelf: "flex-start",
-    borderRadius: 14,
+    borderRadius: 18,
     backgroundColor: "rgba(255, 255, 255, 0.78)",
+    alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 16,
     marginBottom: 18,
   },
 
   navText: {
     color: "#111",
-    fontSize: 14,
-    fontFamily: "Satoshi-Bold",
+    fontSize: 34,
+    lineHeight: 36,
   },
 
   title: {
     color: "#111",
     fontSize: 36,
-    fontFamily: "Satoshi-Bold",
   },
 
   subtitle: {
     color: "#6E6E73",
     fontSize: 15,
-    fontFamily: "Satoshi-Regular",
     marginTop: 6,
   },
 
@@ -247,7 +246,6 @@ const styles = StyleSheet.create({
   avatarInitial: {
     color: "#FFF",
     fontSize: 22,
-    fontFamily: "Satoshi-Bold",
   },
 
   copy: {
@@ -257,21 +255,18 @@ const styles = StyleSheet.create({
   name: {
     color: "#111",
     fontSize: 17,
-    fontFamily: "Satoshi-Bold",
   },
 
   about: {
     color: "#6E6E73",
     fontSize: 13,
     lineHeight: 18,
-    fontFamily: "Satoshi-Regular",
     marginTop: 4,
   },
 
   location: {
     color: "#111",
     fontSize: 12,
-    fontFamily: "Satoshi-Bold",
     marginTop: 4,
   },
 
@@ -296,7 +291,6 @@ const styles = StyleSheet.create({
 
   statusText: {
     fontSize: 12,
-    fontFamily: "Satoshi-Bold",
   },
 
   mutualText: {
@@ -322,7 +316,6 @@ const styles = StyleSheet.create({
   chatText: {
     color: "#FFF",
     fontSize: 13,
-    fontFamily: "Satoshi-Bold",
   },
 
   emptyCard: {
@@ -337,7 +330,6 @@ const styles = StyleSheet.create({
   emptyTitle: {
     color: "#111",
     fontSize: 26,
-    fontFamily: "Satoshi-Bold",
     textAlign: "center",
   },
 
@@ -345,7 +337,6 @@ const styles = StyleSheet.create({
     color: "#6E6E73",
     fontSize: 15,
     lineHeight: 22,
-    fontFamily: "Satoshi-Regular",
     textAlign: "center",
     marginTop: 10,
   },

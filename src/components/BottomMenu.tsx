@@ -1,6 +1,5 @@
 import {
-  getIncomingLikeRequestsForCurrentUser,
-  getLikeResponseNotificationsForCurrentUser,
+  getUnreadNotificationCountForCurrentUser,
 } from "@/services/auth/session";
 import { router, usePathname } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -42,16 +41,13 @@ export default function BottomMenu() {
     let isMounted = true;
 
     async function loadNotificationCount() {
-      const [incomingLikes, likeResponses] = await Promise.all([
-        getIncomingLikeRequestsForCurrentUser(),
-        getLikeResponseNotificationsForCurrentUser(),
-      ]);
+      const unreadCount = await getUnreadNotificationCountForCurrentUser();
 
       if (!isMounted) {
         return;
       }
 
-      setNotificationCount(incomingLikes.length + likeResponses.length);
+      setNotificationCount(unreadCount);
     }
 
     loadNotificationCount();
@@ -148,6 +144,5 @@ const styles = StyleSheet.create({
   badgeText: {
     color: "#FFF",
     fontSize: 11,
-    fontFamily: "Satoshi-Bold",
   },
 });

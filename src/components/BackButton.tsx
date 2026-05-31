@@ -11,26 +11,31 @@ export const BackButton: React.FC<BackButtonProps> = ({ to = "/welcome" }) => {
 
   return (
     <TouchableOpacity
-      onPress={() => router.push("/welcome")}
+      style={styles.button}
+      onPress={() => router.push(to)}
       activeOpacity={0.7} // Делает нажатие более приятным (опционально)
     >
-      <Text style={styles.back}>Sign Up</Text>
+      <Text style={styles.back}>‹</Text>
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
-  back: {
-    fontSize: 16,
-    color: "#ffffff", // Стандартный синий цвет для ссылок, измени под свой дизайн
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    backgroundColor: "black",
-    borderRadius: 37,
+  button: {
+    width: 44,
+    height: 44,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.78)",
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 38,
     marginBottom: 38,
-    maxWidth: 100,
+  },
+
+  back: {
+    color: "#111",
+    fontSize: 34,
+    lineHeight: 36,
     textAlign: "center",
-    fontFamily: "Satoshi-Bold", // Используем ваш шрифт
   },
 });
