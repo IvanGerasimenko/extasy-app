@@ -4,6 +4,7 @@ import { Platform } from "react-native";
 const SESSION_USER_KEY = "extasy.session.user";
 const LOCAL_ACCOUNTS_KEY = "extasy.local.accounts";
 const LIKES_KEY = "extasy.likes";
+const LIKE_REQUESTS_KEY = "extasy.like.requests";
 const MATCHES_KEY = "extasy.matches";
 const MESSAGES_KEY = "extasy.messages";
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -18,6 +19,8 @@ export type SessionUser = {
   photos?: string[];
   about?: string;
   age?: string;
+  city?: string;
+  country?: string;
   gender?: string;
   lookingFor?: string;
   interests?: string[];
@@ -49,9 +52,50 @@ export type ChatMessage = {
 
 export type LikedProfileRecord = {
   user: SessionUser;
+  status: LikeRequestStatus;
   isMutual: boolean;
   matchId?: string;
 };
+
+export type LikeRequestStatus = "pending" | "accepted" | "skipped";
+
+export type LikeRequestRecord = {
+  id: string;
+  fromUserKey: string;
+  toUserKey: string;
+  fromUser: SessionUser;
+  toUser: SessionUser;
+  status: LikeRequestStatus;
+  createdAt: string;
+  respondedAt?: string;
+  matchId?: string;
+};
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const BLOCKED_EMAIL_DOMAINS = new Set([
+  "10minutemail.com",
+  "dispostable.com",
+  "example.com",
+  "fake.com",
+  "guerrillamail.com",
+  "mailinator.com",
+  "sharklasers.com",
+  "temp-mail.org",
+  "tempmail.com",
+  "test.com",
+  "throwawaymail.com",
+  "trashmail.com",
+  "yopmail.com",
+]);
+
+const SUSPICIOUS_EMAIL_PARTS = [
+  "fake",
+  "noemail",
+  "notreal",
+  "qwerty",
+  "test",
+  "trash",
+];
 
 async function getItem(key: string) {
   if (Platform.OS === "web") {
@@ -125,6 +169,7 @@ export async function getLikedProfilesForCurrentUser() {
   const likedUserKeys = await getLikedUserKeysForCurrentUser();
   const users = await getLocalAccountUsers();
   const matches = await getCurrentUserMatches();
+  const likeRequests = await getLikeRequests();
   const likedProfiles: LikedProfileRecord[] = [];
 
   likedUserKeys.forEach((likedUserKey) => {
@@ -132,6 +177,10 @@ export async function getLikedProfilesForCurrentUser() {
       (localUser) => getUserKey(localUser) === likedUserKey,
     );
     const match = matches.find((item) => item.userKeys.includes(likedUserKey));
+    const request = likeRequests.find(
+      (item) =>
+        item.fromUserKey === currentUserKey && item.toUserKey === likedUserKey,
+    );
 
     if (!likedUser) {
       return;
@@ -139,6 +188,7 @@ export async function getLikedProfilesForCurrentUser() {
 
     likedProfiles.push({
       user: likedUser,
+      status: request?.status ?? (match ? "accepted" : "pending"),
       isMutual: Boolean(match?.userKeys.includes(currentUserKey)),
       matchId: match?.id,
     });
@@ -154,6 +204,52 @@ export function getUserKey(user: SessionUser) {
     user.phoneNumber ??
     String(user.id)
   );
+}
+
+export function getEmailValidationError(email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const [localPart, domain] = normalizedEmail.split("@");
+
+  if (!EMAIL_PATTERN.test(normalizedEmail) || !localPart || !domain) {
+    return "Enter a valid email address.";
+  }
+
+  if (localPart.length < 3 || localPart.length > 64) {
+    return "Email username looks invalid.";
+  }
+
+  if (
+    localPart.startsWith(".") ||
+    localPart.endsWith(".") ||
+    localPart.includes("..")
+  ) {
+    return "Email username looks invalid.";
+  }
+
+  const domainParts = domain.split(".");
+  const topLevelDomain = domainParts.at(-1) ?? "";
+
+  if (
+    domainParts.length < 2 ||
+    domainParts.some((part) => part.length < 2) ||
+    !/^[a-z]{2,24}$/.test(topLevelDomain)
+  ) {
+    return "Email domain looks invalid.";
+  }
+
+  if (BLOCKED_EMAIL_DOMAINS.has(domain)) {
+    return "Use a real email provider, not a test or temporary email.";
+  }
+
+  if (
+    SUSPICIOUS_EMAIL_PARTS.some(
+      (part) => localPart === part || localPart.includes(`${part}.`),
+    )
+  ) {
+    return "This email looks like a test email. Use your real email.";
+  }
+
+  return null;
 }
 
 async function getLocalAccounts() {
@@ -231,6 +327,8 @@ export async function completeSessionOnboarding(profile: {
   picture?: string;
   photos?: string[];
   age?: string;
+  city?: string;
+  country?: string;
   gender?: string;
   lookingFor?: string;
   interests?: string[];
@@ -319,32 +417,155 @@ export async function recordProfileLike(targetUser: SessionUser) {
 
   const likes = await getLikes();
   const currentLikes = likes[currentUserKey] ?? [];
+  const likeRequests = await getLikeRequests();
+  const existingRequest = likeRequests.find(
+    (request) =>
+      request.fromUserKey === currentUserKey &&
+      request.toUserKey === targetUserKey,
+  );
+
+  if (existingRequest) {
+    return {
+      isMatch: existingRequest.status === "accepted",
+      match: existingRequest.matchId
+        ? await getMatchById(existingRequest.matchId)
+        : null,
+      user: currentUser,
+      request: existingRequest,
+    };
+  }
 
   if (!currentLikes.includes(targetUserKey)) {
     likes[currentUserKey] = [...currentLikes, targetUserKey];
     await saveLikes(likes);
   }
 
-  const reciprocalLike = likes[targetUserKey]?.includes(currentUserKey);
   const updatedUser = await updateSessionStats({ likesDelta: 1 });
+  const request: LikeRequestRecord = {
+    id: `${currentUserKey}__${targetUserKey}`,
+    fromUserKey: currentUserKey,
+    toUserKey: targetUserKey,
+    fromUser: updatedUser ?? currentUser,
+    toUser: targetUser,
+    status: "pending",
+    createdAt: new Date().toISOString(),
+  };
 
-  if (!reciprocalLike || !updatedUser) {
-    return {
-      isMatch: false,
-      match: null,
-      user: updatedUser,
-    };
-  }
-
-  const match = await createOrGetMatch(updatedUser, targetUser);
-  await updateSessionStats({ matchesDelta: 1 });
-  await updateLocalUserStats(targetUserKey, { matchesDelta: 1 });
+  await saveLikeRequests([...likeRequests, request]);
 
   return {
-    isMatch: true,
+    isMatch: false,
+    match: null,
+    user: updatedUser,
+    request,
+  };
+}
+
+export async function getIncomingLikeRequestsForCurrentUser() {
+  const currentUser = await getSessionUser();
+
+  if (!currentUser) {
+    return [] as LikeRequestRecord[];
+  }
+
+  const currentUserKey = getUserKey(currentUser);
+  const likeRequests = await getLikeRequests();
+
+  return likeRequests.filter(
+    (request) =>
+      request.toUserKey === currentUserKey && request.status === "pending",
+  );
+}
+
+export async function getLikeResponseNotificationsForCurrentUser() {
+  const currentUser = await getSessionUser();
+
+  if (!currentUser) {
+    return [] as LikeRequestRecord[];
+  }
+
+  const currentUserKey = getUserKey(currentUser);
+  const likeRequests = await getLikeRequests();
+
+  return likeRequests.filter(
+    (request) =>
+      request.fromUserKey === currentUserKey && request.status !== "pending",
+  );
+}
+
+export async function acceptIncomingLikeRequest(requestId: string) {
+  const currentUser = await getSessionUser();
+
+  if (!currentUser) {
+    return null;
+  }
+
+  const currentUserKey = getUserKey(currentUser);
+  const likeRequests = await getLikeRequests();
+  const request = likeRequests.find((item) => item.id === requestId);
+
+  if (
+    !request ||
+    request.toUserKey !== currentUserKey ||
+    request.status !== "pending"
+  ) {
+    return null;
+  }
+
+  const match = await createOrGetMatch(currentUser, request.fromUser);
+  const updatedRequests = likeRequests.map((item) =>
+    item.id === requestId
+      ? {
+          ...item,
+          toUser: currentUser,
+          status: "accepted" as const,
+          respondedAt: new Date().toISOString(),
+          matchId: match.id,
+        }
+      : item,
+  );
+
+  await saveLikeRequests(updatedRequests);
+  await updateSessionStats({ matchesDelta: 1 });
+  await updateLocalUserStats(request.fromUserKey, { matchesDelta: 1 });
+
+  return {
     match,
     user: await getSessionUser(),
   };
+}
+
+export async function skipIncomingLikeRequest(requestId: string) {
+  const currentUser = await getSessionUser();
+
+  if (!currentUser) {
+    return null;
+  }
+
+  const currentUserKey = getUserKey(currentUser);
+  const likeRequests = await getLikeRequests();
+  const request = likeRequests.find((item) => item.id === requestId);
+
+  if (
+    !request ||
+    request.toUserKey !== currentUserKey ||
+    request.status !== "pending"
+  ) {
+    return null;
+  }
+
+  const updatedRequest: LikeRequestRecord = {
+    ...request,
+    toUser: currentUser,
+    status: "skipped",
+    respondedAt: new Date().toISOString(),
+  };
+
+  await saveLikeRequests(
+    likeRequests.map((item) => (item.id === requestId ? updatedRequest : item)),
+  );
+
+  return updatedRequest;
 }
 
 export async function getCurrentUserMatches() {
@@ -409,6 +630,25 @@ async function getLikes() {
 
 async function saveLikes(likes: Record<string, string[]>) {
   await setItem(LIKES_KEY, JSON.stringify(likes));
+}
+
+async function getLikeRequests() {
+  const rawRequests = await getItem(LIKE_REQUESTS_KEY);
+
+  if (!rawRequests) {
+    return [] as LikeRequestRecord[];
+  }
+
+  try {
+    return JSON.parse(rawRequests) as LikeRequestRecord[];
+  } catch {
+    await deleteItem(LIKE_REQUESTS_KEY);
+    return [] as LikeRequestRecord[];
+  }
+}
+
+async function saveLikeRequests(requests: LikeRequestRecord[]) {
+  await setItem(LIKE_REQUESTS_KEY, JSON.stringify(requests));
 }
 
 async function getMatches() {

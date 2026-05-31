@@ -17,6 +17,8 @@ type User = {
   photos?: string[];
   about?: string;
   age?: string;
+  city?: string;
+  country?: string;
   gender?: string;
   lookingFor?: string;
   interests?: string[];
@@ -169,8 +171,18 @@ app.patch("/users/:id/onboarding", (req, res) => {
     });
   }
 
-  const { name, picture, photos, about, age, gender, lookingFor, interests } =
-    req.body;
+  const {
+    name,
+    picture,
+    photos,
+    about,
+    age,
+    city,
+    country,
+    gender,
+    lookingFor,
+    interests,
+  } = req.body;
 
   Object.assign(user, {
     name: name ?? user.name,
@@ -178,6 +190,8 @@ app.patch("/users/:id/onboarding", (req, res) => {
     photos: Array.isArray(photos) ? photos : user.photos,
     about: about ?? user.about,
     age: age ?? user.age,
+    city: city ?? user.city,
+    country: country ?? user.country,
     gender: gender ?? user.gender,
     lookingFor: lookingFor ?? user.lookingFor,
     interests: Array.isArray(interests) ? interests : user.interests,

@@ -26,8 +26,11 @@ type DbUserResponse = {
     email: string;
     name?: string;
     picture?: string;
+    photos?: string[];
     about?: string;
     age?: string;
+    city?: string;
+    country?: string;
     gender?: string;
     lookingFor?: string;
     interests?: string[];

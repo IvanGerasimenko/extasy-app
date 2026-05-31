@@ -1,6 +1,8 @@
 import {
   clearSession,
+  getIncomingLikeRequestsForCurrentUser,
   getLikedUserKeysForCurrentUser,
+  getLikeResponseNotificationsForCurrentUser,
   getLocalAccountUsers,
   getSessionUser,
   getUserKey,
@@ -27,6 +29,8 @@ type DiscoverProfile = {
   name: string;
   age: string;
   about: string;
+  city: string;
+  country: string;
   gender: string;
   lookingFor: string;
   interests: string[];
@@ -59,6 +63,56 @@ function isSameUser(firstUser: SessionUser, secondUser: SessionUser) {
   );
 }
 
+function normalizeGender(value?: string) {
+  const normalizedValue = value?.trim().toLowerCase();
+
+  if (normalizedValue === "women" || normalizedValue === "woman") {
+    return "woman";
+  }
+
+  if (normalizedValue === "men" || normalizedValue === "man") {
+    return "man";
+  }
+
+  if (normalizedValue === "non-binary") {
+    return "non-binary";
+  }
+
+  if (normalizedValue === "everyone") {
+    return "everyone";
+  }
+
+  return normalizedValue ?? "";
+}
+
+function acceptsGender(lookingFor?: string, gender?: string) {
+  const normalizedLookingFor = normalizeGender(lookingFor);
+  const normalizedGender = normalizeGender(gender);
+
+  return (
+    normalizedLookingFor === "everyone" ||
+    normalizedLookingFor === normalizedGender
+  );
+}
+
+function isCompatibleMatch(currentUser: SessionUser, localUser: SessionUser) {
+  return (
+    acceptsGender(currentUser.lookingFor, localUser.gender) &&
+    acceptsGender(localUser.lookingFor, currentUser.gender)
+  );
+}
+
+function isNearbyProfile(currentUser: SessionUser, localUser: SessionUser) {
+  if (!currentUser.country || !localUser.country) {
+    return true;
+  }
+
+  return (
+    currentUser.country?.trim().toLowerCase() ===
+    localUser.country?.trim().toLowerCase()
+  );
+}
+
 function profileFromUser(user: SessionUser): DiscoverProfile {
   const rawPhotos = user.photos?.length
     ? user.photos
@@ -71,6 +125,8 @@ function profileFromUser(user: SessionUser): DiscoverProfile {
     name: user.name ?? "You",
     age: user.age ?? "",
     about: user.about ?? "",
+    city: user.city ?? "",
+    country: user.country ?? "",
     gender: user.gender ?? "",
     lookingFor: user.lookingFor ?? "",
     interests: user.interests ?? [],
@@ -88,6 +144,7 @@ export default function DiscoverScreen() {
   const [reaction, setReaction] = useState("");
   const [matchChatId, setMatchChatId] = useState<string | null>(null);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   const activeMatch = useMemo(
     () => deck[activeIndex] ?? null,
@@ -111,9 +168,15 @@ export default function DiscoverScreen() {
 
       const localUsers = await getLocalAccountUsers();
       const likedUserKeys = await getLikedUserKeysForCurrentUser();
+      const [incomingLikes, likeResponses] = await Promise.all([
+        getIncomingLikeRequestsForCurrentUser(),
+        getLikeResponseNotificationsForCurrentUser(),
+      ]);
       const discoverProfiles = localUsers
         .filter((localUser) => hasCompleteProfile(localUser))
         .filter((localUser) => !isSameUser(localUser, sessionUser))
+        .filter((localUser) => isCompatibleMatch(sessionUser, localUser))
+        .filter((localUser) => isNearbyProfile(sessionUser, localUser))
         .filter((localUser) => !likedUserKeys.includes(getUserKey(localUser)))
         .map(profileFromUser);
 
@@ -121,6 +184,7 @@ export default function DiscoverScreen() {
       setDeck(discoverProfiles);
       setActiveIndex(0);
       setPhotoIndex(0);
+      setNotificationCount(incomingLikes.length + likeResponses.length);
       setIsLoading(false);
     }
 
@@ -150,6 +214,8 @@ export default function DiscoverScreen() {
       if (likeResult?.isMatch && likeResult.match) {
         setReaction(`It's a match with ${activeMatch.name}`);
         setMatchChatId(likeResult.match.id);
+      } else {
+        setReaction(`${activeMatch.name} received your like`);
       }
     }
 
@@ -167,6 +233,8 @@ export default function DiscoverScreen() {
       const discoverProfiles = localUsers
         .filter((localUser) => hasCompleteProfile(localUser))
         .filter((localUser) => !isSameUser(localUser, user))
+        .filter((localUser) => isCompatibleMatch(user, localUser))
+        .filter((localUser) => isNearbyProfile(user, localUser))
         .filter((localUser) => !likedUserKeys.includes(getUserKey(localUser)))
         .map(profileFromUser);
 
@@ -221,6 +289,18 @@ export default function DiscoverScreen() {
           </View>
 
           <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => router.push("/notifications")}
+            >
+              <Text style={styles.notificationIcon}>!</Text>
+              {notificationCount > 0 ? (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{notificationCount}</Text>
+                </View>
+              ) : null}
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.iconButton}
               onPress={() => router.push("/profile")}
@@ -291,6 +371,12 @@ export default function DiscoverScreen() {
                 {activeMatch.gender} looking for {activeMatch.lookingFor}
               </Text>
 
+              {activeMatch.city && activeMatch.country ? (
+                <Text style={styles.locationText}>
+                  {activeMatch.city}, {activeMatch.country}
+                </Text>
+              ) : null}
+
               <Text style={styles.about}>{activeMatch.about}</Text>
 
               <View style={styles.tags}>
@@ -306,7 +392,7 @@ export default function DiscoverScreen() {
           <View style={styles.emptyCard}>
             <Text style={styles.emptyTitle}>No more profiles</Text>
             <Text style={styles.emptyText}>
-              You have seen everyone in this demo deck.
+              You have seen everyone near you for now.
             </Text>
             <TouchableOpacity style={styles.resetButton} onPress={resetDeck}>
               <Text style={styles.resetText}>Start Again</Text>
@@ -480,6 +566,31 @@ const styles = StyleSheet.create({
     height: 22,
   },
 
+  notificationIcon: {
+    color: "#111",
+    fontSize: 20,
+    fontFamily: "Satoshi-Bold",
+  },
+
+  badge: {
+    position: "absolute",
+    top: -5,
+    right: -5,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#111",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 5,
+  },
+
+  badgeText: {
+    color: "#FFF",
+    fontSize: 11,
+    fontFamily: "Satoshi-Bold",
+  },
+
   matchCard: {
     height: 580,
     borderRadius: 28,
@@ -648,6 +759,13 @@ const styles = StyleSheet.create({
     marginTop: 8,
     color: "rgba(255, 255, 255, 0.82)",
     fontSize: 15,
+    fontFamily: "Satoshi-Bold",
+  },
+
+  locationText: {
+    marginTop: 8,
+    color: "rgba(255, 255, 255, 0.9)",
+    fontSize: 14,
     fontFamily: "Satoshi-Bold",
   },
 

@@ -1,5 +1,7 @@
 import {
   clearSession,
+  getIncomingLikeRequestsForCurrentUser,
+  getLikeResponseNotificationsForCurrentUser,
   getSessionUser,
   type SessionUser,
 } from "@/services/auth/session";
@@ -22,17 +24,21 @@ export default function ProfileScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   const photos = useMemo(() => {
     if (!user) {
       return [];
     }
+    if (user.photos?.length) {
+      return user.photos;
+    }
 
-    return user.photos?.length
-      ? user.photos
-      : user.picture
-        ? [user.picture]
-        : [];
+    if (user.picture) {
+      return [user.picture];
+    }
+
+    return [];
   }, [user]);
 
   useEffect(() => {
@@ -50,7 +56,13 @@ export default function ProfileScreen() {
         return;
       }
 
+      const [incomingLikes, likeResponses] = await Promise.all([
+        getIncomingLikeRequestsForCurrentUser(),
+        getLikeResponseNotificationsForCurrentUser(),
+      ]);
+
       setUser(sessionUser);
+      setNotificationCount(incomingLikes.length + likeResponses.length);
       setIsLoading(false);
     }
 
@@ -162,6 +174,11 @@ export default function ProfileScreen() {
             {user?.gender ?? "Profile"} looking for{" "}
             {user?.lookingFor ?? "matches"}
           </Text>
+          {user?.city && user.country ? (
+            <Text style={styles.locationText}>
+              {user.city}, {user.country}
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.statsRow}>
@@ -180,6 +197,15 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.sectionbuttons}>
+          <TouchableOpacity
+            style={styles.notificationButton}
+            onPress={() => router.push("/notifications")}
+          >
+            <Text style={styles.notificationButtonText}>
+              Notifications{notificationCount ? ` (${notificationCount})` : ""}
+            </Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.chatButton}
             onPress={() => router.push("/chats")}
@@ -207,6 +233,15 @@ export default function ProfileScreen() {
           <Text style={styles.bodyText}>
             {user?.about ??
               "Add a short bio so people know what makes you you."}
+          </Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Location</Text>
+          <Text style={styles.bodyText}>
+            {user?.city && user.country
+              ? `${user.city}, ${user.country}`
+              : "Add your city and country so nearby people can find you."}
           </Text>
         </View>
 
@@ -464,6 +499,14 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
+  locationText: {
+    marginTop: 8,
+    color: "#111",
+    fontSize: 14,
+    fontFamily: "Satoshi-Bold",
+    textAlign: "center",
+  },
+
   statsRow: {
     flexDirection: "row",
     gap: 10,
@@ -477,6 +520,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginTop: 5,
+  },
+
+  notificationButton: {
+    height: 54,
+    borderRadius: 18,
+    backgroundColor: "#111",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+
+  notificationButtonText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontFamily: "Satoshi-Bold",
   },
 
   chatButtonText: {

@@ -74,6 +74,12 @@ export default function LikedScreen() {
         {likedProfiles.length ? (
           likedProfiles.map((record) => {
             const photo = record.user.photos?.[0] ?? record.user.picture;
+            const statusLabel =
+              record.status === "accepted"
+                ? "Accepted"
+                : record.status === "skipped"
+                  ? "Skipped"
+                  : "Waiting";
 
             return (
               <TouchableOpacity
@@ -105,6 +111,11 @@ export default function LikedScreen() {
                   <Text style={styles.name}>
                     {record.user.name}, {record.user.age}
                   </Text>
+                  {record.user.city && record.user.country ? (
+                    <Text style={styles.location} numberOfLines={1}>
+                      {record.user.city}, {record.user.country}
+                    </Text>
+                  ) : null}
                   <Text style={styles.about} numberOfLines={2}>
                     {record.user.about}
                   </Text>
@@ -113,20 +124,24 @@ export default function LikedScreen() {
                 <View
                   style={[
                     styles.statusBadge,
-                    record.isMutual ? styles.mutualBadge : styles.waitingBadge,
+                    record.status === "accepted" && styles.mutualBadge,
+                    record.status === "pending" && styles.waitingBadge,
+                    record.status === "skipped" && styles.skippedBadge,
                   ]}
                 >
                   <Text
                     style={[
                       styles.statusText,
-                      record.isMutual ? styles.mutualText : styles.waitingText,
+                      record.status === "accepted" && styles.mutualText,
+                      record.status === "pending" && styles.waitingText,
+                      record.status === "skipped" && styles.skippedText,
                     ]}
                   >
-                    {record.isMutual ? "Matched" : "Waiting"}
+                    {statusLabel}
                   </Text>
                 </View>
 
-                {record.isMutual && record.matchId ? (
+                {record.status === "accepted" && record.matchId ? (
                   <TouchableOpacity
                     style={styles.chatButton}
                     onPress={() =>
@@ -253,6 +268,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
+  location: {
+    color: "#111",
+    fontSize: 12,
+    fontFamily: "Satoshi-Bold",
+    marginTop: 4,
+  },
+
   statusBadge: {
     minHeight: 32,
     borderRadius: 999,
@@ -268,6 +290,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#F4E8CA",
   },
 
+  skippedBadge: {
+    backgroundColor: "#F2D9D9",
+  },
+
   statusText: {
     fontSize: 12,
     fontFamily: "Satoshi-Bold",
@@ -279,6 +305,10 @@ const styles = StyleSheet.create({
 
   waitingText: {
     color: "#7A5A12",
+  },
+
+  skippedText: {
+    color: "#7A1F1F",
   },
 
   chatButton: {

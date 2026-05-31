@@ -129,6 +129,11 @@ export default function ChatsScreen() {
                   <Text style={styles.chatName}>
                     {otherUser?.name ?? "Match"}
                   </Text>
+                  {otherUser?.city && otherUser.country ? (
+                    <Text style={styles.chatLocation} numberOfLines={1}>
+                      {otherUser.city}, {otherUser.country}
+                    </Text>
+                  ) : null}
                   <Text style={styles.chatPreview}>
                     You matched. Say hello.
                   </Text>
@@ -242,6 +247,13 @@ const styles = StyleSheet.create({
     color: "#6E6E73",
     fontSize: 14,
     fontFamily: "Satoshi-Regular",
+    marginTop: 4,
+  },
+
+  chatLocation: {
+    color: "#111",
+    fontSize: 12,
+    fontFamily: "Satoshi-Bold",
     marginTop: 4,
   },
 

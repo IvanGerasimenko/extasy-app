@@ -18,6 +18,22 @@ import {
 
 const genders = ["Woman", "Man", "Non-binary"];
 const lookingForOptions = ["Women", "Men", "Everyone"];
+const countryOptions = [
+  "Germany",
+  "United States",
+  "United Kingdom",
+  "Ukraine",
+  "Poland",
+  "France",
+  "Spain",
+  "Italy",
+  "Netherlands",
+  "Austria",
+  "Switzerland",
+  "Canada",
+  "Australia",
+  "Other",
+];
 const interestsList = [
   "Coffee",
   "Travel",
@@ -48,6 +64,8 @@ export default function OnboardingScreen() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
+  const [city, setCity] = useState("");
+  const [country, setCountry] = useState("");
   const [about, setAbout] = useState("");
   const [gender, setGender] = useState("");
   const [lookingFor, setLookingFor] = useState("");
@@ -72,6 +90,8 @@ export default function OnboardingScreen() {
 
       setName(user.name ?? "");
       setAge(user.age ?? "");
+      setCity(user.city ?? "");
+      setCountry(user.country ?? "");
       setAbout(user.about ?? "");
       setGender(user.gender ?? "");
       setLookingFor(user.lookingFor ?? "");
@@ -150,6 +170,8 @@ export default function OnboardingScreen() {
     const updatedUser = await completeSessionOnboarding({
       name: name.trim() || undefined,
       age: age.trim() || undefined,
+      city: city.trim() || undefined,
+      country: country || undefined,
       about: about.trim() || undefined,
       picture: photos[0],
       photos,
@@ -233,6 +255,28 @@ export default function OnboardingScreen() {
               value={about}
               onChangeText={setAbout}
             />
+          </View>
+
+          <View>
+            <Text style={styles.label}>Location</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="City, e.g. Berlin"
+              value={city}
+              onChangeText={setCity}
+            />
+
+            <Text style={styles.label}>Country</Text>
+            <View style={styles.tags}>
+              {countryOptions.map((item) => (
+                <Tag
+                  key={item}
+                  title={item}
+                  selected={country === item}
+                  onPress={() => setCountry(item)}
+                />
+              ))}
+            </View>
           </View>
 
           <View>

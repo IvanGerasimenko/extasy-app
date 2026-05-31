@@ -128,8 +128,22 @@ export default function UserProfileScreen() {
                 <Text style={styles.meta}>
                   {user.gender} looking for {user.lookingFor}
                 </Text>
+                {user.city && user.country ? (
+                  <Text style={styles.locationText}>
+                    {user.city}, {user.country}
+                  </Text>
+                ) : null}
               </View>
             </View>
+
+            {user.city && user.country ? (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Location</Text>
+                <Text style={styles.bodyText}>
+                  {user.city}, {user.country}
+                </Text>
+              </View>
+            ) : null}
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>About</Text>
@@ -288,6 +302,13 @@ const styles = StyleSheet.create({
   meta: {
     color: "rgba(255, 255, 255, 0.84)",
     fontSize: 15,
+    fontFamily: "Satoshi-Bold",
+    marginTop: 8,
+  },
+
+  locationText: {
+    color: "rgba(255, 255, 255, 0.9)",
+    fontSize: 14,
     fontFamily: "Satoshi-Bold",
     marginTop: 8,
   },

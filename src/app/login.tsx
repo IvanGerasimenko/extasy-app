@@ -1,5 +1,6 @@
 import { BackButton } from "@/components/BackButton";
 import {
+  getEmailValidationError,
   saveSessionUser,
   signInLocalAccount,
   type SessionUser,
@@ -20,7 +21,6 @@ import {
 } from "react-native";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 const countryOptions = [
   { label: "Afghanistan", code: "+93", placeholder: "70 123 4567" },
@@ -115,8 +115,10 @@ export default function LoginScreen() {
       return;
     }
 
-    if (!EMAIL_PATTERN.test(trimmedEmail)) {
-      setEmailMessage("Enter a valid email address.");
+    const emailError = getEmailValidationError(trimmedEmail);
+
+    if (emailError) {
+      setEmailMessage(emailError);
       return;
     }
 

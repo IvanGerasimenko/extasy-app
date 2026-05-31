@@ -148,7 +148,11 @@ export default function ChatScreen() {
             }
           >
             <Text style={styles.title}>{otherUser?.name ?? "Chat"}</Text>
-            <Text style={styles.subtitle}>Matched on Extasy</Text>
+            <Text style={styles.subtitle} numberOfLines={1}>
+              {otherUser?.city && otherUser.country
+                ? `${otherUser.city}, ${otherUser.country}`
+                : "Matched on Extasy"}
+            </Text>
           </TouchableOpacity>
         </View>
 

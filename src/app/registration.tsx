@@ -1,5 +1,8 @@
 import { BackButton } from "@/components/BackButton";
-import { registerLocalAccount } from "@/services/auth/session";
+import {
+  getEmailValidationError,
+  registerLocalAccount,
+} from "@/services/auth/session";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -13,8 +16,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export default function RegisterScreen() {
   const [name, setName] = useState("");
@@ -31,8 +32,10 @@ export default function RegisterScreen() {
       return;
     }
 
-    if (!EMAIL_PATTERN.test(trimmedEmail)) {
-      setError("Enter a valid email.");
+    const emailError = getEmailValidationError(trimmedEmail);
+
+    if (emailError) {
+      setError(emailError);
       return;
     }
 
