@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "scheme": "extasy",
+    "name": "extasy",
+    "slug": "extasy",
+    "icon": "./assets/icon.png",
+    "ios": {
+      "bundleIdentifier": "com.vano48278.extasy",
+      "icon": "./assets/icon.png",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "8f2bf51f-4e6a-4703-8990-44fc289b539b"
+      }
+    },
+    "android": {
+      "package": "com.vano48278.extasy"
+    }
+  },
+  "android": {
+    "package": "com.vano48278.extasy",
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/logo.png",
+      "backgroundColor": "#ffffff"
+    }
+  },
+  "web": {
+    "output": "static",
+    "favicon": "./assets/logo.png"
+  },
+  "plugins": [
+    "expo-router",
+    [
+      "expo-splash-screen",
+      {
+        "backgroundColor": "#208AEF",
+        "image": "./assets/logo.png",
+        "imageWidth": 120,
+        "resizeMode": "contain"
+      }
+    ],
+    "expo-web-browser"
+  ],
+  "experiments": {
+    "typedRoutes": true,
+    "reactCompiler": true
+  },
+  "extra": {
+    "router": {},
+    "eas": {
+      "projectId": "8f2bf51f-4e6a-4703-8990-44fc289b539b"
+    }
+  }
+}
