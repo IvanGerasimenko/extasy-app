@@ -1,12 +1,9 @@
 import cors from "cors";
 import "dotenv/config";
 import express from "express";
-
 const app = express();
-
 app.use(cors());
 app.use(express.json());
-
 type User = {
   id: number;
   googleId?: string;
@@ -38,7 +35,6 @@ const phoneCodes = new Map<
 function normalizePhoneNumber(countryCode: string, phoneNumber: string) {
   const cleanedCode = String(countryCode).replace(/[^\d+]/g, "");
   const cleanedPhone = String(phoneNumber).replace(/\D/g, "");
-
   return `${cleanedCode}${cleanedPhone}`;
 }
 
@@ -79,7 +75,6 @@ app.post("/auth/google", (req, res) => {
 
     users.push(user);
   }
-
   return res.json({
     user,
     isNewUser,

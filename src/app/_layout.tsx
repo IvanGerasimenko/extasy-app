@@ -28,6 +28,17 @@ DefaultTextInput.defaultProps.style = [
   DefaultTextInput.defaultProps.style,
 ];
 
+if (__DEV__ && Platform.OS === "ios") {
+  try {
+    const DevLoadingView =
+      require("react-native/Libraries/Utilities/DevLoadingView").default;
+    DevLoadingView.hide?.();
+    DevLoadingView.showMessage = () => {};
+  } catch {
+    // DevLoadingView is only available in React Native development builds.
+  }
+}
+
 export default function RootLayout() {
   return (
     <ThemeProvider>

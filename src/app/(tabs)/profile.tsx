@@ -1,3 +1,4 @@
+import { ThemedBackground } from "@/components/ThemedBackground";
 import { getSessionUser, type SessionUser } from "@/services/auth/session";
 import { router } from "expo-router";
 import React, {
@@ -7,7 +8,6 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   ActivityIndicator,
   Dimensions,
@@ -168,15 +168,14 @@ export default function ProfileScreen() {
         <View style={styles.hero}>
           {photos[0] ? (
             <View style={styles.avatarWrap} {...swipeResponder.panHandlers}>
-              <Image
-                source={{ uri: photos[photoIndex] ?? photos[0] }}
-                style={styles.avatar}
-              />
               <TouchableOpacity
-                style={styles.expandButton}
+                activeOpacity={0.88}
                 onPress={() => setFullscreenOpen(true)}
               >
-                <Text style={styles.expandText}>Open</Text>
+                <Image
+                  source={{ uri: photos[photoIndex] ?? photos[0] }}
+                  style={styles.avatar}
+                />
               </TouchableOpacity>
               {photos.length > 1 ? (
                 <View style={styles.photoCounter}>
@@ -415,6 +414,9 @@ const styles = StyleSheet.create({
     height: 168,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#ffffff",
+    minWidth: "100%",
+    borderRadius: 24,
   },
 
   photoCounter: {
@@ -431,22 +433,6 @@ const styles = StyleSheet.create({
   photoCounterText: {
     color: "#FFF",
     fontSize: 11,
-    fontFamily: systemFontBold,
-  },
-
-  expandButton: {
-    position: "absolute",
-    bottom: 8,
-    borderRadius: 999,
-    backgroundColor: "rgba(0, 0, 0, 0.55)",
-    paddingHorizontal: 12,
-    height: 28,
-    justifyContent: "center",
-  },
-
-  expandText: {
-    color: "#FFF",
-    fontSize: 12,
     fontFamily: systemFontBold,
   },
 
@@ -468,7 +454,7 @@ const styles = StyleSheet.create({
   summaryCard: {
     width: "100%",
     borderRadius: 26,
-    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    backgroundColor: "rgb(255, 255, 255)",
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.82)",
     padding: 18,
@@ -510,7 +496,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 82,
     borderRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.78)",
+    backgroundColor: "rgb(255, 255, 255)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -532,7 +518,7 @@ const styles = StyleSheet.create({
   section: {
     marginTop: 18,
     borderRadius: 24,
-    backgroundColor: "rgba(255, 255, 255, 0.68)",
+    backgroundColor: "rgb(255, 255, 255)",
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.82)",
     padding: 16,

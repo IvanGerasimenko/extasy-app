@@ -1,3 +1,4 @@
+import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   getLikedUserKeysForCurrentUser,
   getLocalAccountUsers,
@@ -8,7 +9,6 @@ import {
 } from "@/services/auth/session";
 import { router } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   ActivityIndicator,
   Animated,
@@ -156,7 +156,7 @@ function getDiscoverProfiles(
 
   const preferredProfiles = genderMatchedProfiles.filter(
     (localUser) =>
-      acceptsGender(localUser.lookingFor, currentUser.gender) &&
+      isCompatibleMatch(currentUser, localUser) &&
       isNearbyProfile(currentUser, localUser),
   );
 
@@ -172,7 +172,6 @@ export default function DiscoverScreen() {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [reaction, setReaction] = useState("");
-  const [matchChatId, setMatchChatId] = useState<string | null>(null);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [isDeciding, setIsDeciding] = useState(false);
   const cardTranslateX = useRef(new Animated.Value(0)).current;
@@ -273,7 +272,6 @@ export default function DiscoverScreen() {
 
     if (likeResult?.isMatch && likeResult.match) {
       setReaction(`It's a match with ${decidedMatch.name}`);
-      setMatchChatId(likeResult.match.id);
     } else {
       setReaction(`${decidedMatch.name} received your like`);
     }
@@ -289,7 +287,6 @@ export default function DiscoverScreen() {
     isDecidingRef.current = true;
     setIsDeciding(true);
     setReaction(nextReaction === "Liked" ? "Liked" : "");
-    setMatchChatId(null);
 
     Animated.timing(cardTranslateX, {
       toValue:
@@ -325,7 +322,6 @@ export default function DiscoverScreen() {
       setActiveIndex(0);
       setPhotoIndex(0);
       setReaction("");
-      setMatchChatId(null);
     });
   }
 
@@ -360,7 +356,6 @@ export default function DiscoverScreen() {
         <View style={styles.header}>
           <View>
             <Text style={styles.eyebrow}>Extasy</Text>
-            <Text style={styles.title}>Discover</Text>
           </View>
           <View style={styles.headerPill}>
             <Text style={styles.headerPillText}>
@@ -457,6 +452,27 @@ export default function DiscoverScreen() {
                 </View>
               </View>
             </TouchableOpacity>
+
+            <View style={styles.floatingActions}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.passButton]}
+                onPress={() => animateDecision("Passed for now")}
+                disabled={isDeciding}
+              >
+                <Text style={styles.passText}>×</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.actionButton, styles.likeButton]}
+                onPress={() => animateDecision("Liked")}
+                disabled={isDeciding}
+              >
+                <Image
+                  source={require("../../../assets/liked.png")}
+                  style={styles.likeIcon}
+                />
+              </TouchableOpacity>
+            </View>
           </Animated.View>
         ) : (
           <View style={styles.emptyCard}>
@@ -471,39 +487,7 @@ export default function DiscoverScreen() {
         )}
 
         {reaction ? <Text style={styles.reactionText}>{reaction}</Text> : null}
-
-        {matchChatId ? (
-          <TouchableOpacity
-            style={styles.chatButton}
-            onPress={() => router.push(`/chat?matchId=${matchChatId}`)}
-          >
-            <Text style={styles.chatButtonText}>Open Chat</Text>
-          </TouchableOpacity>
-        ) : null}
       </ScrollView>
-
-      {activeMatch ? (
-        <View style={styles.floatingActions}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.passButton]}
-            onPress={() => animateDecision("Passed for now")}
-            disabled={isDeciding}
-          >
-            <Text style={styles.passText}>×</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.likeButton]}
-            onPress={() => animateDecision("Liked")}
-            disabled={isDeciding}
-          >
-            <Image
-              source={require("../../../assets/liked.png")}
-              style={styles.likeIcon}
-            />
-          </TouchableOpacity>
-        </View>
-      ) : null}
 
       <Modal visible={fullscreenOpen} transparent animationType="fade">
         <View style={styles.fullscreen}>
@@ -601,13 +585,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  title: {
-    fontSize: isCompactViewport ? 31 : 34,
-    color: "#111",
-    fontWeight: "800",
-    marginTop: 2,
-  },
-
   headerPill: {
     height: 38,
     borderRadius: 999,
@@ -626,9 +603,10 @@ const styles = StyleSheet.create({
   },
 
   matchCard: {
-    height: isCompactViewport ? 510 : Platform.OS === "web" ? 660 : 590,
+    minHeight: "70%",
+    marginBottom: isCompactViewport ? 42 : 48,
     borderRadius: isCompactViewport ? 30 : 34,
-    overflow: "hidden",
+    overflow: "visible",
     backgroundColor: "#161616",
     shadowColor: "#000",
     shadowOffset: {
@@ -642,6 +620,9 @@ const styles = StyleSheet.create({
 
   cardTouchable: {
     flex: 1,
+    borderRadius: isCompactViewport ? 30 : 34,
+    overflow: "hidden",
+    backgroundColor: "#161616",
   },
 
   emptyCard: {
@@ -822,7 +803,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    bottom: isCompactViewport ? 88 : 92,
+    bottom: isCompactViewport ? -32 : -36,
     zIndex: 12,
     gap: 18,
     alignItems: "center",
@@ -878,21 +859,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#111",
     fontSize: 15,
-  },
-
-  chatButton: {
-    height: 56,
-    alignSelf: "center",
-    borderRadius: 18,
-    paddingHorizontal: 34,
-    backgroundColor: "#111",
-    justifyContent: "center",
-    marginTop: 16,
-  },
-
-  chatButtonText: {
-    color: "#FFF",
-    fontSize: 16,
   },
 
   fullscreen: {

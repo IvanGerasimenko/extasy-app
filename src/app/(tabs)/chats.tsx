@@ -10,12 +10,15 @@ import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   ActivityIndicator,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+
+const isWeb = Platform.OS === "web";
 
 function getOtherUser(match: MatchRecord, currentUserKey: string) {
   const otherUserKey = match.userKeys.find(
@@ -151,9 +154,12 @@ const styles = StyleSheet.create({
   },
 
   container: {
+    width: "100%",
+    maxWidth: isWeb ? 760 : undefined,
+    alignSelf: "center",
     paddingHorizontal: 20,
-    paddingBottom: 120,
-    marginTop: 80,
+    paddingTop: isWeb ? 48 : 80,
+    paddingBottom: isWeb ? 132 : 120,
   },
 
   loadingContainer: {
@@ -163,7 +169,7 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    marginBottom: 24,
+    marginBottom: isWeb ? 18 : 24,
   },
 
   navButton: {
@@ -185,16 +191,19 @@ const styles = StyleSheet.create({
 
   title: {
     color: "#111",
-    fontSize: 36,
+    fontSize: isWeb ? 34 : 36,
+    fontWeight: "700",
   },
 
   chatRow: {
-    minHeight: 86,
-    borderRadius: 22,
-    backgroundColor: "rgba(255, 255, 255, 0.82)",
+    minHeight: isWeb ? 92 : 86,
+    borderRadius: isWeb ? 20 : 22,
+    backgroundColor: "rgb(255, 255, 255)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.86)",
     flexDirection: "row",
     alignItems: "center",
-    padding: 14,
+    padding: isWeb ? 16 : 14,
     marginBottom: 12,
   },
 
@@ -227,6 +236,7 @@ const styles = StyleSheet.create({
   chatName: {
     color: "#111",
     fontSize: 18,
+    fontWeight: "700",
   },
 
   chatPreview: {
@@ -249,7 +259,9 @@ const styles = StyleSheet.create({
   emptyCard: {
     minHeight: 280,
     borderRadius: 24,
-    backgroundColor: "rgba(255, 255, 255, 0.82)",
+    backgroundColor: "rgb(255, 255, 255)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.86)",
     alignItems: "center",
     justifyContent: "center",
     padding: 26,

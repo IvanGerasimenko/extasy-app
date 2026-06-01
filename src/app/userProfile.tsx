@@ -1,4 +1,5 @@
 import BottomMenu from "@/components/BottomMenu";
+import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   getLocalAccountUsers,
   getUserKey,
@@ -12,7 +13,6 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   ActivityIndicator,
   Dimensions,
@@ -159,12 +159,18 @@ export default function UserProfileScreen() {
           <>
             <View style={styles.heroCard} {...swipeResponder.panHandlers}>
               {photos[0] ? (
-                <Image
-                  source={{ uri: photos[photoIndex] ?? photos[0] }}
-                  style={styles.heroImage}
-                />
+                <TouchableOpacity
+                  activeOpacity={0.94}
+                  style={styles.photoTapArea}
+                  onPress={() => setFullscreenOpen(true)}
+                >
+                  <Image
+                    source={{ uri: photos[photoIndex] ?? photos[0] }}
+                    style={styles.heroImage}
+                  />
+                </TouchableOpacity>
               ) : null}
-              <View style={styles.heroShade} />
+              <View pointerEvents="none" style={styles.heroShade} />
 
               {photos.length > 1 ? (
                 <View style={styles.photoCounter}>
@@ -174,25 +180,20 @@ export default function UserProfileScreen() {
                 </View>
               ) : null}
 
-              <TouchableOpacity
-                style={styles.expandButton}
-                onPress={() => setFullscreenOpen(true)}
-              >
-                <Text style={styles.expandText}>Open Photo</Text>
-              </TouchableOpacity>
-
               <View style={styles.heroCopy}>
-                <Text style={styles.name}>
-                  {user.name}, {user.age}
-                </Text>
-                <Text style={styles.meta}>
-                  {user.gender} looking for {user.lookingFor}
-                </Text>
-                {user.city && user.country ? (
-                  <Text style={styles.locationText}>
-                    {user.city}, {user.country}
+                <View>
+                  <Text style={styles.name}>
+                    {user.name}, {user.age}
                   </Text>
-                ) : null}
+                  <Text style={styles.meta}>
+                    {user.gender} looking for {user.lookingFor}
+                  </Text>
+                  {user.city && user.country ? (
+                    <Text style={styles.locationText}>
+                      {user.city}, {user.country}
+                    </Text>
+                  ) : null}
+                </View>
               </View>
             </View>
 
@@ -349,7 +350,7 @@ const styles = StyleSheet.create({
   },
 
   heroCard: {
-    height: 540,
+    height: 340,
     borderRadius: 30,
     overflow: "hidden",
     backgroundColor: "#111",
@@ -361,20 +362,18 @@ const styles = StyleSheet.create({
     height: "100%",
   },
 
+  photoTapArea: {
+    ...StyleSheet.absoluteFill,
+  },
+
   heroShade: {
     ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0, 0, 0, 0.2)",
   },
 
   heroCopy: {
-    position: "absolute",
-    left: 18,
-    right: 18,
-    bottom: 18,
     borderRadius: 24,
-    backgroundColor: "rgba(255, 255, 255, 0.72)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.84)",
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
     padding: 18,
   },
 
@@ -386,7 +385,7 @@ const styles = StyleSheet.create({
   },
 
   meta: {
-    color: "#6E6E73",
+    color: "#181818",
     fontSize: 15,
     fontFamily: systemFont,
     marginTop: 8,
@@ -419,28 +418,10 @@ const styles = StyleSheet.create({
     fontFamily: systemFontBold,
   },
 
-  expandButton: {
-    position: "absolute",
-    top: 16,
-    alignSelf: "center",
-    borderRadius: 999,
-    backgroundColor: "rgba(0, 0, 0, 0.48)",
-    paddingHorizontal: 14,
-    height: 32,
-    justifyContent: "center",
-    zIndex: 3,
-  },
-
-  expandText: {
-    color: "#FFF",
-    fontSize: 12,
-    fontFamily: systemFontBold,
-  },
-
   section: {
     marginTop: 22,
     borderRadius: 24,
-    backgroundColor: "rgba(255, 255, 255, 0.68)",
+    backgroundColor: "rgb(255, 255, 255)",
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.82)",
     padding: 16,
@@ -502,7 +483,7 @@ const styles = StyleSheet.create({
   emptyCard: {
     minHeight: 280,
     borderRadius: 24,
-    backgroundColor: "rgba(255, 255, 255, 0.82)",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     alignItems: "center",
     justifyContent: "center",
     padding: 26,

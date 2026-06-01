@@ -202,13 +202,13 @@ const styles = StyleSheet.create({
   },
 
   navText: {
-    color: "#111",
+    color: "#727171",
     fontSize: 34,
     lineHeight: 36,
   },
 
   title: {
-    color: "#111",
+    color: "#b4b2b2",
     fontSize: 36,
   },
 

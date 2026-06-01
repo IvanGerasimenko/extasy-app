@@ -10,53 +10,7 @@ import { Platform } from "react-native";
 
 type ThemeMode = "light" | "dark";
 
-type ThemePalette = {
-  mode: ThemeMode;
-  background: string;
-  surface: string;
-  surfaceStrong: string;
-  text: string;
-  mutedText: string;
-  surfaceText: string;
-  surfaceMutedText: string;
-  border: string;
-  accent: string;
-};
-
-type ThemeContextValue = {
-  mode: ThemeMode;
-  colors: ThemePalette;
-  toggleTheme: () => void;
-};
-
-const lightColors: ThemePalette = {
-  mode: "light",
-  background: "#F7F3EF",
-  surface: "rgba(255, 255, 255, 0.78)",
-  surfaceStrong: "#FFFFFF",
-  text: "#111111",
-  mutedText: "#6E6E73",
-  surfaceText: "#111111",
-  surfaceMutedText: "#6E6E73",
-  border: "rgba(255, 255, 255, 0.86)",
-  accent: "#FF4458",
-};
-
-const darkColors: ThemePalette = {
-  mode: "dark",
-  background: "#111014",
-  surface: "#FFFFFF",
-  surfaceStrong: "#FFFFFF",
-  text: "#FFFFFF",
-  mutedText: "#D8D8DE",
-  surfaceText: "#111111",
-  surfaceMutedText: "#6E6E73",
-  border: "rgba(255, 255, 255, 0.22)",
-  accent: "#FF5A6C",
-};
-
 const THEME_STORAGE_KEY = "extasy.theme.mode";
-
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function getInitialTheme(): ThemeMode {
@@ -129,3 +83,48 @@ export function useAppTheme() {
 
   return value;
 }
+
+type ThemePalette = {
+  mode: ThemeMode;
+  background: string;
+  surface: string;
+  surfaceStrong: string;
+  text: string;
+  mutedText: string;
+  surfaceText: string;
+  surfaceMutedText: string;
+  border: string;
+  accent: string;
+};
+
+type ThemeContextValue = {
+  mode: ThemeMode;
+  colors: ThemePalette;
+  toggleTheme: () => void;
+};
+
+const lightColors: ThemePalette = {
+  mode: "light",
+  background: "#F7F3EF",
+  surface: "rgba(255, 255, 255, 0.78)",
+  surfaceStrong: "#FFFFFF",
+  text: "#111111",
+  mutedText: "#6E6E73",
+  surfaceText: "#111111",
+  surfaceMutedText: "#6E6E73",
+  border: "rgba(255, 255, 255, 0.86)",
+  accent: "#FF4458",
+};
+
+const darkColors: ThemePalette = {
+  mode: "dark",
+  background: "#000000",
+  surface: "rgb(255, 255, 255)",
+  surfaceStrong: "#ffffff",
+  text: "#767676",
+  mutedText: "#8e8e8e",
+  surfaceText: "#393939",
+  surfaceMutedText: "#424242",
+  border: "rgba(255, 255, 255, 0.22)",
+  accent: "#FF5A6C",
+};

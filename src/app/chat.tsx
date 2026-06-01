@@ -1,4 +1,5 @@
 import BottomMenu from "@/components/BottomMenu";
+import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   getChatMessages,
   getMatchById,
@@ -10,7 +11,6 @@ import {
 } from "@/services/auth/session";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   ActivityIndicator,
   Image,
@@ -23,6 +23,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+const isWeb = Platform.OS === "web";
 
 function getOtherUser(match: MatchRecord, currentUserKey: string) {
   const otherUserKey = match.userKeys.find(
@@ -105,13 +107,6 @@ export default function ChatScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.navButton}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.navText}>‹</Text>
-          </TouchableOpacity>
-
           {photo ? (
             <TouchableOpacity
               onPress={() =>
@@ -151,55 +146,57 @@ export default function ChatScreen() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView
-          style={styles.messages}
-          contentContainerStyle={styles.messagesContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {messages.length ? (
-            messages.map((message) => {
-              const isMine = message.senderKey === currentUserKey;
+        <View style={styles.chatSurface}>
+          <ScrollView
+            style={styles.messages}
+            contentContainerStyle={styles.messagesContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {messages.length ? (
+              messages.map((message) => {
+                const isMine = message.senderKey === currentUserKey;
 
-              return (
-                <View
-                  key={message.id}
-                  style={[
-                    styles.messageBubble,
-                    isMine ? styles.myMessage : styles.theirMessage,
-                  ]}
-                >
-                  <Text
+                return (
+                  <View
+                    key={message.id}
                     style={[
-                      styles.messageText,
-                      isMine ? styles.myMessageText : styles.theirMessageText,
+                      styles.messageBubble,
+                      isMine ? styles.myMessage : styles.theirMessage,
                     ]}
                   >
-                    {message.text}
-                  </Text>
-                </View>
-              );
-            })
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>It's a match</Text>
-              <Text style={styles.emptyText}>
-                Start the conversation with {otherUser?.name ?? "your match"}.
-              </Text>
-            </View>
-          )}
-        </ScrollView>
+                    <Text
+                      style={[
+                        styles.messageText,
+                        isMine ? styles.myMessageText : styles.theirMessageText,
+                      ]}
+                    >
+                      {message.text}
+                    </Text>
+                  </View>
+                );
+              })
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyTitle}>It's a match</Text>
+                <Text style={styles.emptyText}>
+                  Start the conversation with {otherUser?.name ?? "your match"}.
+                </Text>
+              </View>
+            )}
+          </ScrollView>
 
-        <View style={styles.composer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Write a message..."
-            placeholderTextColor="#888"
-            value={draft}
-            onChangeText={setDraft}
-          />
-          <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-            <Text style={styles.sendText}>Send</Text>
-          </TouchableOpacity>
+          <View style={styles.composer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Write a message..."
+              placeholderTextColor="#888"
+              value={draft}
+              onChangeText={setDraft}
+            />
+            <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
+              <Text style={styles.sendText}>Senden</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
 
@@ -216,7 +213,10 @@ const styles = StyleSheet.create({
 
   screen: {
     flex: 1,
-    paddingTop: 58,
+    width: "100%",
+    maxWidth: isWeb ? 760 : undefined,
+    alignSelf: "center",
+    paddingTop: isWeb ? 32 : 58,
   },
 
   loadingContainer: {
@@ -228,16 +228,20 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 18,
-    paddingBottom: 16,
+    paddingHorizontal: isWeb ? 20 : 18,
+    paddingBottom: isWeb ? 18 : 16,
     gap: 12,
+    backgroundColor: "#fffffffa",
+    borderRadius: 26,
+    paddingTop: 22,
+    marginBottom: isWeb ? 24 : 40,
   },
 
   navButton: {
     width: 44,
     height: 44,
     borderRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.78)",
+    backgroundColor: "rgba(255, 255, 255, 0.88)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -275,7 +279,8 @@ const styles = StyleSheet.create({
 
   title: {
     color: "#111",
-    fontSize: 20,
+    fontSize: isWeb ? 22 : 20,
+    fontWeight: "700",
   },
 
   subtitle: {
@@ -284,22 +289,41 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  chatSurface: {
+    flex: 1,
+    marginHorizontal: isWeb ? 20 : 14,
+    marginBottom: isWeb ? 104 : 92,
+    borderRadius: isWeb ? 30 : 28,
+    backgroundColor: "rgba(255, 255, 255, 0.34)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.76)",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 18,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 32,
+    elevation: 10,
+  },
+
   messages: {
     flex: 1,
   },
 
   messagesContent: {
-    paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 110,
+    paddingHorizontal: isWeb ? 20 : 18,
+    paddingTop: isWeb ? 22 : 18,
+    paddingBottom: isWeb ? 20 : 18,
   },
 
   messageBubble: {
-    maxWidth: "78%",
-    borderRadius: 22,
-    paddingHorizontal: 16,
+    maxWidth: isWeb ? "68%" : "78%",
+    borderRadius: isWeb ? 20 : 22,
+    paddingHorizontal: isWeb ? 18 : 16,
     paddingVertical: 12,
-    marginBottom: 10,
+    marginBottom: isWeb ? 12 : 10,
   },
 
   myMessage: {
@@ -310,7 +334,7 @@ const styles = StyleSheet.create({
 
   theirMessage: {
     alignSelf: "flex-start",
-    backgroundColor: "rgba(255, 255, 255, 0.84)",
+    backgroundColor: "rgb(255, 255, 255)",
     borderBottomLeftRadius: 8,
   },
 
@@ -330,11 +354,13 @@ const styles = StyleSheet.create({
   emptyState: {
     minHeight: 260,
     borderRadius: 26,
-    backgroundColor: "rgba(255, 255, 255, 0.82)",
+    backgroundColor: "rgb(255, 255, 255)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.86)",
     alignItems: "center",
     justifyContent: "center",
     padding: 26,
-    marginTop: 40,
+    marginTop: isWeb ? 24 : 40,
   },
 
   emptyTitle: {
@@ -354,32 +380,52 @@ const styles = StyleSheet.create({
   composer: {
     flexDirection: "row",
     gap: 10,
-    padding: 14,
-    paddingBottom: 96,
-    backgroundColor: "rgba(255, 255, 255, 0.72)",
+    paddingHorizontal: isWeb ? 20 : 14,
+    paddingTop: isWeb ? 14 : 14,
+    paddingBottom: isWeb ? 18 : 16,
+    backgroundColor: "transparent",
   },
 
   input: {
     flex: 1,
     minHeight: 50,
     borderRadius: 18,
-    backgroundColor: "#FFF",
+    backgroundColor: "rgba(255, 255, 255, 0.58)",
     paddingHorizontal: 16,
     color: "#111",
     fontSize: 15,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    elevation: 8,
   },
 
   sendButton: {
-    minWidth: 76,
+    minWidth: 88,
     height: 50,
     borderRadius: 18,
-    backgroundColor: "#111",
+    backgroundColor: "rgba(255, 255, 255, 0.58)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.88)",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    elevation: 8,
   },
 
   sendText: {
-    color: "#FFF",
+    color: "#111",
     fontSize: 15,
+    fontWeight: "700",
   },
 });
