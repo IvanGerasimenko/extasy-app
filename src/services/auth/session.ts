@@ -424,15 +424,48 @@ export async function recordProfileLike(targetUser: SessionUser) {
       request.fromUserKey === currentUserKey &&
       request.toUserKey === targetUserKey,
   );
+  const reverseRequest = likeRequests.find(
+    (request) =>
+      request.fromUserKey === targetUserKey &&
+      request.toUserKey === currentUserKey,
+  );
 
   if (existingRequest) {
-    return {
-      isMatch: existingRequest.status === "accepted",
-      match: existingRequest.matchId
+    if (existingRequest.status === "accepted") {
+      const savedMatch = existingRequest.matchId
         ? await getMatchById(existingRequest.matchId)
-        : null,
+        : null;
+      const match = savedMatch ?? (await createOrGetMatch(currentUser, targetUser));
+
+      return {
+        isMatch: true,
+        match,
+        user: currentUser,
+        request: existingRequest.matchId
+          ? existingRequest
+          : { ...existingRequest, matchId: match.id },
+      };
+    }
+
+    return {
+      isMatch: false,
+      match: null,
       user: currentUser,
       request: existingRequest,
+    };
+  }
+
+  if (reverseRequest?.status === "accepted") {
+    const match =
+      reverseRequest.matchId
+        ? await getMatchById(reverseRequest.matchId)
+        : await createOrGetMatch(currentUser, targetUser);
+
+    return {
+      isMatch: true,
+      match,
+      user: currentUser,
+      request: reverseRequest,
     };
   }
 
@@ -447,6 +480,47 @@ export async function recordProfileLike(targetUser: SessionUser) {
   }
 
   const updatedUser = await updateSessionStats({ likesDelta: 1 });
+  const now = new Date().toISOString();
+
+  if (reverseRequest?.status === "pending") {
+    const match = await createOrGetMatch(updatedUser ?? currentUser, targetUser);
+    const acceptedReverseRequest: LikeRequestRecord = {
+      ...reverseRequest,
+      fromUser: compactUserForRelationStorage(targetUser),
+      toUser: compactUserForRelationStorage(updatedUser ?? currentUser),
+      status: "accepted",
+      respondedAt: now,
+      matchId: match.id,
+    };
+    const acceptedCurrentRequest: LikeRequestRecord = {
+      id: `${currentUserKey}__${targetUserKey}`,
+      fromUserKey: currentUserKey,
+      toUserKey: targetUserKey,
+      fromUser: compactUserForRelationStorage(updatedUser ?? currentUser),
+      toUser: compactUserForRelationStorage(targetUser),
+      status: "accepted",
+      createdAt: now,
+      respondedAt: now,
+      matchId: match.id,
+    };
+
+    await saveLikeRequests([
+      ...likeRequests.map((request) =>
+        request.id === reverseRequest.id ? acceptedReverseRequest : request,
+      ),
+      acceptedCurrentRequest,
+    ]);
+    await updateSessionStats({ matchesDelta: 1 });
+    await updateLocalUserStats(targetUserKey, { matchesDelta: 1 });
+
+    return {
+      isMatch: true,
+      match,
+      user: await getSessionUser(),
+      request: acceptedCurrentRequest,
+    };
+  }
+
   const request: LikeRequestRecord = {
     id: `${currentUserKey}__${targetUserKey}`,
     fromUserKey: currentUserKey,
@@ -454,7 +528,7 @@ export async function recordProfileLike(targetUser: SessionUser) {
     fromUser: compactUserForRelationStorage(updatedUser ?? currentUser),
     toUser: compactUserForRelationStorage(targetUser),
     status: "pending",
-    createdAt: new Date().toISOString(),
+    createdAt: now,
   };
 
   try {
