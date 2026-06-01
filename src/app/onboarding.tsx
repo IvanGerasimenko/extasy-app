@@ -4,8 +4,8 @@ import { getSessionUser } from "@/services/auth/session";
 import { setPendingOnboardingProfile } from "@/services/onboarding/pendingProfile";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { ThemedBackground } from "@/components/ThemedBackground";
 import {
-  ImageBackground,
   Platform,
   ScrollView,
   StyleSheet,
@@ -243,13 +243,11 @@ export default function OnboardingScreen() {
   }
 
   return (
-    <ImageBackground
-      source={require("../../assets/bg.png")}
+    <ThemedBackground
       style={[
         styles.background,
         webViewportHeight ? { height: webViewportHeight } : null,
       ]}
-      resizeMode="cover"
     >
       <ScrollView
         style={[
@@ -376,7 +374,7 @@ export default function OnboardingScreen() {
           </View>
         </View>
       </ScrollView>
-    </ImageBackground>
+    </ThemedBackground>
   );
 }
 

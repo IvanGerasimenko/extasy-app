@@ -1,3 +1,4 @@
+import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   getLikedProfilesForCurrentUser,
   getUserKey,
@@ -8,7 +9,6 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
-  ImageBackground,
   ScrollView,
   StyleSheet,
   Text,
@@ -43,24 +43,16 @@ export default function LikedScreen() {
 
   if (isLoading) {
     return (
-      <ImageBackground
-        source={require("../../../assets/bg.png")}
-        style={styles.background}
-      >
+      <ThemedBackground style={styles.background}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#111" />
         </View>
-      </ImageBackground>
+      </ThemedBackground>
     );
   }
 
   return (
-    <ImageBackground
-      source={require("../../../assets/bg.png")}
-      style={styles.background}
-    >
-      <Image source={require("../../../assets/logo.png")} style={styles.logo} />
-
+    <ThemedBackground style={styles.background}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Liked</Text>
@@ -162,7 +154,7 @@ export default function LikedScreen() {
           </View>
         )}
       </ScrollView>
-    </ImageBackground>
+    </ThemedBackground>
   );
 }
 
@@ -178,6 +170,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     paddingHorizontal: 20,
     paddingBottom: 120,
+    marginTop: 80,
   },
   logo: {
     flex: 1,
@@ -202,7 +195,7 @@ const styles = StyleSheet.create({
     height: 44,
     alignSelf: "flex-start",
     borderRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.78)",
+    backgroundColor: "rgba(255, 255, 255, 0.60)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 18,
@@ -220,7 +213,7 @@ const styles = StyleSheet.create({
   },
 
   subtitle: {
-    color: "#6E6E73",
+    color: "#888787",
     fontSize: 15,
     marginTop: 6,
   },

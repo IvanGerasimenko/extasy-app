@@ -5,8 +5,8 @@ import {
 } from "@/services/auth/session";
 import { router } from "expo-router";
 import React, { useState } from "react";
+import { ThemedBackground } from "@/components/ThemedBackground";
 import {
-  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -66,11 +66,7 @@ export default function RegisterScreen() {
   }
 
   return (
-    <ImageBackground
-      source={require("../../assets/bg.png")}
-      style={styles.background}
-      resizeMode="cover"
-    >
+    <ThemedBackground style={styles.background}>
       <KeyboardAvoidingView
         style={styles.screen}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -125,13 +121,16 @@ export default function RegisterScreen() {
 
             {error ? <Text style={styles.error}>{error}</Text> : null}
 
-            <TouchableOpacity style={styles.button} onPress={handleCreateAccount}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={handleCreateAccount}
+            >
               <Text style={styles.buttonText}>Create Account</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </ImageBackground>
+    </ThemedBackground>
   );
 }
 

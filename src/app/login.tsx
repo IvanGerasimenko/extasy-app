@@ -1,4 +1,5 @@
 import { BackButton } from "@/components/BackButton";
+import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   getEmailValidationError,
   saveSessionUser,
@@ -8,7 +9,6 @@ import {
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
-  ImageBackground,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -227,11 +227,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <ImageBackground
-      source={require("../../assets/bg.png")}
-      style={styles.background}
-      resizeMode="cover"
-    >
+    <ThemedBackground style={styles.background}>
       <KeyboardAvoidingView
         style={styles.screen}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -298,7 +294,7 @@ export default function LoginScreen() {
                 <TextInput
                   style={styles.input}
                   placeholder="Your password"
-                  placeholderTextColor="#999"
+                  placeholderTextColor="#ffffff"
                   secureTextEntry
                   value={password}
                   onChangeText={setPassword}
@@ -426,7 +422,7 @@ export default function LoginScreen() {
           </View>
         </View>
       </Modal>
-    </ImageBackground>
+    </ThemedBackground>
   );
 }
 
@@ -459,20 +455,20 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     lineHeight: 24,
-    color: "#6E6E73",
+    color: "#ffffff",
     marginTop: 10,
     marginBottom: 28,
   },
 
   card: {
-    backgroundColor: "rgba(255, 255, 255, 0.25)",
+    backgroundColor: "#FFF",
     borderRadius: 20,
     padding: 20,
   },
 
   modeRow: {
     flexDirection: "row",
-    backgroundColor: "rgba(255, 255, 255, 0.55)",
+    backgroundColor: "#FFF",
     borderRadius: 18,
     padding: 4,
     marginBottom: 18,

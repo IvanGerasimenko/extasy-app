@@ -1,11 +1,17 @@
 import { getSessionUser, type SessionUser } from "@/services/auth/session";
 import { router } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   ActivityIndicator,
   Dimensions,
   Image,
-  ImageBackground,
   Modal,
   PanResponder,
   Platform,
@@ -74,7 +80,11 @@ export default function ProfileScreen() {
         onMoveShouldSetPanResponder: (_, gestureState) => {
           const horizontalMove = Math.abs(gestureState.dx);
           const verticalMove = Math.abs(gestureState.dy);
-          return photos.length > 1 && horizontalMove > 24 && horizontalMove > verticalMove * 1.3;
+          return (
+            photos.length > 1 &&
+            horizontalMove > 24 &&
+            horizontalMove > verticalMove * 1.3
+          );
         },
         onPanResponderRelease: (_, gestureState) => {
           if (Math.abs(gestureState.dx) < 45) {
@@ -128,24 +138,16 @@ export default function ProfileScreen() {
 
   if (isLoading) {
     return (
-      <ImageBackground
-        source={require("../../../assets/bg.png")}
-        style={styles.background}
-        resizeMode="cover"
-      >
+      <ThemedBackground style={styles.background}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#111" />
         </View>
-      </ImageBackground>
+      </ThemedBackground>
     );
   }
 
   return (
-    <ImageBackground
-      source={require("../../../assets/bg.png")}
-      style={styles.background}
-      resizeMode="cover"
-    >
+    <ThemedBackground style={styles.background}>
       <ScrollView
         style={styles.screen}
         contentContainerStyle={styles.container}
@@ -332,7 +334,7 @@ export default function ProfileScreen() {
           ) : null}
         </View>
       </Modal>
-    </ImageBackground>
+    </ThemedBackground>
   );
 }
 

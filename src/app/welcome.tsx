@@ -1,19 +1,17 @@
 import React from "react";
-import {
-  Image,
-  ImageBackground,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { router } from "expo-router";
 import AuthButton from "../components/AuthButton";
+import { ThemedBackground } from "../components/ThemedBackground";
+import { ThemedLogo } from "../components/ThemedLogo";
+import { ThemeToggle } from "../components/ThemeToggle";
 import { useGoogleAuth } from "../services/auth/googleAuth";
+import { useAppTheme } from "../services/theme/ThemeContext";
 
 export default function WelcomeScreen() {
   const { signInWithGoogle } = useGoogleAuth();
+  const { colors } = useAppTheme();
 
   const handleGoogleLogin = async () => {
     const result = await signInWithGoogle();
@@ -30,21 +28,27 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <ImageBackground
-      source={require("../../assets/bg.png")}
-      style={styles.background}
-      resizeMode="cover"
-    >
-      <View style={styles.overlay} />
+    <ThemedBackground style={styles.background}>
+      <View style={styles.themeToggleWrap}>
+        <ThemeToggle />
+      </View>
       <ScrollView style={styles.container}>
-        <Image source={require("../../assets/logo.png")} style={styles.logo} />
+        <ThemedLogo style={styles.logo} />
 
         <Image
           source={require("../../assets/people.png")}
           style={styles.people}
         />
 
-        <Text style={styles.subtitle}>
+        <Text
+          style={[
+            styles.subtitle,
+            {
+              backgroundColor: colors.surface,
+              color: colors.surfaceMutedText,
+            },
+          ]}
+        >
           Find real love. Build meaningful connections.
         </Text>
 
@@ -62,16 +66,18 @@ export default function WelcomeScreen() {
         </View>
 
         <View style={styles.signupWrap}>
-          <Text style={styles.accountText}>Don't have an account?</Text>
+          <Text style={[styles.accountText, { color: colors.mutedText }]}>
+            Don't have an account?
+          </Text>
           <Text
-            style={styles.signupText}
+            style={[styles.signupText, { color: colors.text }]}
             onPress={() => router.replace("/registration")}
           >
             Sign Up
           </Text>
         </View>
       </ScrollView>
-    </ImageBackground>
+    </ThemedBackground>
   );
 }
 
@@ -84,8 +90,11 @@ const styles = StyleSheet.create({
     minHeight: "100%",
   },
 
-  overlay: {
-    backgroundColor: "rgba(157, 155, 155, 0.45)",
+  themeToggleWrap: {
+    position: "absolute",
+    top: 54,
+    right: 20,
+    zIndex: 5,
   },
 
   people: {

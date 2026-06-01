@@ -6,10 +6,10 @@ import {
 } from "@/services/auth/session";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   ActivityIndicator,
   Image,
-  ImageBackground,
   ScrollView,
   StyleSheet,
   Text,
@@ -60,22 +60,16 @@ export default function ChatsScreen() {
 
   if (isLoading) {
     return (
-      <ImageBackground
-        source={require("../../../assets/bg.png")}
-        style={styles.background}
-      >
+      <ThemedBackground style={styles.background}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#111" />
         </View>
-      </ImageBackground>
+      </ThemedBackground>
     );
   }
 
   return (
-    <ImageBackground
-      source={require("../../../assets/bg.png")}
-      style={styles.background}
-    >
+    <ThemedBackground style={styles.background}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Chats</Text>
@@ -146,7 +140,7 @@ export default function ChatsScreen() {
           </View>
         )}
       </ScrollView>
-    </ImageBackground>
+    </ThemedBackground>
   );
 }
 

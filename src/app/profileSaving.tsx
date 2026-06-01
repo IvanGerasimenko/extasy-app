@@ -2,10 +2,10 @@ import { completeSessionOnboarding } from "@/services/auth/session";
 import { consumePendingOnboardingProfile } from "@/services/onboarding/pendingProfile";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
+import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   Animated,
   Easing,
-  ImageBackground,
   Platform,
   StyleSheet,
   Text,
@@ -127,11 +127,7 @@ export default function ProfileSavingScreen() {
   });
 
   return (
-    <ImageBackground
-      source={require("../../assets/bg.png")}
-      style={styles.background}
-      resizeMode="cover"
-    >
+    <ThemedBackground style={styles.background}>
       <View style={styles.container}>
         <View style={styles.loaderStage}>
           <Animated.View
@@ -171,11 +167,7 @@ export default function ProfileSavingScreen() {
           </Animated.View>
         </View>
 
-        <Text
-          style={styles.title}
-          adjustsFontSizeToFit
-          numberOfLines={1}
-        >
+        <Text style={styles.title} adjustsFontSizeToFit numberOfLines={1}>
           Creating your profile
         </Text>
         <Text style={styles.subtitle}>
@@ -194,7 +186,7 @@ export default function ProfileSavingScreen() {
           </>
         ) : null}
       </View>
-    </ImageBackground>
+    </ThemedBackground>
   );
 }
 

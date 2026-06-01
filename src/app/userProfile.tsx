@@ -5,12 +5,18 @@ import {
   type SessionUser,
 } from "@/services/auth/session";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   ActivityIndicator,
   Dimensions,
   Image,
-  ImageBackground,
   Modal,
   PanResponder,
   Platform,
@@ -46,7 +52,11 @@ export default function UserProfileScreen() {
       return [];
     }
 
-    return user.photos?.length ? user.photos : user.picture ? [user.picture] : [];
+    return user.photos?.length
+      ? user.photos
+      : user.picture
+        ? [user.picture]
+        : [];
   }, [user]);
 
   const changePhoto = useCallback(
@@ -69,7 +79,11 @@ export default function UserProfileScreen() {
         onMoveShouldSetPanResponder: (_, gestureState) => {
           const horizontalMove = Math.abs(gestureState.dx);
           const verticalMove = Math.abs(gestureState.dy);
-          return photos.length > 1 && horizontalMove > 24 && horizontalMove > verticalMove * 1.3;
+          return (
+            photos.length > 1 &&
+            horizontalMove > 24 &&
+            horizontalMove > verticalMove * 1.3
+          );
         },
         onPanResponderRelease: (_, gestureState) => {
           if (Math.abs(gestureState.dx) < 45) {
@@ -119,18 +133,21 @@ export default function UserProfileScreen() {
 
   if (isLoading) {
     return (
-      <ImageBackground source={require("../../assets/bg.png")} style={styles.background}>
+      <ThemedBackground style={styles.background}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#111" />
         </View>
-      </ImageBackground>
+      </ThemedBackground>
     );
   }
 
   return (
-    <ImageBackground source={require("../../assets/bg.png")} style={styles.background}>
+    <ThemedBackground style={styles.background}>
       <ScrollView contentContainerStyle={styles.container}>
-        <TouchableOpacity style={styles.navButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.navButton}
+          onPress={() => router.back()}
+        >
           <Text style={styles.navText}>‹</Text>
         </TouchableOpacity>
 
@@ -288,7 +305,7 @@ export default function UserProfileScreen() {
           ) : null}
         </View>
       </Modal>
-    </ImageBackground>
+    </ThemedBackground>
   );
 }
 

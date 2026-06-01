@@ -3,11 +3,11 @@ import { router } from "expo-router";
 import React, { useEffect } from "react";
 import {
   ActivityIndicator,
-  Image,
   ImageBackground,
   StyleSheet,
   View,
 } from "react-native";
+import { ThemedLogo } from "@/components/ThemedLogo";
 
 export default function SplashScreen() {
   useEffect(() => {
@@ -49,7 +49,7 @@ export default function SplashScreen() {
       resizeMode="cover"
     >
       <View style={styles.container}>
-        <Image source={require("../../assets/logo.png")} style={styles.logo} />
+        <ThemedLogo style={styles.logo} />
 
         <ActivityIndicator size="large" color="#ffffff" style={styles.loader} />
       </View>

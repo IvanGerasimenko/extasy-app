@@ -1,3 +1,4 @@
+import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   acceptIncomingLikeRequest,
   getIncomingLikeRequestsForCurrentUser,
@@ -12,7 +13,6 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
-  ImageBackground,
   ScrollView,
   StyleSheet,
   Text,
@@ -116,24 +116,16 @@ export default function NotificationsScreen() {
 
   if (isLoading) {
     return (
-      <ImageBackground
-        source={require("../../../assets/bg.png")}
-        style={styles.background}
-      >
+      <ThemedBackground style={styles.background}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#111" />
         </View>
-      </ImageBackground>
+      </ThemedBackground>
     );
   }
 
   return (
-    <ImageBackground
-      source={require("../../../assets/bg.png")}
-      style={styles.background}
-    >
-      <Image source={require("../../../assets/logo.png")} style={styles.logo} />
-
+    <ThemedBackground style={styles.background}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>Notifications</Text>
         <Text style={styles.subtitle}>
@@ -190,7 +182,7 @@ export default function NotificationsScreen() {
           )}
         </View>
       </ScrollView>
-    </ImageBackground>
+    </ThemedBackground>
   );
 }
 
@@ -206,6 +198,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     paddingHorizontal: 20,
     paddingBottom: 120,
+    marginTop: 80,
   },
 
   loadingContainer: {

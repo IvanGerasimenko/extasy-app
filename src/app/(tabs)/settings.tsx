@@ -7,17 +7,24 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  ImageBackground,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { ThemedBackground } from "@/components/ThemedBackground";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { useAppTheme } from "@/services/theme/ThemeContext";
 
 export default function SettingsScreen() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { colors } = useAppTheme();
+  const surfaceStyle = {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -52,45 +59,70 @@ export default function SettingsScreen() {
 
   if (isLoading) {
     return (
-      <ImageBackground
-        source={require("../../../assets/bg.png")}
-        style={styles.background}
-      >
+      <ThemedBackground style={styles.background}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#111" />
+          <ActivityIndicator size="large" color={colors.text} />
         </View>
-      </ImageBackground>
+      </ThemedBackground>
     );
   }
 
   return (
-    <ImageBackground
-      source={require("../../../assets/bg.png")}
-      style={styles.background}
-    >
+    <ThemedBackground style={styles.background}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.eyebrow}>Extasy</Text>
-        <Text style={styles.title}>Settings</Text>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={[styles.eyebrow, { color: colors.mutedText }]}>
+              Extasy
+            </Text>
+            <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
+          </View>
+          <ThemeToggle />
+        </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{user?.name ?? "Your account"}</Text>
-          <Text style={styles.cardText}>
+        <View style={[styles.card, surfaceStyle]}>
+          <Text style={[styles.cardTitle, { color: colors.surfaceText }]}>
+            {user?.name ?? "Your account"}
+          </Text>
+          <Text style={[styles.cardText, { color: colors.surfaceMutedText }]}>
             {user?.email ?? user?.phoneNumber ?? "Profile settings"}
           </Text>
         </View>
 
         <TouchableOpacity
-          style={styles.secondaryButton}
+          style={[styles.secondaryButton, surfaceStyle]}
           onPress={() => router.push("/onboarding")}
         >
-          <Text style={styles.secondaryText}>Edit Profile</Text>
+          <Text style={[styles.secondaryText, { color: colors.surfaceText }]}>
+            Edit Profile
+          </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <Text style={styles.signOutText}>Sign Out</Text>
+        <TouchableOpacity
+          style={[
+            styles.signOutButton,
+            {
+              backgroundColor:
+                colors.mode === "dark" ? colors.surface : colors.text,
+              borderColor: colors.border,
+            },
+          ]}
+          onPress={handleSignOut}
+        >
+          <Text
+            style={[
+              styles.signOutText,
+              {
+                color:
+                  colors.mode === "dark" ? colors.surfaceText : "#FFFFFF",
+              },
+            ]}
+          >
+            Sign Out
+          </Text>
         </TouchableOpacity>
       </ScrollView>
-    </ImageBackground>
+    </ThemedBackground>
   );
 }
 
@@ -115,6 +147,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 16,
+  },
+
   eyebrow: {
     color: "#6E6E73",
     fontSize: 13,
@@ -129,6 +168,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 24,
     backgroundColor: "rgba(255, 255, 255, 0.82)",
+    borderWidth: 1,
     padding: 20,
     marginTop: 24,
   },
@@ -149,6 +189,7 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 18,
     backgroundColor: "rgba(255, 255, 255, 0.82)",
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 18,
@@ -163,6 +204,7 @@ const styles = StyleSheet.create({
     height: 58,
     borderRadius: 18,
     backgroundColor: "#111",
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 18,

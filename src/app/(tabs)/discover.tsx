@@ -8,12 +8,12 @@ import {
 } from "@/services/auth/session";
 import { router } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   ActivityIndicator,
   Animated,
   Dimensions,
   Image,
-  ImageBackground,
   Modal,
   Platform,
   ScrollView,
@@ -342,24 +342,16 @@ export default function DiscoverScreen() {
 
   if (isLoading) {
     return (
-      <ImageBackground
-        source={require("../../../assets/bg.png")}
-        style={styles.background}
-        resizeMode="cover"
-      >
+      <ThemedBackground style={styles.background}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#111" />
         </View>
-      </ImageBackground>
+      </ThemedBackground>
     );
   }
 
   return (
-    <ImageBackground
-      source={require("../../../assets/bg.png")}
-      style={styles.background}
-      resizeMode="cover"
-    >
+    <ThemedBackground style={styles.background}>
       <ScrollView
         style={styles.screen}
         contentContainerStyle={styles.container}
@@ -566,7 +558,7 @@ export default function DiscoverScreen() {
           ) : null}
         </View>
       </Modal>
-    </ImageBackground>
+    </ThemedBackground>
   );
 }
 

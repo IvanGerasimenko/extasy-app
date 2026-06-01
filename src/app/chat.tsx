@@ -10,10 +10,10 @@ import {
 } from "@/services/auth/session";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   ActivityIndicator,
   Image,
-  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -87,14 +87,11 @@ export default function ChatScreen() {
 
   if (isLoading) {
     return (
-      <ImageBackground
-        source={require("../../assets/bg.png")}
-        style={styles.background}
-      >
+      <ThemedBackground style={styles.background}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#111" />
         </View>
-      </ImageBackground>
+      </ThemedBackground>
     );
   }
 
@@ -102,10 +99,7 @@ export default function ChatScreen() {
   const photo = otherUser?.photos?.[0] ?? otherUser?.picture;
 
   return (
-    <ImageBackground
-      source={require("../../assets/bg.png")}
-      style={styles.background}
-    >
+    <ThemedBackground style={styles.background}>
       <KeyboardAvoidingView
         style={styles.screen}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -210,7 +204,7 @@ export default function ChatScreen() {
       </KeyboardAvoidingView>
 
       <BottomMenu />
-    </ImageBackground>
+    </ThemedBackground>
   );
 }
 
