@@ -101,6 +101,9 @@ const styles = StyleSheet.create({
   },
 
   container: {
+    width: "100%",
+    maxWidth: 560,
+    alignSelf: "center",
     paddingHorizontal: 20,
     paddingTop: 64,
     paddingBottom: 120,

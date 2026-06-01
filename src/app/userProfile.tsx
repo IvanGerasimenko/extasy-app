@@ -5,12 +5,14 @@ import {
   type SessionUser,
 } from "@/services/auth/session";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   Image,
   ImageBackground,
   Modal,
+  PanResponder,
   Platform,
   ScrollView,
   StyleSheet,
@@ -18,6 +20,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+const screenWidth = Dimensions.get("window").width;
 
 const systemFont = Platform.select({
   ios: "System",
@@ -35,6 +39,7 @@ export default function UserProfileScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
+  const fullscreenCarouselRef = useRef<ScrollView | null>(null);
 
   const photos = useMemo(() => {
     if (!user) {
@@ -43,6 +48,52 @@ export default function UserProfileScreen() {
 
     return user.photos?.length ? user.photos : user.picture ? [user.picture] : [];
   }, [user]);
+
+  const changePhoto = useCallback(
+    (direction: -1 | 1) => {
+      if (!photos.length) {
+        return;
+      }
+
+      setPhotoIndex((currentIndex) => {
+        const photoCount = photos.length;
+        return (currentIndex + direction + photoCount) % photoCount;
+      });
+    },
+    [photos.length],
+  );
+
+  const swipeResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) => {
+          const horizontalMove = Math.abs(gestureState.dx);
+          const verticalMove = Math.abs(gestureState.dy);
+          return photos.length > 1 && horizontalMove > 24 && horizontalMove > verticalMove * 1.3;
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          if (Math.abs(gestureState.dx) < 45) {
+            return;
+          }
+
+          changePhoto(gestureState.dx > 0 ? -1 : 1);
+        },
+      }),
+    [changePhoto, photos.length],
+  );
+
+  useEffect(() => {
+    if (fullscreenOpen) {
+      const frame = requestAnimationFrame(() => {
+        fullscreenCarouselRef.current?.scrollTo({
+          x: photoIndex * screenWidth,
+          animated: false,
+        });
+      });
+
+      return () => cancelAnimationFrame(frame);
+    }
+  }, [fullscreenOpen, photoIndex]);
 
   useEffect(() => {
     let isMounted = true;
@@ -65,17 +116,6 @@ export default function UserProfileScreen() {
       isMounted = false;
     };
   }, [userKey]);
-
-  function changePhoto(direction: -1 | 1) {
-    if (!photos.length) {
-      return;
-    }
-
-    setPhotoIndex((currentIndex) => {
-      const photoCount = photos.length;
-      return (currentIndex + direction + photoCount) % photoCount;
-    });
-  }
 
   if (isLoading) {
     return (
@@ -100,7 +140,7 @@ export default function UserProfileScreen() {
           </View>
         ) : (
           <>
-            <View style={styles.heroCard}>
+            <View style={styles.heroCard} {...swipeResponder.panHandlers}>
               {photos[0] ? (
                 <Image
                   source={{ uri: photos[photoIndex] ?? photos[0] }}
@@ -110,20 +150,11 @@ export default function UserProfileScreen() {
               <View style={styles.heroShade} />
 
               {photos.length > 1 ? (
-                <>
-                  <TouchableOpacity
-                    style={[styles.photoNavButton, styles.photoNavLeft]}
-                    onPress={() => changePhoto(-1)}
-                  >
-                    <Text style={styles.photoNavText}>‹</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.photoNavButton, styles.photoNavRight]}
-                    onPress={() => changePhoto(1)}
-                  >
-                    <Text style={styles.photoNavText}>›</Text>
-                  </TouchableOpacity>
-                </>
+                <View style={styles.photoCounter}>
+                  <Text style={styles.photoCounterText}>
+                    {photoIndex + 1} / {photos.length}
+                  </Text>
+                </View>
               ) : null}
 
               <TouchableOpacity
@@ -216,31 +247,43 @@ export default function UserProfileScreen() {
             <Text style={styles.fullscreenCloseText}>Close</Text>
           </TouchableOpacity>
 
-          {photos[photoIndex] ? (
-            <Image
-              source={{ uri: photos[photoIndex] }}
-              style={styles.fullscreenImage}
-              resizeMode="contain"
-            />
+          {photos.length ? (
+            <ScrollView
+              ref={fullscreenCarouselRef}
+              horizontal
+              pagingEnabled
+              bounces={false}
+              decelerationRate="fast"
+              showsHorizontalScrollIndicator={false}
+              style={styles.fullscreenImageWrap}
+              contentOffset={{ x: photoIndex * screenWidth, y: 0 }}
+              onMomentumScrollEnd={(event) => {
+                const nextIndex = Math.round(
+                  event.nativeEvent.contentOffset.x / screenWidth,
+                );
+
+                if (nextIndex >= 0 && nextIndex < photos.length) {
+                  setPhotoIndex(nextIndex);
+                }
+              }}
+            >
+              {photos.map((photo, index) => (
+                <View key={`${photo}-${index}`} style={styles.fullscreenSlide}>
+                  <Image
+                    source={{ uri: photo }}
+                    style={styles.fullscreenImage}
+                    resizeMode="contain"
+                  />
+                </View>
+              ))}
+            </ScrollView>
           ) : null}
 
           {photos.length > 1 ? (
-            <View style={styles.fullscreenControls}>
-              <TouchableOpacity
-                style={styles.fullscreenNav}
-                onPress={() => changePhoto(-1)}
-              >
-                <Text style={styles.fullscreenNavText}>‹</Text>
-              </TouchableOpacity>
+            <View style={styles.fullscreenCounterWrap}>
               <Text style={styles.fullscreenCounter}>
                 {photoIndex + 1} / {photos.length}
               </Text>
-              <TouchableOpacity
-                style={styles.fullscreenNav}
-                onPress={() => changePhoto(1)}
-              >
-                <Text style={styles.fullscreenNavText}>›</Text>
-              </TouchableOpacity>
             </View>
           ) : null}
         </View>
@@ -256,6 +299,9 @@ const styles = StyleSheet.create({
   },
 
   container: {
+    width: "100%",
+    maxWidth: 560,
+    alignSelf: "center",
     paddingHorizontal: 20,
     paddingTop: 64,
     paddingBottom: 120,
@@ -336,31 +382,24 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
-  photoNavButton: {
+  photoCounter: {
     position: "absolute",
-    top: "45%",
-    width: 44,
-    height: 58,
-    borderRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.82)",
+    top: 16,
+    right: 16,
+    minWidth: 54,
+    height: 32,
+    borderRadius: 999,
+    backgroundColor: "rgba(0, 0, 0, 0.48)",
+    paddingHorizontal: 12,
     alignItems: "center",
     justifyContent: "center",
     zIndex: 2,
   },
 
-  photoNavLeft: {
-    left: 14,
-  },
-
-  photoNavRight: {
-    right: 14,
-  },
-
-  photoNavText: {
-    color: "#111",
-    fontSize: 34,
+  photoCounterText: {
+    color: "#FFF",
+    fontSize: 12,
     fontFamily: systemFontBold,
-    lineHeight: 38,
   },
 
   expandButton: {
@@ -466,9 +505,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  fullscreenImage: {
+  fullscreenImageWrap: {
     width: "100%",
     height: "76%",
+  },
+
+  fullscreenSlide: {
+    width: screenWidth,
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  fullscreenImage: {
+    width: screenWidth,
+    height: "100%",
   },
 
   fullscreenClose: {
@@ -489,28 +540,14 @@ const styles = StyleSheet.create({
     fontFamily: systemFontBold,
   },
 
-  fullscreenControls: {
+  fullscreenCounterWrap: {
     position: "absolute",
     bottom: 42,
-    flexDirection: "row",
     alignItems: "center",
-    gap: 18,
-  },
-
-  fullscreenNav: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
     backgroundColor: "rgba(255, 255, 255, 0.18)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  fullscreenNavText: {
-    color: "#FFF",
-    fontSize: 36,
-    fontFamily: systemFontBold,
-    lineHeight: 40,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
 
   fullscreenCounter: {

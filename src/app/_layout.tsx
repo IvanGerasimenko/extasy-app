@@ -28,6 +28,7 @@ export default function RootLayout() {
       <Stack.Screen name="Splash" options={{ headerShown: false }} />
       <Stack.Screen name="welcome" options={{ headerShown: false }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+      <Stack.Screen name="profileSaving" options={{ headerShown: false }} />
       <Stack.Screen name="registration" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="userProfile" options={{ headerShown: false }} />

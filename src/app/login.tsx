@@ -442,6 +442,9 @@ const styles = StyleSheet.create({
 
   container: {
     flexGrow: 1,
+    width: "100%",
+    maxWidth: 500,
+    alignSelf: "center",
     paddingHorizontal: 24,
     paddingTop: Platform.OS === "web" ? 110 : 70,
     paddingBottom: Platform.OS === "web" ? 160 : 40,

@@ -76,14 +76,9 @@ export default function ChatsScreen() {
       source={require("../../../assets/bg.png")}
       style={styles.background}
     >
+      <Image source={require("../../../assets/logo.png")} style={styles.logo} />
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.navButton}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.navText}>‹</Text>
-          </TouchableOpacity>
           <Text style={styles.title}>Chats</Text>
         </View>
 
@@ -163,9 +158,17 @@ const styles = StyleSheet.create({
   },
 
   container: {
+    width: "100%",
+    maxWidth: 640,
+    alignSelf: "center",
     paddingHorizontal: 20,
-    paddingTop: 64,
     paddingBottom: 120,
+  },
+  logo: {
+    flex: 1,
+    width: 220,
+    height: 120,
+    resizeMode: "contain",
   },
 
   loadingContainer: {

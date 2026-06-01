@@ -132,14 +132,9 @@ export default function NotificationsScreen() {
       source={require("../../../assets/bg.png")}
       style={styles.background}
     >
-      <ScrollView contentContainerStyle={styles.container}>
-        <TouchableOpacity
-          style={styles.navButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.navText}>‹</Text>
-        </TouchableOpacity>
+      <Image source={require("../../../assets/logo.png")} style={styles.logo} />
 
+      <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>Notifications</Text>
         <Text style={styles.subtitle}>
           Accept likes to open a chat, or skip them.
@@ -160,7 +155,6 @@ export default function NotificationsScreen() {
             </View>
           )}
         </View>
-
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Your Like Updates</Text>
           {responses.length ? (
@@ -207,8 +201,10 @@ const styles = StyleSheet.create({
   },
 
   container: {
+    width: "100%",
+    maxWidth: 640,
+    alignSelf: "center",
     paddingHorizontal: 20,
-    paddingTop: 64,
     paddingBottom: 120,
   },
 
@@ -227,6 +223,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 18,
+    marginLeft: 10,
   },
 
   navText: {
@@ -254,13 +251,19 @@ const styles = StyleSheet.create({
   },
 
   section: {
-    marginTop: 26,
+    marginTop: 16,
   },
 
   sectionTitle: {
     color: "#111",
     fontSize: 19,
     marginBottom: 12,
+  },
+  logo: {
+    width: 220,
+    height: 120,
+    resizeMode: "contain",
+    marginTop: 24,
   },
 
   card: {

@@ -7,12 +7,15 @@ import {
   type SessionUser,
 } from "@/services/auth/session";
 import { router } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
+  Dimensions,
   Image,
   ImageBackground,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,6 +23,9 @@ import {
   View,
   type ImageSourcePropType,
 } from "react-native";
+
+const screenWidth = Dimensions.get("window").width;
+const isCompactViewport = screenWidth < 500;
 
 type DiscoverProfile = {
   id: string;
@@ -134,6 +140,31 @@ function profileFromUser(user: SessionUser): DiscoverProfile {
   };
 }
 
+function getDiscoverProfiles(
+  currentUser: SessionUser,
+  localUsers: SessionUser[],
+  likedUserKeys: string[],
+) {
+  const availableProfiles = localUsers
+    .filter((localUser) => hasCompleteProfile(localUser))
+    .filter((localUser) => !isSameUser(localUser, currentUser))
+    .filter((localUser) => !likedUserKeys.includes(getUserKey(localUser)));
+
+  const genderMatchedProfiles = availableProfiles.filter((localUser) =>
+    acceptsGender(currentUser.lookingFor, localUser.gender),
+  );
+
+  const preferredProfiles = genderMatchedProfiles.filter(
+    (localUser) =>
+      acceptsGender(localUser.lookingFor, currentUser.gender) &&
+      isNearbyProfile(currentUser, localUser),
+  );
+
+  return (
+    preferredProfiles.length ? preferredProfiles : genderMatchedProfiles
+  ).map(profileFromUser);
+}
+
 export default function DiscoverScreen() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [deck, setDeck] = useState<DiscoverProfile[]>([]);
@@ -143,11 +174,40 @@ export default function DiscoverScreen() {
   const [reaction, setReaction] = useState("");
   const [matchChatId, setMatchChatId] = useState<string | null>(null);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
+  const [isDeciding, setIsDeciding] = useState(false);
+  const cardTranslateX = useRef(new Animated.Value(0)).current;
+  const isDecidingRef = useRef(false);
+  const fullscreenCarouselRef = useRef<ScrollView | null>(null);
 
   const activeMatch = useMemo(
     () => deck[activeIndex] ?? null,
     [activeIndex, deck],
   );
+  const remainingProfiles = Math.max(0, deck.length - activeIndex);
+
+  const cardRotate = cardTranslateX.interpolate({
+    inputRange: [-screenWidth, 0, screenWidth],
+    outputRange: ["-10deg", "0deg", "10deg"],
+    extrapolate: "clamp",
+  });
+
+  useEffect(() => {
+    if (fullscreenOpen && activeMatch) {
+      const frame = requestAnimationFrame(() => {
+        fullscreenCarouselRef.current?.scrollTo({
+          x: photoIndex * screenWidth,
+          animated: false,
+        });
+      });
+
+      return () => cancelAnimationFrame(frame);
+    }
+  }, [activeMatch, fullscreenOpen, photoIndex]);
+
+  useEffect(() => {
+    cardTranslateX.stopAnimation();
+    cardTranslateX.setValue(0);
+  }, [activeIndex, cardTranslateX]);
 
   useEffect(() => {
     let isMounted = true;
@@ -166,13 +226,11 @@ export default function DiscoverScreen() {
 
       const localUsers = await getLocalAccountUsers();
       const likedUserKeys = await getLikedUserKeysForCurrentUser();
-      const discoverProfiles = localUsers
-        .filter((localUser) => hasCompleteProfile(localUser))
-        .filter((localUser) => !isSameUser(localUser, sessionUser))
-        .filter((localUser) => isCompatibleMatch(sessionUser, localUser))
-        .filter((localUser) => isNearbyProfile(sessionUser, localUser))
-        .filter((localUser) => !likedUserKeys.includes(getUserKey(localUser)))
-        .map(profileFromUser);
+      const discoverProfiles = getDiscoverProfiles(
+        sessionUser,
+        localUsers,
+        likedUserKeys,
+      );
 
       setUser(sessionUser);
       setDeck(discoverProfiles);
@@ -188,38 +246,66 @@ export default function DiscoverScreen() {
     };
   }, []);
 
-  async function handleDecision(nextReaction: string) {
-    setReaction(nextReaction);
-    setMatchChatId(null);
-
-    if (nextReaction === "Liked" && activeMatch) {
-      let likeResult = null;
-
-      try {
-        likeResult = await recordProfileLike(activeMatch.user);
-      } catch (error) {
-        setReaction(
-          error instanceof Error
-            ? error.message
-            : "Could not save this like. Try again.",
-        );
-        return;
-      }
-
-      if (likeResult?.user) {
-        setUser(likeResult.user);
-      }
-
-      if (likeResult?.isMatch && likeResult.match) {
-        setReaction(`It's a match with ${activeMatch.name}`);
-        setMatchChatId(likeResult.match.id);
-      } else {
-        setReaction(`${activeMatch.name} received your like`);
-      }
+  async function persistDecision(
+    nextReaction: string,
+    decidedMatch: DiscoverProfile,
+  ) {
+    if (nextReaction !== "Liked") {
+      return;
     }
 
-    setPhotoIndex(0);
-    setActiveIndex((currentIndex) => currentIndex + 1);
+    let likeResult = null;
+
+    try {
+      likeResult = await recordProfileLike(decidedMatch.user);
+    } catch (error) {
+      setReaction(
+        error instanceof Error
+          ? error.message
+          : "Could not save this like. Try again.",
+      );
+      return;
+    }
+
+    if (likeResult?.user) {
+      setUser(likeResult.user);
+    }
+
+    if (likeResult?.isMatch && likeResult.match) {
+      setReaction(`It's a match with ${decidedMatch.name}`);
+      setMatchChatId(likeResult.match.id);
+    } else {
+      setReaction(`${decidedMatch.name} received your like`);
+    }
+  }
+
+  function animateDecision(nextReaction: string) {
+    const decidedMatch = activeMatch;
+
+    if (!decidedMatch || isDecidingRef.current) {
+      return;
+    }
+
+    isDecidingRef.current = true;
+    setIsDeciding(true);
+    setReaction(nextReaction === "Liked" ? "Liked" : "");
+    setMatchChatId(null);
+
+    Animated.timing(cardTranslateX, {
+      toValue:
+        nextReaction === "Liked" ? screenWidth * 1.15 : -screenWidth * 1.15,
+      duration: 220,
+      useNativeDriver: true,
+    }).start(() => {
+      cardTranslateX.setValue(0);
+      setPhotoIndex(0);
+      setActiveIndex((currentIndex) => Math.min(currentIndex + 1, deck.length));
+      requestAnimationFrame(() => {
+        isDecidingRef.current = false;
+        setIsDeciding(false);
+      });
+      void persistDecision(nextReaction, decidedMatch);
+    });
   }
 
   function resetDeck() {
@@ -229,13 +315,11 @@ export default function DiscoverScreen() {
 
     getLocalAccountUsers().then(async (localUsers) => {
       const likedUserKeys = await getLikedUserKeysForCurrentUser();
-      const discoverProfiles = localUsers
-        .filter((localUser) => hasCompleteProfile(localUser))
-        .filter((localUser) => !isSameUser(localUser, user))
-        .filter((localUser) => isCompatibleMatch(user, localUser))
-        .filter((localUser) => isNearbyProfile(user, localUser))
-        .filter((localUser) => !likedUserKeys.includes(getUserKey(localUser)))
-        .map(profileFromUser);
+      const discoverProfiles = getDiscoverProfiles(
+        user,
+        localUsers,
+        likedUserKeys,
+      );
 
       setDeck(discoverProfiles);
       setActiveIndex(0);
@@ -286,76 +370,102 @@ export default function DiscoverScreen() {
             <Text style={styles.eyebrow}>Extasy</Text>
             <Text style={styles.title}>Discover</Text>
           </View>
+          <View style={styles.headerPill}>
+            <Text style={styles.headerPillText}>
+              {remainingProfiles} nearby
+            </Text>
+          </View>
         </View>
 
         {activeMatch ? (
-          <View key={activeMatch.id} style={styles.matchCard}>
-            <Image
-              source={activeMatch.photos[photoIndex] ?? activeMatch.photos[0]}
-              style={styles.profileImage}
-            />
-            <View style={styles.imageShade} />
-
+          <Animated.View
+            key={`${activeMatch.id}-${activeIndex}`}
+            style={[
+              styles.matchCard,
+              {
+                transform: [
+                  { translateX: cardTranslateX },
+                  { rotate: cardRotate },
+                ],
+              },
+            ]}
+          >
             <TouchableOpacity
-              style={styles.expandButton}
-              onPress={() => setFullscreenOpen(true)}
+              activeOpacity={0.95}
+              style={styles.cardTouchable}
+              onPress={() => {
+                if (!isDeciding) {
+                  changePhoto(1);
+                }
+              }}
+              onLongPress={() => {
+                if (!isDeciding) {
+                  setFullscreenOpen(true);
+                }
+              }}
             >
-              <Text style={styles.expandText}>Open Photo</Text>
-            </TouchableOpacity>
+              <Image
+                source={activeMatch.photos[photoIndex] ?? activeMatch.photos[0]}
+                style={styles.profileImage}
+              />
+              <View style={styles.imageShadeTop} />
+              <View style={styles.imageShadeBottom} />
 
-            {activeMatch.photos.length > 1 ? (
-              <>
-                <TouchableOpacity
-                  style={[styles.photoNavButton, styles.photoNavLeft]}
-                  onPress={() => changePhoto(-1)}
-                >
-                  <Text style={styles.photoNavText}>‹</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.photoNavButton, styles.photoNavRight]}
-                  onPress={() => changePhoto(1)}
-                >
-                  <Text style={styles.photoNavText}>›</Text>
-                </TouchableOpacity>
-                <View style={styles.photoCounter}>
-                  <Text style={styles.photoCounterText}>
-                    {photoIndex + 1} / {activeMatch.photos.length}
-                  </Text>
+              {activeMatch.photos.length > 1 ? (
+                <View style={styles.photoDots}>
+                  {activeMatch.photos.map((_, index) => (
+                    <View
+                      key={`${activeMatch.id}-dot-${index}`}
+                      style={[
+                        styles.photoDot,
+                        index === photoIndex && styles.activePhotoDot,
+                      ]}
+                    />
+                  ))}
                 </View>
-              </>
-            ) : null}
-
-            <View style={styles.matchInfo}>
-              <View style={styles.matchTopRow}>
-                <Text style={styles.matchName}>
-                  {activeMatch.name}, {activeMatch.age}
-                </Text>
-                <View style={styles.onlineBadge}>
-                  <Text style={styles.onlineText}>Online</Text>
-                </View>
-              </View>
-
-              <Text style={styles.matchMeta}>
-                {activeMatch.gender} looking for {activeMatch.lookingFor}
-              </Text>
-
-              {activeMatch.city && activeMatch.country ? (
-                <Text style={styles.locationText}>
-                  {activeMatch.city}, {activeMatch.country}
-                </Text>
               ) : null}
 
-              <Text style={styles.about}>{activeMatch.about}</Text>
+              <TouchableOpacity
+                style={styles.expandButton}
+                onPress={() => setFullscreenOpen(true)}
+              >
+                <Text style={styles.expandText}>View</Text>
+              </TouchableOpacity>
 
-              <View style={styles.tags}>
-                {activeMatch.interests.slice(0, 6).map((interest) => (
-                  <View key={interest} style={styles.tag}>
-                    <Text style={styles.tagText}>{interest}</Text>
+              <View style={styles.matchInfo}>
+                <View style={styles.matchTopRow}>
+                  <Text style={styles.matchName}>
+                    {activeMatch.name}, {activeMatch.age}
+                  </Text>
+                  <View style={styles.onlineBadge}>
+                    <Text style={styles.onlineText}>Active</Text>
                   </View>
-                ))}
+                </View>
+
+                <Text style={styles.matchMeta}>
+                  {activeMatch.gender} looking for {activeMatch.lookingFor}
+                </Text>
+
+                {activeMatch.city && activeMatch.country ? (
+                  <Text style={styles.locationText}>
+                    {activeMatch.city}, {activeMatch.country}
+                  </Text>
+                ) : null}
+
+                <Text style={styles.about} numberOfLines={3}>
+                  {activeMatch.about}
+                </Text>
+
+                <View style={styles.tags}>
+                  {activeMatch.interests.slice(0, 5).map((interest) => (
+                    <View key={interest} style={styles.tag}>
+                      <Text style={styles.tagText}>{interest}</Text>
+                    </View>
+                  ))}
+                </View>
               </View>
-            </View>
-          </View>
+            </TouchableOpacity>
+          </Animated.View>
         ) : (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyTitle}>No more profiles</Text>
@@ -367,32 +477,6 @@ export default function DiscoverScreen() {
             </TouchableOpacity>
           </View>
         )}
-
-        {activeMatch?.photos.length ? (
-          <View style={styles.gallerySection}>
-            <Text style={styles.sectionTitle}>Photos</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.galleryRow}
-            >
-              {activeMatch.photos.map((photo, index) => (
-                <TouchableOpacity
-                  key={`${activeMatch.id}-${index}`}
-                  onPress={() => setPhotoIndex(index)}
-                >
-                  <Image
-                    source={photo}
-                    style={[
-                      styles.galleryPhoto,
-                      photoIndex === index && styles.activeGalleryPhoto,
-                    ]}
-                  />
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        ) : null}
 
         {reaction ? <Text style={styles.reactionText}>{reaction}</Text> : null}
 
@@ -406,26 +490,28 @@ export default function DiscoverScreen() {
         ) : null}
       </ScrollView>
 
-      <View style={styles.floatingActions}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.passButton]}
-          onPress={() => handleDecision("Passed for now")}
-          disabled={!activeMatch}
-        >
-          <Text style={styles.passText}>×</Text>
-        </TouchableOpacity>
+      {activeMatch ? (
+        <View style={styles.floatingActions}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.passButton]}
+            onPress={() => animateDecision("Passed for now")}
+            disabled={isDeciding}
+          >
+            <Text style={styles.passText}>×</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.actionButton, styles.likeButton]}
-          onPress={() => handleDecision("Liked")}
-          disabled={!activeMatch}
-        >
-          <Image
-            source={require("../../../assets/lovesearch.png")}
-            style={styles.likeIcon}
-          />
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.likeButton]}
+            onPress={() => animateDecision("Liked")}
+            disabled={isDeciding}
+          >
+            <Image
+              source={require("../../../assets/liked.png")}
+              style={styles.likeIcon}
+            />
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
       <Modal visible={fullscreenOpen} transparent animationType="fade">
         <View style={styles.fullscreen}>
@@ -436,31 +522,46 @@ export default function DiscoverScreen() {
             <Text style={styles.fullscreenCloseText}>Close</Text>
           </TouchableOpacity>
 
-          {activeMatch?.photos[photoIndex] ? (
-            <Image
-              source={activeMatch.photos[photoIndex]}
-              style={styles.fullscreenImage}
-              resizeMode="contain"
-            />
+          {activeMatch?.photos.length ? (
+            <ScrollView
+              ref={fullscreenCarouselRef}
+              horizontal
+              pagingEnabled
+              bounces={false}
+              decelerationRate="fast"
+              showsHorizontalScrollIndicator={false}
+              style={styles.fullscreenImageWrap}
+              contentOffset={{ x: photoIndex * screenWidth, y: 0 }}
+              onMomentumScrollEnd={(event) => {
+                const nextIndex = Math.round(
+                  event.nativeEvent.contentOffset.x / screenWidth,
+                );
+
+                if (nextIndex >= 0 && nextIndex < activeMatch.photos.length) {
+                  setPhotoIndex(nextIndex);
+                }
+              }}
+            >
+              {activeMatch.photos.map((photo, index) => (
+                <View
+                  key={`${activeMatch.id}-fullscreen-${index}`}
+                  style={styles.fullscreenSlide}
+                >
+                  <Image
+                    source={photo}
+                    style={styles.fullscreenImage}
+                    resizeMode="contain"
+                  />
+                </View>
+              ))}
+            </ScrollView>
           ) : null}
 
           {activeMatch && activeMatch.photos.length > 1 ? (
-            <View style={styles.fullscreenControls}>
-              <TouchableOpacity
-                style={styles.fullscreenNav}
-                onPress={() => changePhoto(-1)}
-              >
-                <Text style={styles.fullscreenNavText}>‹</Text>
-              </TouchableOpacity>
+            <View style={styles.fullscreenCounterWrap}>
               <Text style={styles.fullscreenCounter}>
                 {photoIndex + 1} / {activeMatch.photos.length}
               </Text>
-              <TouchableOpacity
-                style={styles.fullscreenNav}
-                onPress={() => changePhoto(1)}
-              >
-                <Text style={styles.fullscreenNavText}>›</Text>
-              </TouchableOpacity>
             </View>
           ) : null}
         </View>
@@ -480,9 +581,12 @@ const styles = StyleSheet.create({
   },
 
   container: {
-    paddingHorizontal: 20,
-    paddingTop: 64,
-    paddingBottom: 120,
+    width: "100%",
+    maxWidth: 560,
+    alignSelf: "center",
+    paddingHorizontal: isCompactViewport ? 14 : Platform.OS === "web" ? 24 : 16,
+    paddingTop: isCompactViewport ? 42 : Platform.OS === "web" ? 34 : 58,
+    paddingBottom: isCompactViewport ? 168 : 138,
   },
 
   loadingContainer: {
@@ -495,52 +599,57 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 22,
+    marginBottom: isCompactViewport ? 12 : 16,
   },
 
   eyebrow: {
-    color: "#6E6E73",
+    color: "#FF4458",
     fontSize: 13,
     letterSpacing: 0,
+    fontWeight: "700",
   },
 
   title: {
-    fontSize: 36,
+    fontSize: isCompactViewport ? 31 : 34,
     color: "#111",
+    fontWeight: "800",
+    marginTop: 2,
   },
 
-  headerActions: {
-    flexDirection: "row",
-    gap: 10,
-  },
-
-  iconButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.78)",
+  headerPill: {
+    height: 38,
+    borderRadius: 999,
+    backgroundColor: "rgba(255, 255, 255, 0.86)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.92)",
+    paddingHorizontal: 14,
     alignItems: "center",
     justifyContent: "center",
   },
 
-  headerIcon: {
-    width: 22,
-    height: 22,
+  headerPillText: {
+    color: "#3C3C43",
+    fontSize: 13,
+    fontWeight: "700",
   },
 
   matchCard: {
-    height: 580,
-    borderRadius: 28,
+    height: isCompactViewport ? 510 : Platform.OS === "web" ? 660 : 590,
+    borderRadius: isCompactViewport ? 30 : 34,
     overflow: "hidden",
-    backgroundColor: "#111",
+    backgroundColor: "#161616",
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 14,
+      height: 20,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 24,
-    elevation: 10,
+    shadowOpacity: 0.24,
+    shadowRadius: 30,
+    elevation: 12,
+  },
+
+  cardTouchable: {
+    flex: 1,
   },
 
   emptyCard: {
@@ -586,62 +695,49 @@ const styles = StyleSheet.create({
     height: "100%",
   },
 
-  imageShade: {
+  imageShadeTop: {
     ...StyleSheet.absoluteFill,
+    bottom: undefined,
+    height: 170,
     backgroundColor: "rgba(0, 0, 0, 0.18)",
   },
 
-  photoNavButton: {
+  imageShadeBottom: {
+    ...StyleSheet.absoluteFill,
+    top: undefined,
+    height: "56%",
+    backgroundColor: "rgba(0, 0, 0, 0.58)",
+  },
+
+  photoDots: {
     position: "absolute",
-    top: "45%",
-    width: 44,
-    height: 58,
-    borderRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.82)",
-    alignItems: "center",
-    justifyContent: "center",
+    top: 14,
+    left: 16,
+    right: 16,
+    flexDirection: "row",
+    gap: 6,
     zIndex: 2,
   },
 
-  photoNavLeft: {
-    left: 14,
-  },
-
-  photoNavRight: {
-    right: 14,
-  },
-
-  photoNavText: {
-    color: "#111",
-    fontSize: 34,
-    lineHeight: 38,
-  },
-
-  photoCounter: {
-    position: "absolute",
-    top: 16,
-    alignSelf: "center",
+  photoDot: {
+    flex: 1,
+    height: 4,
     borderRadius: 999,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
-    paddingHorizontal: 12,
-    height: 30,
-    justifyContent: "center",
-    zIndex: 2,
+    backgroundColor: "rgba(255, 255, 255, 0.36)",
   },
 
-  photoCounterText: {
-    color: "#FFF",
-    fontSize: 12,
+  activePhotoDot: {
+    backgroundColor: "#FFF",
   },
 
   expandButton: {
     position: "absolute",
-    top: 16,
-    alignSelf: "center",
+    top: 28,
+    right: 16,
     borderRadius: 999,
-    backgroundColor: "rgba(0, 0, 0, 0.48)",
+    backgroundColor: "rgba(0, 0, 0, 0.34)",
     paddingHorizontal: 14,
-    height: 32,
+    height: 34,
     justifyContent: "center",
     zIndex: 3,
   },
@@ -654,8 +750,8 @@ const styles = StyleSheet.create({
   matchInfo: {
     flex: 1,
     justifyContent: "flex-end",
-    padding: 22,
-    backgroundColor: "rgba(0, 0, 0, 0.15)",
+    padding: isCompactViewport ? 18 : 22,
+    paddingBottom: isCompactViewport ? 24 : 30,
   },
 
   matchTopRow: {
@@ -668,11 +764,14 @@ const styles = StyleSheet.create({
   matchName: {
     flex: 1,
     color: "#FFF",
-    fontSize: 34,
+    fontSize: isCompactViewport ? 30 : Platform.OS === "web" ? 38 : 34,
+    fontWeight: "800",
   },
 
   onlineBadge: {
-    backgroundColor: "#DDFCE7",
+    backgroundColor: "rgba(48, 209, 88, 0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(48, 209, 88, 0.45)",
     borderRadius: 999,
     paddingHorizontal: 12,
     height: 30,
@@ -680,8 +779,9 @@ const styles = StyleSheet.create({
   },
 
   onlineText: {
-    color: "#126B36",
+    color: "#DDFCE7",
     fontSize: 12,
+    fontWeight: "800",
   },
 
   matchMeta: {
@@ -700,7 +800,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
     color: "#FFF",
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 21,
   },
 
   tags: {
@@ -715,58 +815,37 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 13,
     justifyContent: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: "rgba(255, 255, 255, 0.16)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.18)",
   },
 
   tagText: {
-    color: "#111",
+    color: "#FFF",
     fontSize: 12,
+    fontWeight: "700",
   },
 
   floatingActions: {
     position: "absolute",
-    right: 18,
-    top: "43%",
+    left: 0,
+    right: 0,
+    bottom: isCompactViewport ? 88 : 92,
     zIndex: 12,
-    gap: 12,
+    gap: 18,
     alignItems: "center",
-  },
-
-  gallerySection: {
-    marginTop: 24,
-  },
-
-  sectionTitle: {
-    color: "#111",
-    fontSize: 18,
-    marginBottom: 12,
-  },
-
-  galleryRow: {
-    gap: 12,
-    paddingRight: 4,
-  },
-
-  galleryPhoto: {
-    width: 112,
-    height: 136,
-    borderRadius: 22,
-    backgroundColor: "#E8E2DC",
-  },
-
-  activeGalleryPhoto: {
-    borderWidth: 3,
-    borderColor: "#111",
+    justifyContent: "center",
+    flexDirection: "row",
   },
 
   actionButton: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: isCompactViewport ? 58 : 64,
+    height: isCompactViewport ? 58 : 64,
+    borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.9)",
+    borderColor: "rgba(255, 255, 255, 0.72)",
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -778,20 +857,21 @@ const styles = StyleSheet.create({
   },
 
   passButton: {
-    backgroundColor: "rgba(255, 255, 255, 0.84)",
+    backgroundColor: "#FFF",
   },
 
   likeButton: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    backgroundColor: "#111",
+    width: isCompactViewport ? 66 : 72,
+    height: isCompactViewport ? 66 : 72,
+    borderRadius: 999,
+    backgroundColor: "#FF4458",
   },
 
   passText: {
-    color: "#111",
-    fontSize: 30,
-    lineHeight: 32,
+    color: "#FF4458",
+    fontSize: 34,
+    lineHeight: 36,
+    fontWeight: "300",
   },
 
   likeIcon: {
@@ -831,8 +911,20 @@ const styles = StyleSheet.create({
   },
 
   fullscreenImage: {
+    width: screenWidth,
+    height: "100%",
+  },
+
+  fullscreenImageWrap: {
     width: "100%",
     height: "76%",
+  },
+
+  fullscreenSlide: {
+    width: screenWidth,
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   fullscreenClose: {
@@ -852,27 +944,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  fullscreenControls: {
+  fullscreenCounterWrap: {
     position: "absolute",
     bottom: 42,
-    flexDirection: "row",
     alignItems: "center",
-    gap: 18,
-  },
-
-  fullscreenNav: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
     backgroundColor: "rgba(255, 255, 255, 0.18)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  fullscreenNavText: {
-    color: "#FFF",
-    fontSize: 36,
-    lineHeight: 40,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
 
   fullscreenCounter: {

@@ -1,6 +1,4 @@
-import {
-  getUnreadNotificationCountForCurrentUser,
-} from "@/services/auth/session";
+import { getUnreadNotificationCountForCurrentUser } from "@/services/auth/session";
 import { router, usePathname } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -58,43 +56,54 @@ export default function BottomMenu() {
   }, [pathname]);
 
   return (
-    <View style={styles.menu}>
-      {menuItems.map((item) => {
-        const isActive = pathname === item.route;
+    <View style={styles.menuShell}>
+      <View style={styles.menu}>
+        {menuItems.map((item) => {
+          const isActive = pathname === item.route;
 
-        return (
-          <TouchableOpacity
-            key={item.route}
-            style={[styles.button, isActive && styles.activeButton]}
-            onPress={() => router.push(item.route)}
-          >
-            <Image source={item.icon} style={styles.icon} />
-            {"showsBadge" in item && notificationCount ? (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{notificationCount}</Text>
-              </View>
-            ) : null}
-          </TouchableOpacity>
-        );
-      })}
+          return (
+            <TouchableOpacity
+              key={item.route}
+              style={[styles.button, isActive && styles.activeButton]}
+              onPress={() => router.push(item.route)}
+            >
+              <Image
+                source={item.icon}
+                style={[styles.icon, isActive && styles.activeIcon]}
+              />
+              {"showsBadge" in item && notificationCount ? (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{notificationCount}</Text>
+                </View>
+              ) : null}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  menu: {
+  menuShell: {
     position: "absolute",
-    left: 20,
-    right: 20,
+    left: 0,
+    right: 0,
     bottom: 24,
     zIndex: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.78)",
+    alignItems: "center",
+  },
+
+  menu: {
+    width: "90%",
+    maxWidth: 520,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderColor: "rgba(255, 255, 255, 0.92)",
     borderWidth: 1,
-    borderRadius: 30,
-    padding: 8,
+    borderRadius: 999,
+    padding: 7,
     flexDirection: "row",
-    gap: 10,
+    gap: 8,
     alignItems: "center",
     justifyContent: "space-between",
     shadowColor: "#000",
@@ -109,21 +118,25 @@ const styles = StyleSheet.create({
 
   button: {
     flex: 1,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "rgba(255, 255, 255, 0.72)",
+    height: 48,
+    borderRadius: 999,
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
   },
 
   activeButton: {
-    backgroundColor: "rgba(17, 17, 17, 0.08)",
+    backgroundColor: "rgba(255, 68, 88, 0.14)",
   },
 
   icon: {
     width: 24,
     height: 24,
     resizeMode: "contain",
+  },
+
+  activeIcon: {
+    tintColor: "#FF4458",
   },
 
   badge: {

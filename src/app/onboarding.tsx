@@ -1,9 +1,7 @@
 import { BackButton } from "@/components/BackButton";
 import ProfileImagePicker from "@/components/ImagePicker";
-import {
-  completeSessionOnboarding,
-  getSessionUser,
-} from "@/services/auth/session";
+import { getSessionUser } from "@/services/auth/session";
+import { setPendingOnboardingProfile } from "@/services/onboarding/pendingProfile";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -17,8 +15,8 @@ import {
   View,
 } from "react-native";
 
-const genders = ["Woman", "Man", "Non-binary"];
-const lookingForOptions = ["Women", "Men", "Everyone"];
+const genders = ["Woman", "Men", "Non-binary"];
+const lookingForOptions = ["Women", "Men", "Non-binary"];
 const countryOptions = [
   "Germany",
   "United States",
@@ -198,12 +196,9 @@ export default function OnboardingScreen() {
     setIsSaving(true);
     setError("");
 
-    let updatedUser = null;
-
     try {
       const storagePhotos = await preparePhotosForStorage(photos);
-
-      updatedUser = await completeSessionOnboarding({
+      setPendingOnboardingProfile({
         name: name.trim() || undefined,
         age: age.trim() || undefined,
         city: city.trim() || undefined,
@@ -223,14 +218,7 @@ export default function OnboardingScreen() {
       return;
     }
 
-    setIsSaving(false);
-
-    if (!updatedUser) {
-      router.replace("/welcome");
-      return;
-    }
-
-    router.replace("/discover");
+    router.replace("/profileSaving");
   }
 
   function Tag({
@@ -397,7 +385,17 @@ async function preparePhotosForStorage(photos: string[]) {
     return photos;
   }
 
-  return Promise.all(photos.map((photo) => resizePhotoForSafariStorage(photo)));
+  return Promise.all(
+    photos.map((photo) =>
+      shouldResizePhotoForStorage(photo)
+        ? resizePhotoForSafariStorage(photo)
+        : photo,
+    ),
+  );
+}
+
+function shouldResizePhotoForStorage(photo: string) {
+  return photo.startsWith("data:image/") && photo.length > 500_000;
 }
 
 async function resizePhotoForSafariStorage(photo: string) {
@@ -411,7 +409,7 @@ async function resizePhotoForSafariStorage(photo: string) {
     nextImage.onerror = reject;
     nextImage.src = photo;
   });
-  const maxSize = 520;
+  const maxSize = 420;
   const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
   const width = Math.max(1, Math.round(image.width * scale));
   const height = Math.max(1, Math.round(image.height * scale));
@@ -421,7 +419,7 @@ async function resizePhotoForSafariStorage(photo: string) {
   canvas.height = height;
   canvas.getContext("2d")?.drawImage(image, 0, 0, width, height);
 
-  return canvas.toDataURL("image/jpeg", 0.55);
+  return canvas.toDataURL("image/jpeg", 0.45);
 }
 
 const styles = StyleSheet.create({

@@ -24,11 +24,6 @@ export default function ImagePicker({
       return resizeWebImage(asset.uri);
     }
 
-    if (asset.base64) {
-      const mimeType = asset.mimeType ?? "image/jpeg";
-      return `data:${mimeType};base64,${asset.base64}`;
-    }
-
     return asset.uri;
   }
 
@@ -44,8 +39,8 @@ export default function ImagePicker({
     const result = await ExpoImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: true,
-      base64: true,
-      quality: 0.45,
+      base64: false,
+      quality: 0.35,
     });
 
     if (!result.canceled) {
@@ -99,7 +94,7 @@ async function resizeWebImage(uri: string) {
       nextImage.src = imageUrl;
     });
 
-    const maxSize = 520;
+    const maxSize = 420;
     const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
     const width = Math.max(1, Math.round(image.width * scale));
     const height = Math.max(1, Math.round(image.height * scale));
@@ -109,7 +104,7 @@ async function resizeWebImage(uri: string) {
     canvas.height = height;
     canvas.getContext("2d")?.drawImage(image, 0, 0, width, height);
 
-    return canvas.toDataURL("image/jpeg", 0.55);
+    return canvas.toDataURL("image/jpeg", 0.45);
   } finally {
     URL.revokeObjectURL(imageUrl);
   }
