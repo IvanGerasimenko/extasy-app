@@ -1,4 +1,5 @@
 import * as ExpoImagePicker from "expo-image-picker";
+import { premiumColors, premiumShadow } from "@/constants/premiumDesign";
 import React from "react";
 import {
   Image,
@@ -15,6 +16,9 @@ type ImagePickerProps = {
   onPhotosChange: (photos: string[]) => void;
 };
 
+const FULL_HD_MAX_SIZE = 1920;
+const FULL_HD_JPEG_QUALITY = 0.92;
+
 export default function ImagePicker({
   photos,
   onPhotosChange,
@@ -28,19 +32,21 @@ export default function ImagePicker({
   }
 
   async function pickImage() {
-    const permission =
-      await ExpoImagePicker.requestMediaLibraryPermissionsAsync();
+    if (Platform.OS !== "web") {
+      const permission =
+        await ExpoImagePicker.requestMediaLibraryPermissionsAsync();
 
-    if (!permission.granted) {
-      alert("Permission is required to add photos");
-      return;
+      if (!permission.granted) {
+        alert("Permission is required to add photos");
+        return;
+      }
     }
 
     const result = await ExpoImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: true,
       base64: false,
-      quality: 0.35,
+      quality: 1,
     });
 
     if (!result.canceled) {
@@ -94,7 +100,7 @@ async function resizeWebImage(uri: string) {
       nextImage.src = imageUrl;
     });
 
-    const maxSize = 420;
+    const maxSize = FULL_HD_MAX_SIZE;
     const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
     const width = Math.max(1, Math.round(image.width * scale));
     const height = Math.max(1, Math.round(image.height * scale));
@@ -104,7 +110,7 @@ async function resizeWebImage(uri: string) {
     canvas.height = height;
     canvas.getContext("2d")?.drawImage(image, 0, 0, width, height);
 
-    return canvas.toDataURL("image/jpeg", 0.45);
+    return canvas.toDataURL("image/jpeg", FULL_HD_JPEG_QUALITY);
   } finally {
     URL.revokeObjectURL(imageUrl);
   }
@@ -119,37 +125,40 @@ const styles = StyleSheet.create({
   },
 
   addPhoto: {
-    width: 92,
-    height: 112,
-    borderRadius: 20,
+    width: 104,
+    height: 128,
+    borderRadius: 24,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: "#C9C2BA",
+    borderColor: premiumColors.champagne,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FFF",
+    backgroundColor: premiumColors.porcelain,
   },
 
   plus: {
     fontSize: 22,
-    color: "#111",
+    color: premiumColors.champagne,
   },
 
   addPhotoText: {
     fontSize: 12,
+    color: premiumColors.ink,
+    fontWeight: "800",
     marginTop: 6,
   },
 
   photoBox: {
-    width: 92,
-    height: 112,
-    borderRadius: 20,
-    backgroundColor: "#E8E2DC",
+    width: 104,
+    height: 128,
+    borderRadius: 24,
+    backgroundColor: premiumColors.champagneSoft,
+    ...premiumShadow,
   },
 
   photoWrap: {
-    width: 92,
-    height: 112,
+    width: 104,
+    height: 128,
   },
 
   removeButton: {
@@ -159,7 +168,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: "rgba(0, 0, 0, 0.72)",
+    backgroundColor: "rgba(16, 24, 32, 0.82)",
     alignItems: "center",
     justifyContent: "center",
   },

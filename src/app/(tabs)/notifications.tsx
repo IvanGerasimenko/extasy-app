@@ -13,12 +13,15 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+
+const isWeb = Platform.OS === "web";
 
 export default function NotificationsScreen() {
   const [incomingLikes, setIncomingLikes] = useState<LikeRequestRecord[]>([]);
@@ -194,11 +197,11 @@ const styles = StyleSheet.create({
 
   container: {
     width: "100%",
-    maxWidth: 640,
+    maxWidth: isWeb ? 980 : 640,
     alignSelf: "center",
-    paddingHorizontal: 20,
-    paddingBottom: 120,
-    marginTop: 80,
+    paddingHorizontal: isWeb ? 34 : 20,
+    paddingBottom: isWeb ? 150 : 120,
+    marginTop: isWeb ? 34 : 80,
   },
 
   loadingContainer: {

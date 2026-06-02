@@ -1,6 +1,20 @@
 import { useAppTheme } from "@/services/theme/ThemeContext";
 import React from "react";
-import { StyleSheet, View, type ViewProps } from "react-native";
+import {
+  Platform,
+  StyleSheet,
+  View,
+  type ViewProps,
+  type ViewStyle,
+} from "react-native";
+
+const webScrollableBackground =
+  Platform.OS === "web"
+    ? ({
+        minHeight: "100vh",
+        overflow: "auto",
+      } as unknown as ViewStyle)
+    : null;
 
 export function ThemedBackground({ children, style, ...props }: ViewProps) {
   const { colors } = useAppTheme();
@@ -8,7 +22,12 @@ export function ThemedBackground({ children, style, ...props }: ViewProps) {
   return (
     <View
       {...props}
-      style={[styles.background, { backgroundColor: colors.background }, style]}
+      style={[
+        styles.background,
+        webScrollableBackground,
+        { backgroundColor: colors.background },
+        style,
+      ]}
     >
       {children}
     </View>

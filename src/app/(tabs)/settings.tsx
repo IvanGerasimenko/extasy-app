@@ -1,21 +1,30 @@
+import { PremiumTag } from "@/components/PremiumUI";
+import { ThemedBackground } from "@/components/ThemedBackground";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import {
+  premiumColors,
+  premiumShadow,
+  premiumSpacing,
+} from "@/constants/premiumDesign";
 import {
   clearSession,
   getSessionUser,
   type SessionUser,
 } from "@/services/auth/session";
+import { useAppTheme } from "@/services/theme/ThemeContext";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { ThemedBackground } from "@/components/ThemedBackground";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { useAppTheme } from "@/services/theme/ThemeContext";
+
+const isWeb = Platform.OS === "web";
 
 export default function SettingsScreen() {
   const [user, setUser] = useState<SessionUser | null>(null);
@@ -71,11 +80,14 @@ export default function SettingsScreen() {
     <ThemedBackground style={styles.background}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.headerRow}>
-          <View>
+          <View style={styles.headerCopy}>
             <Text style={[styles.eyebrow, { color: colors.mutedText }]}>
               Extasy
             </Text>
             <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
+            <Text style={[styles.subtitle, { color: colors.mutedText }]}>
+              Account controls, preferences, and premium experience states.
+            </Text>
           </View>
           <ThemeToggle />
         </View>
@@ -87,6 +99,23 @@ export default function SettingsScreen() {
           <Text style={[styles.cardText, { color: colors.surfaceMutedText }]}>
             {user?.email ?? user?.phoneNumber ?? "Profile settings"}
           </Text>
+          <View style={styles.settingsTags}>
+            <PremiumTag label="Premium modal" tone="gold" />
+            <PremiumTag label="Bottom sheet ready" tone="navy" />
+          </View>
+        </View>
+
+        <View style={[styles.card, surfaceStyle]}>
+          {["Notifications", "Discovery preferences", "Safety center"].map(
+            (label) => (
+              <View key={label} style={styles.settingsRow}>
+                <Text style={[styles.rowText, { color: colors.surfaceText }]}>
+                  {label}
+                </Text>
+                <Text style={styles.rowChevron}>›</Text>
+              </View>
+            ),
+          )}
         </View>
 
         <TouchableOpacity
@@ -113,8 +142,7 @@ export default function SettingsScreen() {
             style={[
               styles.signOutText,
               {
-                color:
-                  colors.mode === "dark" ? colors.surfaceText : "#FFFFFF",
+                color: colors.mode === "dark" ? colors.surfaceText : "#FFFFFF",
               },
             ]}
           >
@@ -134,11 +162,11 @@ const styles = StyleSheet.create({
 
   container: {
     width: "100%",
-    maxWidth: 560,
+    maxWidth: isWeb ? 900 : 560,
     alignSelf: "center",
-    paddingHorizontal: 20,
-    paddingTop: 64,
-    paddingBottom: 120,
+    paddingHorizontal: isWeb ? 34 : premiumSpacing.screenX,
+    paddingTop: isWeb ? 34 : premiumSpacing.screenTop,
+    paddingBottom: isWeb ? 150 : premiumSpacing.screenBottom,
   },
 
   loadingContainer: {
@@ -149,28 +177,46 @@ const styles = StyleSheet.create({
 
   headerRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: 16,
+    marginBottom: 8,
+  },
+
+  headerCopy: {
+    flex: 1,
+    minWidth: 0,
   },
 
   eyebrow: {
     color: "#6E6E73",
     fontSize: 13,
+    fontWeight: "800",
+    textTransform: "uppercase",
   },
 
   title: {
     color: "#111",
     fontSize: 36,
+    lineHeight: 40,
+    fontWeight: "800",
     marginTop: 4,
   },
 
+  subtitle: {
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: 8,
+    paddingRight: 4,
+  },
+
   card: {
-    borderRadius: 24,
+    borderRadius: 26,
     backgroundColor: "rgba(255, 255, 255, 0.82)",
     borderWidth: 1,
     padding: 20,
-    marginTop: 24,
+    marginTop: 16,
+    ...premiumShadow,
   },
 
   cardTitle: {
@@ -187,7 +233,7 @@ const styles = StyleSheet.create({
 
   secondaryButton: {
     height: 56,
-    borderRadius: 18,
+    borderRadius: 20,
     backgroundColor: "rgba(255, 255, 255, 0.82)",
     borderWidth: 1,
     alignItems: "center",
@@ -202,7 +248,7 @@ const styles = StyleSheet.create({
 
   signOutButton: {
     height: 58,
-    borderRadius: 18,
+    borderRadius: 20,
     backgroundColor: "#111",
     borderWidth: 1,
     alignItems: "center",
@@ -213,5 +259,31 @@ const styles = StyleSheet.create({
   signOutText: {
     color: "#FFF",
     fontSize: 17,
+  },
+
+  settingsTags: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 16,
+  },
+
+  settingsRow: {
+    minHeight: 52,
+    borderBottomWidth: 1,
+    borderBottomColor: premiumColors.hairline,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  rowText: {
+    fontSize: 15,
+    fontWeight: "700",
+  },
+
+  rowChevron: {
+    color: premiumColors.champagne,
+    fontSize: 24,
   },
 });

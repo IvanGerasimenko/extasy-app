@@ -1,4 +1,16 @@
+import {
+  CompatibilityBadge,
+  PremiumEmptyState,
+  PremiumHeader,
+  PremiumLoadingState,
+  PremiumTag,
+} from "@/components/PremiumUI";
 import { ThemedBackground } from "@/components/ThemedBackground";
+import {
+  premiumColors,
+  premiumShadow,
+  premiumSpacing,
+} from "@/constants/premiumDesign";
 import {
   getLikedUserKeysForCurrentUser,
   getLocalAccountUsers,
@@ -10,7 +22,6 @@ import {
 import { router } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Animated,
   Dimensions,
   Image,
@@ -26,6 +37,7 @@ import {
 
 const screenWidth = Dimensions.get("window").width;
 const isCompactViewport = screenWidth < 500;
+const isWeb = Platform.OS === "web";
 
 type DiscoverProfile = {
   id: string;
@@ -339,9 +351,7 @@ export default function DiscoverScreen() {
   if (isLoading) {
     return (
       <ThemedBackground style={styles.background}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#111" />
-        </View>
+        <PremiumLoadingState />
       </ThemedBackground>
     );
   }
@@ -353,16 +363,18 @@ export default function DiscoverScreen() {
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.eyebrow}>Extasy</Text>
-          </View>
-          <View style={styles.headerPill}>
-            <Text style={styles.headerPillText}>
-              {remainingProfiles} nearby
-            </Text>
-          </View>
-        </View>
+        <PremiumHeader
+          eyebrow="Extasy"
+          title="Discover"
+          subtitle="Intentional profiles selected for calmer, higher-quality matching."
+          right={
+            <View style={styles.headerPill}>
+              <Text style={styles.headerPillText}>
+                {remainingProfiles} nearby
+              </Text>
+            </View>
+          }
+        />
 
         {activeMatch ? (
           <Animated.View
@@ -416,7 +428,7 @@ export default function DiscoverScreen() {
                 style={styles.expandButton}
                 onPress={() => setFullscreenOpen(true)}
               >
-                <Text style={styles.expandText}>View</Text>
+                <Text style={styles.expandText}>Gallery</Text>
               </TouchableOpacity>
 
               <View style={styles.matchInfo}>
@@ -424,14 +436,15 @@ export default function DiscoverScreen() {
                   <Text style={styles.matchName}>
                     {activeMatch.name}, {activeMatch.age}
                   </Text>
-                  <View style={styles.onlineBadge}>
-                    <Text style={styles.onlineText}>Active</Text>
-                  </View>
+                  <CompatibilityBadge value="86%" />
                 </View>
 
-                <Text style={styles.matchMeta}>
-                  {activeMatch.gender} looking for {activeMatch.lookingFor}
-                </Text>
+                <View style={styles.matchMetaRow}>
+                  <Text style={styles.matchMeta}>
+                    {activeMatch.gender} looking for {activeMatch.lookingFor}
+                  </Text>
+                  <Text style={styles.intentPill}>Intentional</Text>
+                </View>
 
                 {activeMatch.city && activeMatch.country ? (
                   <Text style={styles.locationText}>
@@ -445,9 +458,7 @@ export default function DiscoverScreen() {
 
                 <View style={styles.tags}>
                   {activeMatch.interests.slice(0, 5).map((interest) => (
-                    <View key={interest} style={styles.tag}>
-                      <Text style={styles.tagText}>{interest}</Text>
-                    </View>
+                    <PremiumTag key={interest} label={interest} tone="gold" />
                   ))}
                 </View>
               </View>
@@ -463,30 +474,39 @@ export default function DiscoverScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
+                style={[styles.actionButton, styles.saveButton]}
+                onPress={() => setReaction(`${activeMatch.name} saved`)}
+                disabled={isDeciding}
+              >
+                <Text style={styles.saveText}>☆</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 style={[styles.actionButton, styles.likeButton]}
                 onPress={() => animateDecision("Liked")}
                 disabled={isDeciding}
               >
                 <Image
-                  source={require("../../../assets/liked.png")}
-                  style={styles.likeIcon}
+                  source={require("@/assets/liked.png")}
+                  style={styles.connectIcon}
                 />
               </TouchableOpacity>
             </View>
           </Animated.View>
         ) : (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No more profiles</Text>
-            <Text style={styles.emptyText}>
-              You have seen everyone near you for now.
-            </Text>
-            <TouchableOpacity style={styles.resetButton} onPress={resetDeck}>
-              <Text style={styles.resetText}>Start Again</Text>
-            </TouchableOpacity>
-          </View>
+          <PremiumEmptyState
+            title="No more profiles"
+            text="You have seen every complete profile near you for now."
+            action="Refresh curation"
+            onAction={resetDeck}
+          />
         )}
 
-        {reaction ? <Text style={styles.reactionText}>{reaction}</Text> : null}
+        {reaction ? (
+          <View style={styles.toast}>
+            <Text style={styles.reactionText}>{reaction}</Text>
+          </View>
+        ) : null}
       </ScrollView>
 
       <Modal visible={fullscreenOpen} transparent animationType="fade">
@@ -558,108 +578,49 @@ const styles = StyleSheet.create({
 
   container: {
     width: "100%",
-    maxWidth: 560,
+    maxWidth: isWeb ? 680 : 560,
     alignSelf: "center",
-    paddingHorizontal: isCompactViewport ? 14 : Platform.OS === "web" ? 24 : 16,
-    paddingTop: isCompactViewport ? 42 : Platform.OS === "web" ? 34 : 58,
-    paddingBottom: isCompactViewport ? 168 : 138,
-  },
-
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: isCompactViewport ? 12 : 16,
-  },
-
-  eyebrow: {
-    color: "#FF4458",
-    fontSize: 13,
-    letterSpacing: 0,
-    fontWeight: "700",
+    paddingHorizontal: isWeb
+      ? 34
+      : isCompactViewport
+        ? 14
+        : premiumSpacing.screenX,
+    paddingTop: isWeb ? 34 : isCompactViewport ? 42 : premiumSpacing.screenTop,
+    paddingBottom: isWeb ? 150 : isCompactViewport ? 168 : premiumSpacing.screenBottom,
   },
 
   headerPill: {
-    height: 38,
-    borderRadius: 999,
-    backgroundColor: "rgba(255, 255, 255, 0.86)",
+    height: 40,
+    borderRadius: 18,
+    backgroundColor: premiumColors.white,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.92)",
+    borderColor: premiumColors.hairline,
     paddingHorizontal: 14,
     alignItems: "center",
     justifyContent: "center",
   },
 
   headerPillText: {
-    color: "#3C3C43",
+    color: premiumColors.navy,
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "800",
   },
 
   matchCard: {
-    minHeight: "70%",
+    minHeight: isWeb ? 560 : isCompactViewport ? 610 : 660,
+    maxWidth: isWeb ? 540 : undefined,
     marginBottom: isCompactViewport ? 42 : 48,
-    borderRadius: isCompactViewport ? 30 : 34,
+    borderRadius: premiumSpacing.cardRadius,
     overflow: "visible",
-    backgroundColor: "#161616",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 20,
-    },
-    shadowOpacity: 0.24,
-    shadowRadius: 30,
-    elevation: 12,
+    backgroundColor: premiumColors.ink,
+    ...premiumShadow,
   },
 
   cardTouchable: {
     flex: 1,
-    borderRadius: isCompactViewport ? 30 : 34,
+    borderRadius: premiumSpacing.cardRadius,
     overflow: "hidden",
-    backgroundColor: "#161616",
-  },
-
-  emptyCard: {
-    minHeight: 420,
-    borderRadius: 28,
-    backgroundColor: "rgba(255, 255, 255, 0.82)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 28,
-  },
-
-  emptyTitle: {
-    color: "#111",
-    fontSize: 28,
-    textAlign: "center",
-  },
-
-  emptyText: {
-    color: "#6E6E73",
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: "center",
-    marginTop: 10,
-  },
-
-  resetButton: {
-    height: 50,
-    borderRadius: 18,
-    backgroundColor: "#111",
-    justifyContent: "center",
-    paddingHorizontal: 24,
-    marginTop: 22,
-  },
-
-  resetText: {
-    color: "#FFF",
-    fontSize: 15,
+    backgroundColor: premiumColors.ink,
   },
 
   profileImage: {
@@ -672,14 +633,14 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     bottom: undefined,
     height: 170,
-    backgroundColor: "rgba(0, 0, 0, 0.18)",
+    backgroundColor: "rgba(16, 24, 32, 0.18)",
   },
 
   imageShadeBottom: {
     ...StyleSheet.absoluteFill,
     top: undefined,
     height: "56%",
-    backgroundColor: "rgba(0, 0, 0, 0.58)",
+    backgroundColor: "rgba(16, 24, 32, 0.66)",
   },
 
   photoDots: {
@@ -696,7 +657,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 4,
     borderRadius: 999,
-    backgroundColor: "rgba(255, 255, 255, 0.36)",
+    backgroundColor: "rgba(255, 255, 255, 0.34)",
   },
 
   activePhotoDot: {
@@ -708,7 +669,7 @@ const styles = StyleSheet.create({
     top: 28,
     right: 16,
     borderRadius: 999,
-    backgroundColor: "rgba(0, 0, 0, 0.34)",
+    backgroundColor: "rgba(16, 24, 32, 0.52)",
     paddingHorizontal: 14,
     height: 34,
     justifyContent: "center",
@@ -737,30 +698,34 @@ const styles = StyleSheet.create({
   matchName: {
     flex: 1,
     color: "#FFF",
-    fontSize: isCompactViewport ? 30 : Platform.OS === "web" ? 38 : 34,
+    fontSize: isCompactViewport ? 30 : Platform.OS === "web" ? 31 : 34,
     fontWeight: "800",
   },
 
-  onlineBadge: {
-    backgroundColor: "rgba(48, 209, 88, 0.18)",
-    borderWidth: 1,
-    borderColor: "rgba(48, 209, 88, 0.45)",
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    height: 30,
-    justifyContent: "center",
-  },
-
-  onlineText: {
-    color: "#DDFCE7",
-    fontSize: 12,
-    fontWeight: "800",
+  matchMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 8,
   },
 
   matchMeta: {
-    marginTop: 8,
     color: "rgba(255, 255, 255, 0.82)",
-    fontSize: 15,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
+  intentPill: {
+    color: premiumColors.champagneSoft,
+    fontSize: 11,
+    fontWeight: "900",
+    backgroundColor: "rgba(199, 167, 108, 0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(199, 167, 108, 0.38)",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
 
   locationText: {
@@ -783,22 +748,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
 
-  tag: {
-    minHeight: 34,
-    borderRadius: 999,
-    paddingHorizontal: 13,
-    justifyContent: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.16)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.18)",
-  },
-
-  tagText: {
-    color: "#FFF",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-
   floatingActions: {
     position: "absolute",
     left: 0,
@@ -812,13 +761,11 @@ const styles = StyleSheet.create({
   },
 
   actionButton: {
-    width: isCompactViewport ? 58 : 64,
-    height: isCompactViewport ? 58 : 64,
+    width: isCompactViewport ? 52 : 58,
+    height: isCompactViewport ? 52 : 58,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.72)",
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -834,31 +781,50 @@ const styles = StyleSheet.create({
   },
 
   likeButton: {
-    width: isCompactViewport ? 66 : 72,
-    height: isCompactViewport ? 66 : 72,
-    borderRadius: 999,
-    backgroundColor: "#FF4458",
+    backgroundColor: premiumColors.white,
   },
 
   passText: {
-    color: "#FF4458",
-    fontSize: 34,
-    lineHeight: 36,
+    color: premiumColors.muted,
+    fontSize: 30,
+    lineHeight: 32,
     fontWeight: "300",
   },
 
-  likeIcon: {
-    width: 25,
-    height: 25,
+  saveButton: {
+    backgroundColor: premiumColors.white,
+  },
+
+  saveText: {
+    color: premiumColors.champagne,
+    fontSize: 26,
+    lineHeight: 28,
+  },
+
+  connectIcon: {
+    width: isCompactViewport ? 34 : 36,
+    height: isCompactViewport ? 34 : 36,
     resizeMode: "contain",
-    tintColor: "#FFF",
+  },
+
+  toast: {
+    alignSelf: "center",
+    minHeight: 44,
+    borderRadius: 18,
+    paddingHorizontal: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: premiumColors.white,
+    borderWidth: 1,
+    borderColor: premiumColors.hairline,
+    ...premiumShadow,
   },
 
   reactionText: {
-    marginTop: 16,
     textAlign: "center",
-    color: "#111",
+    color: premiumColors.ink,
     fontSize: 15,
+    fontWeight: "800",
   },
 
   fullscreen: {

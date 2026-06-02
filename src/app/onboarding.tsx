@@ -1,16 +1,27 @@
 import { BackButton } from "@/components/BackButton";
 import ProfileImagePicker from "@/components/ImagePicker";
+import {
+  PremiumButton,
+  PremiumHeader,
+  PremiumTag,
+  PremiumTextInput,
+} from "@/components/PremiumUI";
+import { ThemedBackground } from "@/components/ThemedBackground";
+import {
+  premiumColors,
+  premiumShadow,
+  premiumSpacing,
+  premiumType,
+} from "@/constants/premiumDesign";
 import { getSessionUser } from "@/services/auth/session";
 import { setPendingOnboardingProfile } from "@/services/onboarding/pendingProfile";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   Platform,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -58,6 +69,8 @@ const interestsList = [
   "Writing",
   "Hiking",
 ];
+const FULL_HD_MAX_SIZE = 1920;
+const FULL_HD_JPEG_QUALITY = 0.92;
 
 export default function OnboardingScreen() {
   const [photos, setPhotos] = useState<string[]>([]);
@@ -232,12 +245,10 @@ export default function OnboardingScreen() {
   }) {
     return (
       <TouchableOpacity
-        style={[styles.tag, selected && styles.selectedTag]}
+        style={styles.tagPressable}
         onPress={onPress}
       >
-        <Text style={[styles.tagText, selected && styles.selectedText]}>
-          {title}
-        </Text>
+        <PremiumTag label={title} selected={selected} />
       </TouchableOpacity>
     );
   }
@@ -262,15 +273,24 @@ export default function OnboardingScreen() {
         showsVerticalScrollIndicator={false}
       >
         <BackButton to="/welcome" />
-        <Text style={styles.title}>Complete your profile</Text>
-        <Text style={styles.subtitle}>It only takes 2 minutes</Text>
+        <PremiumHeader
+          eyebrow="Profile setup"
+          title="Build a profile worth meeting"
+          subtitle="Photos, interests, and preferences help Extasy present thoughtful matches."
+        />
 
         <View style={styles.section}>
+          <View style={styles.stepCard}>
+            <Text style={styles.stepLabel}>Photo upload</Text>
+            <Text style={styles.stepText}>
+              Lead with a clear portrait. Add more photos for context and trust.
+            </Text>
+          </View>
           <ProfileImagePicker photos={photos} onPhotosChange={setPhotos} />
 
           <View>
             <Text style={styles.label}>Your name</Text>
-            <TextInput
+            <PremiumTextInput
               style={styles.input}
               placeholder="E.g. John Doe"
               value={name}
@@ -278,7 +298,7 @@ export default function OnboardingScreen() {
             />
 
             <Text style={styles.label}>Age</Text>
-            <TextInput
+            <PremiumTextInput
               style={styles.input}
               placeholder="E.g. 28"
               keyboardType="number-pad"
@@ -287,7 +307,7 @@ export default function OnboardingScreen() {
             />
 
             <Text style={styles.label}>About you</Text>
-            <TextInput
+            <PremiumTextInput
               style={styles.textarea}
               placeholder="Tell others a little bit about yourself..."
               multiline
@@ -298,7 +318,7 @@ export default function OnboardingScreen() {
 
           <View>
             <Text style={styles.label}>Location</Text>
-            <TextInput
+            <PremiumTextInput
               style={styles.input}
               placeholder="City, e.g. Berlin"
               value={city}
@@ -362,15 +382,11 @@ export default function OnboardingScreen() {
           <View>
             {error ? <Text style={styles.error}>{error}</Text> : null}
 
-            <TouchableOpacity
-              style={[styles.button, isSaving && styles.disabledButton]}
+            <PremiumButton
+              title={isSaving ? "Saving profile..." : "Start matching"}
               onPress={handleStartMatching}
               disabled={isSaving}
-            >
-              <Text style={styles.buttonText}>
-                {isSaving ? "Saving..." : "Start Matching"}
-              </Text>
-            </TouchableOpacity>
+            />
           </View>
         </View>
       </ScrollView>
@@ -392,47 +408,54 @@ async function preparePhotosForStorage(photos: string[]) {
   );
 }
 
+// Keep web profile photos at Full HD while avoiding extremely large storage writes.
 function shouldResizePhotoForStorage(photo: string) {
-  return photo.startsWith("data:image/") && photo.length > 500_000;
+  return photo.startsWith("data:image/") && photo.length > 3_500_000;
 }
 
+// Re-encode very large web photos to Full HD instead of shrinking them to thumbnail size.
 async function resizePhotoForSafariStorage(photo: string) {
   if (typeof window === "undefined" || typeof document === "undefined") {
     return photo;
   }
 
+  // Load the image from the data URL
   const image = await new Promise<HTMLImageElement>((resolve, reject) => {
     const nextImage = new window.Image();
     nextImage.onload = () => resolve(nextImage);
     nextImage.onerror = reject;
     nextImage.src = photo;
   });
-  const maxSize = 420;
+  const maxSize = FULL_HD_MAX_SIZE;
   const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
   const width = Math.max(1, Math.round(image.width * scale));
   const height = Math.max(1, Math.round(image.height * scale));
   const canvas = document.createElement("canvas");
 
+  // Draw the image to the canvas with the new dimensions
   canvas.width = width;
   canvas.height = height;
   canvas.getContext("2d")?.drawImage(image, 0, 0, width, height);
 
-  return canvas.toDataURL("image/jpeg", 0.45);
+  return canvas.toDataURL("image/jpeg", FULL_HD_JPEG_QUALITY);
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
     width: "100%",
-    maxWidth: 500,
+    maxWidth: Platform.OS === "web" ? 980 : 500,
     alignSelf: "center",
   },
 
   section: {
-    backgroundColor: "rgba(255, 255, 255, 0.25)",
-    borderRadius: 20,
-    padding: 20,
-    gap: 20,
+    backgroundColor: "rgba(255, 252, 247, 0.86)",
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: premiumColors.hairline,
+    padding: 18,
+    gap: 18,
+    ...premiumShadow,
   },
 
   background: {
@@ -443,8 +466,8 @@ const styles = StyleSheet.create({
 
   container: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: Platform.OS === "web" ? 110 : 70,
+    paddingHorizontal: Platform.OS === "web" ? 36 : premiumSpacing.screenX,
+    paddingTop: Platform.OS === "web" ? 42 : premiumSpacing.screenTop,
     paddingBottom: Platform.OS === "web" ? 160 : 40,
   },
 
@@ -453,46 +476,20 @@ const styles = StyleSheet.create({
     paddingBottom: 320,
   },
 
-  title: {
-    fontSize: 22,
-    color: "#111",
-    textAlign: "center",
-  },
-
-  subtitle: {
-    fontSize: 13,
-    color: "#777",
-    textAlign: "center",
-    marginTop: 8,
-    marginBottom: 32,
-  },
-
   label: {
-    fontSize: 13,
-    color: "#111",
+    ...premiumType.label,
+    color: premiumColors.ink,
     marginBottom: 10,
     marginTop: 18,
   },
 
   input: {
-    height: 54,
-    borderRadius: 16,
-    backgroundColor: "#FFF",
-    paddingHorizontal: 16,
-    fontSize: 13,
-    borderWidth: 1,
-    borderColor: "#E5DED7",
+    width: "100%",
   },
 
   textarea: {
-    height: 120,
-    borderRadius: 18,
-    backgroundColor: "#FFF",
-    padding: 16,
-    fontSize: 13,
-    borderWidth: 1,
-    borderColor: "#E5DED7",
-    textAlignVertical: "top",
+    width: "100%",
+    minHeight: 130,
   },
 
   optionsRow: {
@@ -532,62 +529,33 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
-  tag: {
-    paddingHorizontal: 16,
-    height: 42,
+  tagPressable: {
     borderRadius: 14,
-    backgroundColor: "#FFF",
-    borderWidth: 1,
-    borderColor: "#E5DED7",
-    justifyContent: "center",
-  },
-
-  tagText: {
-    fontSize: 12,
-    color: "#111",
-  },
-
-  selectedOption: {
-    backgroundColor: "#111",
-    borderColor: "#111",
-  },
-
-  selectedCircle: {
-    backgroundColor: "#FFF",
-    borderColor: "#FFF",
-  },
-
-  selectedText: {
-    color: "#FFF",
-  },
-
-  selectedTag: {
-    backgroundColor: "#111",
-    borderColor: "#111",
-  },
-
-  button: {
-    height: 58,
-    borderRadius: 18,
-    backgroundColor: "#111",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 34,
-  },
-
-  disabledButton: {
-    opacity: 0.65,
   },
 
   error: {
-    color: "#7A1F1F",
+    color: premiumColors.danger,
     fontSize: 13,
     lineHeight: 20,
     marginTop: 8,
   },
 
-  buttonText: {
-    color: "#FFF",
-    fontSize: 13,
+  stepCard: {
+    borderRadius: 24,
+    backgroundColor: premiumColors.navySoft,
+    borderWidth: 1,
+    borderColor: "#CEDAE5",
+    padding: 16,
+  },
+
+  stepLabel: {
+    ...premiumType.label,
+    color: premiumColors.navy,
+  },
+
+  stepText: {
+    ...premiumType.body,
+    color: premiumColors.muted,
+    marginTop: 6,
   },
 });

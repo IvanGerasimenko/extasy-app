@@ -439,10 +439,10 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     width: "100%",
-    maxWidth: 500,
+    maxWidth: Platform.OS === "web" ? 920 : 500,
     alignSelf: "center",
-    paddingHorizontal: 24,
-    paddingTop: Platform.OS === "web" ? 110 : 70,
+    paddingHorizontal: Platform.OS === "web" ? 36 : 24,
+    paddingTop: Platform.OS === "web" ? 56 : 70,
     paddingBottom: Platform.OS === "web" ? 160 : 40,
   },
 
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#FFF",
     borderRadius: 20,
-    padding: 20,
+    padding: Platform.OS === "web" ? 28 : 20,
   },
 
   modeRow: {

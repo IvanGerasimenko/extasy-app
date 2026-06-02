@@ -349,11 +349,11 @@ const styles = StyleSheet.create({
 
   container: {
     width: "100%",
-    maxWidth: 560,
+    maxWidth: Platform.OS === "web" ? 860 : 560,
     alignSelf: "center",
-    paddingHorizontal: 20,
-    paddingTop: 64,
-    paddingBottom: 120,
+    paddingHorizontal: Platform.OS === "web" ? 34 : 20,
+    paddingTop: Platform.OS === "web" ? 34 : 64,
+    paddingBottom: Platform.OS === "web" ? 150 : 120,
   },
 
   iconButton: {
@@ -397,26 +397,30 @@ const styles = StyleSheet.create({
   },
 
   hero: {
-    alignItems: "center",
+    alignItems: Platform.OS === "web" ? "flex-start" : "center",
     marginTop: 16,
     marginBottom: 24,
   },
 
   avatar: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
+    width: Platform.OS === "web" ? 220 : 150,
+    height: Platform.OS === "web" ? 220 : 150,
+    borderRadius: Platform.OS === "web" ? 28 : 64,
     backgroundColor: "#E8E2DC",
   },
 
   avatarWrap: {
-    width: 168,
-    height: 168,
+    width: Platform.OS === "web" ? 240 : 168,
+    height: Platform.OS === "web" ? 240 : 168,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#ffffff",
-    minWidth: "100%",
-    borderRadius: 24,
+    minWidth: Platform.OS === "web" ? undefined : "100%",
+    borderRadius: Platform.OS === "web" ? 32 : 24,
+    shadowColor: "#1E1306",
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: Platform.OS === "web" ? 0.1 : 0,
+    shadowRadius: 22,
   },
 
   photoCounter: {
@@ -453,6 +457,7 @@ const styles = StyleSheet.create({
 
   summaryCard: {
     width: "100%",
+    maxWidth: Platform.OS === "web" ? 680 : undefined,
     borderRadius: 26,
     backgroundColor: "rgb(255, 255, 255)",
     borderWidth: 1,
@@ -490,6 +495,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     marginBottom: 18,
+    maxWidth: Platform.OS === "web" ? 760 : undefined,
   },
 
   statBox: {
@@ -517,6 +523,7 @@ const styles = StyleSheet.create({
 
   section: {
     marginTop: 18,
+    maxWidth: Platform.OS === "web" ? 860 : undefined,
     borderRadius: 24,
     backgroundColor: "rgb(255, 255, 255)",
     borderWidth: 1,

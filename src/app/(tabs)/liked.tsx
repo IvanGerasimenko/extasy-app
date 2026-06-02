@@ -1,14 +1,24 @@
+import {
+  PremiumEmptyState,
+  PremiumHeader,
+  PremiumLoadingState,
+} from "@/components/PremiumUI";
 import { ThemedBackground } from "@/components/ThemedBackground";
+import {
+  premiumColors,
+  premiumShadow,
+  premiumSpacing,
+} from "@/constants/premiumDesign";
 import {
   getLikedProfilesForCurrentUser,
   getUserKey,
   type LikedProfileRecord,
 } from "@/services/auth/session";
-import { router } from "expo-router";
+import { router, usePathname } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,9 +26,12 @@ import {
   View,
 } from "react-native";
 
+const isWeb = Platform.OS === "web";
+
 export default function LikedScreen() {
   const [likedProfiles, setLikedProfiles] = useState<LikedProfileRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const pathname = usePathname();
 
   useEffect(() => {
     let isMounted = true;
@@ -39,14 +52,12 @@ export default function LikedScreen() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [pathname]);
 
   if (isLoading) {
     return (
       <ThemedBackground style={styles.background}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#111" />
-        </View>
+        <PremiumLoadingState label="Loading matches" />
       </ThemedBackground>
     );
   }
@@ -54,10 +65,11 @@ export default function LikedScreen() {
   return (
     <ThemedBackground style={styles.background}>
       <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Liked</Text>
-          <Text style={styles.subtitle}>People you already liked.</Text>
-        </View>
+        <PremiumHeader
+          eyebrow="Matches"
+          title="Connections"
+          subtitle="Profiles you saved or connected with, plus mutual match status."
+        />
 
         {likedProfiles.length ? (
           likedProfiles.map((record) => {
@@ -146,12 +158,10 @@ export default function LikedScreen() {
             );
           })
         ) : (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No likes yet</Text>
-            <Text style={styles.emptyText}>
-              Profiles you like will appear here with their match status.
-            </Text>
-          </View>
+          <PremiumEmptyState
+            title="No matches yet"
+            text="Profiles you connect with will appear here with their current status."
+          />
         )}
       </ScrollView>
     </ThemedBackground>
@@ -166,28 +176,11 @@ const styles = StyleSheet.create({
 
   container: {
     width: "100%",
-    maxWidth: 640,
+    maxWidth: isWeb ? 980 : 640,
     alignSelf: "center",
-    paddingHorizontal: 20,
-    paddingBottom: 120,
-    marginTop: 80,
-  },
-  logo: {
-    flex: 1,
-    width: 220,
-    height: 120,
-    resizeMode: "contain",
-    marginTop: 24,
-  },
-
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  header: {
-    marginBottom: 24,
+    paddingHorizontal: isWeb ? 34 : premiumSpacing.screenX,
+    paddingTop: isWeb ? 34 : premiumSpacing.screenTop,
+    paddingBottom: isWeb ? 150 : premiumSpacing.screenBottom,
   },
 
   navButton: {
@@ -220,26 +213,29 @@ const styles = StyleSheet.create({
 
   likedCard: {
     borderRadius: 24,
-    backgroundColor: "rgba(255, 255, 255, 0.84)",
+    backgroundColor: "rgba(255, 252, 247, 0.9)",
+    borderWidth: 1,
+    borderColor: premiumColors.hairline,
     padding: 14,
     marginBottom: 12,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    ...premiumShadow,
   },
 
   avatar: {
     width: 64,
     height: 64,
     borderRadius: 20,
-    backgroundColor: "#E8E2DC",
+    backgroundColor: premiumColors.champagneSoft,
   },
 
   avatarPlaceholder: {
     width: 64,
     height: 64,
     borderRadius: 20,
-    backgroundColor: "#111",
+    backgroundColor: premiumColors.navy,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -254,19 +250,19 @@ const styles = StyleSheet.create({
   },
 
   name: {
-    color: "#111",
+    color: premiumColors.ink,
     fontSize: 17,
   },
 
   about: {
-    color: "#6E6E73",
+    color: premiumColors.muted,
     fontSize: 13,
     lineHeight: 18,
     marginTop: 4,
   },
 
   location: {
-    color: "#111",
+    color: premiumColors.navy,
     fontSize: 12,
     marginTop: 4,
   },
@@ -279,15 +275,15 @@ const styles = StyleSheet.create({
   },
 
   mutualBadge: {
-    backgroundColor: "#DDFCE7",
+    backgroundColor: premiumColors.emeraldSoft,
   },
 
   waitingBadge: {
-    backgroundColor: "#F4E8CA",
+    backgroundColor: premiumColors.champagneSoft,
   },
 
   skippedBadge: {
-    backgroundColor: "#F2D9D9",
+    backgroundColor: "#F4E0DD",
   },
 
   statusText: {
@@ -295,7 +291,7 @@ const styles = StyleSheet.create({
   },
 
   mutualText: {
-    color: "#126B36",
+    color: premiumColors.emerald,
   },
 
   waitingText: {
@@ -309,7 +305,7 @@ const styles = StyleSheet.create({
   chatButton: {
     height: 36,
     borderRadius: 14,
-    backgroundColor: "#111",
+    backgroundColor: premiumColors.ink,
     justifyContent: "center",
     paddingHorizontal: 14,
   },
@@ -319,26 +315,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 
-  emptyCard: {
-    minHeight: 280,
-    borderRadius: 24,
-    backgroundColor: "rgba(255, 255, 255, 0.82)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 26,
-  },
-
-  emptyTitle: {
-    color: "#111",
-    fontSize: 26,
-    textAlign: "center",
-  },
-
-  emptyText: {
-    color: "#6E6E73",
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: "center",
-    marginTop: 10,
-  },
 });

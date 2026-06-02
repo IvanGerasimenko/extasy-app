@@ -1,14 +1,24 @@
 import {
+  PremiumEmptyState,
+  PremiumHeader,
+  PremiumLoadingState,
+  PremiumSearchBar,
+} from "@/components/PremiumUI";
+import { ThemedBackground } from "@/components/ThemedBackground";
+import {
+  premiumColors,
+  premiumShadow,
+  premiumSpacing,
+} from "@/constants/premiumDesign";
+import {
   getCurrentUserMatches,
   getSessionUser,
   getUserKey,
   type MatchRecord,
 } from "@/services/auth/session";
-import { router } from "expo-router";
+import { router, usePathname } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ThemedBackground } from "@/components/ThemedBackground";
 import {
-  ActivityIndicator,
   Image,
   Platform,
   ScrollView,
@@ -31,6 +41,8 @@ export default function ChatsScreen() {
   const [matches, setMatches] = useState<MatchRecord[]>([]);
   const [currentUserKey, setCurrentUserKey] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [query, setQuery] = useState("");
+  const pathname = usePathname();
 
   useEffect(() => {
     let isMounted = true;
@@ -59,27 +71,35 @@ export default function ChatsScreen() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [pathname]);
 
   if (isLoading) {
     return (
       <ThemedBackground style={styles.background}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#111" />
-        </View>
+        <PremiumLoadingState label="Loading conversations" />
       </ThemedBackground>
     );
   }
 
+  const visibleMatches = matches.filter((match) => {
+    const otherUser = getOtherUser(match, currentUserKey);
+    return (otherUser?.name ?? "Match")
+      .toLowerCase()
+      .includes(query.trim().toLowerCase());
+  });
+
   return (
     <ThemedBackground style={styles.background}>
       <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Chats</Text>
-        </View>
+        <PremiumHeader
+          eyebrow="Inbox"
+          title="Conversations"
+          subtitle="A clean space for intentional messages after mutual matches."
+        />
+        <PremiumSearchBar value={query} onChangeText={setQuery} />
 
-        {matches.length ? (
-          matches.map((match) => {
+        {visibleMatches.length ? (
+          visibleMatches.map((match, index) => {
             const otherUser = getOtherUser(match, currentUserKey);
             const photo = otherUser?.photos?.[0] ?? otherUser?.picture;
 
@@ -117,30 +137,35 @@ export default function ChatsScreen() {
                 )}
 
                 <View style={styles.chatCopy}>
-                  <Text style={styles.chatName}>
-                    {otherUser?.name ?? "Match"}
-                  </Text>
+                  <View style={styles.chatTitleRow}>
+                    <Text style={styles.chatName}>
+                      {otherUser?.name ?? "Match"}
+                    </Text>
+                    <Text style={styles.timeText}>
+                      {index ? "Yesterday" : "Now"}
+                    </Text>
+                  </View>
                   {otherUser?.city && otherUser.country ? (
                     <Text style={styles.chatLocation} numberOfLines={1}>
                       {otherUser.city}, {otherUser.country}
                     </Text>
                   ) : null}
                   <Text style={styles.chatPreview}>
-                    You matched. Say hello.
+                    {index
+                      ? "A thoughtful conversation is waiting."
+                      : "You matched. Say hello with intention."}
                   </Text>
                 </View>
 
-                <Text style={styles.chevron}>›</Text>
+                {!index ? <View style={styles.unreadBadge} /> : null}
               </TouchableOpacity>
             );
           })
         ) : (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No chats yet</Text>
-            <Text style={styles.emptyText}>
-              When both people like each other, a chat appears here.
-            </Text>
-          </View>
+          <PremiumEmptyState
+            title="No chats yet"
+            text="When both people connect, their conversation appears here."
+          />
         )}
       </ScrollView>
     </ThemedBackground>
@@ -155,21 +180,12 @@ const styles = StyleSheet.create({
 
   container: {
     width: "100%",
-    maxWidth: isWeb ? 760 : undefined,
+    maxWidth: isWeb ? 980 : undefined,
     alignSelf: "center",
-    paddingHorizontal: 20,
-    paddingTop: isWeb ? 48 : 80,
-    paddingBottom: isWeb ? 132 : 120,
-  },
-
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  header: {
-    marginBottom: isWeb ? 18 : 24,
+    paddingHorizontal: isWeb ? 34 : premiumSpacing.screenX,
+    paddingTop: isWeb ? 34 : premiumSpacing.screenTop,
+    paddingBottom: isWeb ? 150 : premiumSpacing.screenBottom,
+    gap: 14,
   },
 
   navButton: {
@@ -190,35 +206,35 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    color: "#111",
+    color: premiumColors.ink,
     fontSize: isWeb ? 34 : 36,
     fontWeight: "700",
   },
 
   chatRow: {
     minHeight: isWeb ? 92 : 86,
-    borderRadius: isWeb ? 20 : 22,
-    backgroundColor: "rgb(255, 255, 255)",
+    borderRadius: 22,
+    backgroundColor: premiumColors.white,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.86)",
+    borderColor: premiumColors.hairline,
     flexDirection: "row",
     alignItems: "center",
     padding: isWeb ? 16 : 14,
-    marginBottom: 12,
+    ...premiumShadow,
   },
 
   avatar: {
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: "#E8E2DC",
+    backgroundColor: premiumColors.champagneSoft,
   },
 
   avatarPlaceholder: {
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: "#111",
+    backgroundColor: premiumColors.navy,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -233,51 +249,44 @@ const styles = StyleSheet.create({
     marginLeft: 14,
   },
 
+  chatTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+
   chatName: {
-    color: "#111",
+    flex: 1,
+    color: premiumColors.ink,
     fontSize: 18,
+    fontWeight: "800",
+  },
+
+  timeText: {
+    color: premiumColors.muted,
+    fontSize: 11,
     fontWeight: "700",
   },
 
   chatPreview: {
-    color: "#6E6E73",
+    color: premiumColors.muted,
     fontSize: 14,
     marginTop: 4,
   },
 
   chatLocation: {
-    color: "#111",
+    color: premiumColors.navy,
     fontSize: 12,
+    fontWeight: "800",
     marginTop: 4,
   },
 
-  chevron: {
-    color: "#111",
-    fontSize: 32,
-  },
-
-  emptyCard: {
-    minHeight: 280,
-    borderRadius: 24,
-    backgroundColor: "rgb(255, 255, 255)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.86)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 26,
-  },
-
-  emptyTitle: {
-    color: "#111",
-    fontSize: 26,
-    textAlign: "center",
-  },
-
-  emptyText: {
-    color: "#6E6E73",
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: "center",
-    marginTop: 10,
+  unreadBadge: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: premiumColors.emerald,
+    marginLeft: 10,
   },
 });

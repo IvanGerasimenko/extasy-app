@@ -1,5 +1,12 @@
 import BottomMenu from "@/components/BottomMenu";
+import {
+  CompatibilityBadge,
+  PremiumEmptyState,
+  PremiumLoadingState,
+  PremiumTag
+} from "@/components/PremiumUI";
 import { ThemedBackground } from "@/components/ThemedBackground";
+import { premiumColors, premiumShadow } from "@/constants/premiumDesign";
 import {
   getLocalAccountUsers,
   getUserKey,
@@ -14,7 +21,6 @@ import React, {
   useState,
 } from "react";
 import {
-  ActivityIndicator,
   Dimensions,
   Image,
   Modal,
@@ -134,9 +140,7 @@ export default function UserProfileScreen() {
   if (isLoading) {
     return (
       <ThemedBackground style={styles.background}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#111" />
-        </View>
+        <PremiumLoadingState label="Loading profile" />
       </ThemedBackground>
     );
   }
@@ -152,9 +156,10 @@ export default function UserProfileScreen() {
         </TouchableOpacity>
 
         {!user ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>Profile not found</Text>
-          </View>
+          <PremiumEmptyState
+            title="Profile not found"
+            text="This profile is no longer available."
+          />
         ) : (
           <>
             <View style={styles.heroCard} {...swipeResponder.panHandlers}>
@@ -194,6 +199,18 @@ export default function UserProfileScreen() {
                     </Text>
                   ) : null}
                 </View>
+                <CompatibilityBadge value="86%" />
+              </View>
+            </View>
+
+            <View style={styles.compatibilityBlock}>
+              <Text style={styles.compatibilityTitle}>Compatibility</Text>
+              <Text style={styles.compatibilityText}>
+                Similar pace, shared interests, and aligned intent. Visual
+                indicator only.
+              </Text>
+              <View style={styles.compatibilityTrack}>
+                <View style={styles.compatibilityFill} />
               </View>
             </View>
 
@@ -215,10 +232,22 @@ export default function UserProfileScreen() {
               <Text style={styles.sectionTitle}>Interests</Text>
               <View style={styles.tags}>
                 {user.interests?.map((interest) => (
-                  <View key={interest} style={styles.tag}>
-                    <Text style={styles.tagText}>{interest}</Text>
-                  </View>
+                  <PremiumTag key={interest} label={interest} tone="emerald" />
                 ))}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Conversation starters</Text>
+              <View style={styles.starterCard}>
+                <Text style={styles.starterText}>
+                  Ask about a favorite weekend ritual
+                </Text>
+              </View>
+              <View style={styles.starterCard}>
+                <Text style={styles.starterText}>
+                  Share what makes a great first coffee
+                </Text>
               </View>
             </View>
 
@@ -318,17 +347,11 @@ const styles = StyleSheet.create({
 
   container: {
     width: "100%",
-    maxWidth: 560,
+    maxWidth: Platform.OS === "web" ? 860 : 560,
     alignSelf: "center",
-    paddingHorizontal: 20,
-    paddingTop: 64,
-    paddingBottom: 120,
-  },
-
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: Platform.OS === "web" ? 34 : 20,
+    paddingTop: Platform.OS === "web" ? 34 : 64,
+    paddingBottom: Platform.OS === "web" ? 150 : 170,
   },
 
   navButton: {
@@ -336,24 +359,26 @@ const styles = StyleSheet.create({
     height: 44,
     alignSelf: "flex-start",
     borderRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.78)",
+    backgroundColor: premiumColors.white,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 18,
   },
 
   navText: {
-    color: "#111",
+    color: premiumColors.ink,
     fontSize: 34,
     lineHeight: 36,
     fontFamily: systemFontBold,
   },
 
   heroCard: {
-    height: 340,
+    height: Platform.OS === "web" ? 420 : 340,
+    maxWidth: Platform.OS === "web" ? 760 : undefined,
     borderRadius: 30,
     overflow: "hidden",
-    backgroundColor: "#111",
+    backgroundColor: premiumColors.navy,
+    ...premiumShadow,
   },
 
   heroImage: {
@@ -368,31 +393,35 @@ const styles = StyleSheet.create({
 
   heroShade: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(0, 0, 0, 0.2)",
+    backgroundColor: "rgba(16, 24, 32, 0.26)",
   },
 
   heroCopy: {
     borderRadius: 24,
-    backgroundColor: "rgba(255, 255, 255, 0.5)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    backgroundColor: "rgba(255, 252, 247, 0.78)",
     padding: 18,
   },
 
   name: {
-    color: "#111",
+    color: premiumColors.ink,
     fontSize: 34,
     fontFamily: systemFontBold,
     fontWeight: "700",
   },
 
   meta: {
-    color: "#181818",
+    color: premiumColors.charcoal,
     fontSize: 15,
     fontFamily: systemFont,
     marginTop: 8,
   },
 
   locationText: {
-    color: "#111",
+    color: premiumColors.ink,
     fontSize: 14,
     fontFamily: systemFont,
     marginTop: 8,
@@ -405,7 +434,7 @@ const styles = StyleSheet.create({
     minWidth: 54,
     height: 32,
     borderRadius: 999,
-    backgroundColor: "rgba(0, 0, 0, 0.48)",
+    backgroundColor: "rgba(16, 24, 32, 0.58)",
     paddingHorizontal: 12,
     alignItems: "center",
     justifyContent: "center",
@@ -420,15 +449,17 @@ const styles = StyleSheet.create({
 
   section: {
     marginTop: 22,
+    maxWidth: Platform.OS === "web" ? 860 : undefined,
     borderRadius: 24,
-    backgroundColor: "rgb(255, 255, 255)",
+    backgroundColor: "rgba(255, 252, 247, 0.9)",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.82)",
+    borderColor: premiumColors.hairline,
     padding: 16,
+    ...premiumShadow,
   },
 
   sectionTitle: {
-    color: "#111",
+    color: premiumColors.ink,
     fontSize: 18,
     fontFamily: systemFontBold,
     fontWeight: "700",
@@ -436,7 +467,7 @@ const styles = StyleSheet.create({
   },
 
   bodyText: {
-    color: "#111",
+    color: premiumColors.muted,
     fontSize: 15,
     lineHeight: 22,
     fontFamily: systemFont,
@@ -448,21 +479,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
-  tag: {
-    minHeight: 38,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    justifyContent: "center",
-    backgroundColor: "#111",
-  },
-
-  tagText: {
-    color: "#FFF",
-    fontSize: 13,
-    fontFamily: systemFontBold,
-    fontWeight: "700",
-  },
-
   photosRow: {
     gap: 12,
     paddingRight: 4,
@@ -472,28 +488,74 @@ const styles = StyleSheet.create({
     width: 118,
     height: 146,
     borderRadius: 22,
-    backgroundColor: "#E8E2DC",
+    backgroundColor: premiumColors.champagneSoft,
   },
 
   activePhoto: {
     borderWidth: 3,
-    borderColor: "#111",
+    borderColor: premiumColors.champagne,
   },
 
-  emptyCard: {
-    minHeight: 280,
-    borderRadius: 24,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 26,
+  compatibilityBlock: {
+    marginTop: 18,
+    maxWidth: Platform.OS === "web" ? 860 : undefined,
+    borderRadius: 26,
+    backgroundColor: premiumColors.navy,
+    padding: 18,
+    ...premiumShadow,
   },
 
-  emptyTitle: {
-    color: "#111",
-    fontSize: 26,
+  compatibilityTitle: {
+    color: premiumColors.white,
+    fontSize: 20,
     fontFamily: systemFontBold,
-    textAlign: "center",
+    fontWeight: "800",
+  },
+
+  compatibilityText: {
+    color: "rgba(255, 255, 255, 0.74)",
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 8,
+  },
+
+  compatibilityTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    marginTop: 16,
+  },
+
+  compatibilityFill: {
+    width: "86%",
+    height: "100%",
+    borderRadius: 4,
+    backgroundColor: premiumColors.champagne,
+  },
+
+  starterCard: {
+    borderRadius: 18,
+    backgroundColor: premiumColors.navySoft,
+    borderWidth: 1,
+    borderColor: "#CEDAE5",
+    padding: 14,
+    marginTop: 10,
+  },
+
+  starterText: {
+    color: premiumColors.navy,
+    fontSize: 14,
+    fontFamily: systemFontBold,
+  },
+
+  stickyAction: {
+    position: "absolute",
+    left: Platform.OS === "web" ? 0 : 20,
+    right: Platform.OS === "web" ? undefined : 20,
+    width: Platform.OS === "web" ? 420 : undefined,
+    alignSelf: Platform.OS === "web" ? "center" : undefined,
+    bottom: 92,
+    zIndex: 18,
   },
 
   fullscreen: {

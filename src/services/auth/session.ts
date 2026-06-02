@@ -47,8 +47,17 @@ export type ChatMessage = {
   id: string;
   matchId: string;
   senderKey: string;
-  text: string;
+  text?: string;
+  imageUri?: string;
+  emoji?: string;
+  photoReaction?: string;
   createdAt: string;
+};
+
+export type ChatMessagePayload = {
+  text?: string;
+  imageUri?: string;
+  emoji?: string;
 };
 
 export type LikedProfileRecord = {
@@ -712,11 +721,18 @@ export async function getChatMessages(matchId: string) {
   return messages.filter((message) => message.matchId === matchId);
 }
 
-export async function sendChatMessage(matchId: string, text: string) {
+export async function sendChatMessage(
+  matchId: string,
+  content: string | ChatMessagePayload,
+) {
   const currentUser = await getSessionUser();
-  const trimmedText = text.trim();
+  const payload =
+    typeof content === "string" ? { text: content } : content;
+  const trimmedText = payload.text?.trim();
+  const imageUri = payload.imageUri?.trim();
+  const emoji = payload.emoji?.trim();
 
-  if (!currentUser || !trimmedText) {
+  if (!currentUser || (!trimmedText && !imageUri && !emoji)) {
     return null;
   }
 
@@ -725,6 +741,8 @@ export async function sendChatMessage(matchId: string, text: string) {
     matchId,
     senderKey: getUserKey(currentUser),
     text: trimmedText,
+    imageUri,
+    emoji,
     createdAt: new Date().toISOString(),
   };
 
@@ -732,6 +750,34 @@ export async function sendChatMessage(matchId: string, text: string) {
   await saveMessages([...messages, message]);
 
   return message;
+}
+
+export async function reactToChatMessage(messageId: string, emoji: string) {
+  const trimmedEmoji = emoji.trim();
+
+  if (!trimmedEmoji) {
+    return null;
+  }
+
+  const messages = await getMessages();
+  const updatedMessages = messages.map((message) =>
+    message.id === messageId
+      ? {
+          ...message,
+          photoReaction: trimmedEmoji,
+        }
+      : message,
+  );
+  const updatedMessage =
+    updatedMessages.find((message) => message.id === messageId) ?? null;
+
+  if (!updatedMessage) {
+    return null;
+  }
+
+  await saveMessages(updatedMessages);
+
+  return updatedMessage;
 }
 
 async function getLikes() {
