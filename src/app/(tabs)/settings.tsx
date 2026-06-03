@@ -7,8 +7,13 @@ import {
   premiumSpacing,
 } from "@/constants/premiumDesign";
 import {
+  blockMatchContact,
   clearSession,
+  getCurrentUserMatches,
   getSessionUser,
+  getUserKey,
+  updateSessionDiscoverVisibility,
+  type MatchRecord,
   type SessionUser,
 } from "@/services/auth/session";
 import { useAppTheme } from "@/services/theme/ThemeContext";
@@ -16,6 +21,7 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -29,11 +35,50 @@ const isWeb = Platform.OS === "web";
 export default function SettingsScreen() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [safetyOpen, setSafetyOpen] = useState(false);
+  const [messageRequestsLimited, setMessageRequestsLimited] = useState(true);
+  const [profileVisibilityLimited, setProfileVisibilityLimited] =
+    useState(false);
+  const [matches, setMatches] = useState<MatchRecord[]>([]);
+  const [safetyMessage, setSafetyMessage] = useState("");
+  const [reportReasonOpen, setReportReasonOpen] = useState(false);
+  const reportReasons = [
+    "Помилка в додатку",
+    "Проблема з входом",
+    "Discover працює неправильно",
+    "Чати або повідомлення зникають",
+    "Проблема з преміумом",
+    "Питання безпеки або приватності",
+    "Інша проблема",
+  ];
   const { colors } = useAppTheme();
   const surfaceStyle = {
     backgroundColor: colors.surface,
     borderColor: colors.border,
   };
+  const settingActions = [
+    {
+      emoji: "🔔",
+      title: "Сповіщення",
+      text: "Лайки, пари та нові повідомлення.",
+      status: "Активно",
+      onPress: () => router.push("/notifications"),
+    },
+    {
+      emoji: "🎯",
+      title: "Уподобання пошуку",
+      text: "Стать, країна, інтереси та профіль.",
+      status: "Змінити",
+      onPress: () => router.push("/onboarding"),
+    },
+    {
+      emoji: "🛡️",
+      title: "Центр безпеки",
+      text: "Спокійні знайомства й контроль контакту.",
+      status: "Увімкнено",
+      onPress: () => setSafetyOpen(true),
+    },
+  ];
 
   useEffect(() => {
     let isMounted = true;
@@ -51,6 +96,8 @@ export default function SettingsScreen() {
       }
 
       setUser(sessionUser);
+      setProfileVisibilityLimited(Boolean(sessionUser.isDiscoverHidden));
+      setMatches(await getCurrentUserMatches());
       setIsLoading(false);
     }
 
@@ -64,6 +111,65 @@ export default function SettingsScreen() {
   async function handleSignOut() {
     await clearSession();
     router.replace("/welcome");
+  }
+
+  async function handleBlockContact(match: MatchRecord) {
+    const result = await blockMatchContact(match.id);
+
+    if (!result) {
+      setSafetyMessage("Модерація: не вдалося заблокувати контакт.");
+      return;
+    }
+
+    setMatches((currentMatches) =>
+      currentMatches.filter(
+        (item) => !item.userKeys.includes(result.blockedUserKey),
+      ),
+    );
+    setSafetyMessage(
+      `Модерація: ${result.blockedUser?.name ?? "контакт"} заблоковано. Чат і повідомлення видалено.`,
+    );
+  }
+
+  function toggleMessageFilter() {
+    setMessageRequestsLimited((currentValue) => {
+      const nextValue = !currentValue;
+      setSafetyMessage(
+        nextValue
+          ? "Модерація: фільтр повідомлень увімкнено. Підозрілі контакти буде приглушено."
+          : "Модерація: фільтр повідомлень вимкнено. Ви бачитимете більше повідомлень.",
+      );
+      return nextValue;
+    });
+  }
+
+  async function toggleProfileVisibility() {
+    const nextValue = !profileVisibilityLimited;
+    const updatedUser = await updateSessionDiscoverVisibility(nextValue);
+
+    if (updatedUser) {
+      setUser(updatedUser);
+    }
+
+    setProfileVisibilityLimited(nextValue);
+    setSafetyMessage(
+      nextValue
+        ? "Модерація: видимість обмежено. Ваш профіль не показується в Discover."
+        : "Модерація: видимість відновлено. Ваш профіль знову може з'являтися в Discover.",
+    );
+  }
+
+  function handleReportReason(reason: string) {
+    setReportReasonOpen(false);
+    setSafetyMessage(
+      `Підтримка: звернення отримано. Тема: ${reason}. Ми перевіримо роботу додатка і підкажемо наступний крок.`,
+    );
+    setTimeout(() => setSafetyOpen(true), 180);
+  }
+
+  function openReportReasonModal() {
+    setSafetyOpen(false);
+    setTimeout(() => setReportReasonOpen(true), 220);
   }
 
   if (isLoading) {
@@ -84,9 +190,11 @@ export default function SettingsScreen() {
             <Text style={[styles.eyebrow, { color: colors.mutedText }]}>
               Extasy
             </Text>
-            <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
+            <Text style={[styles.title, { color: colors.text }]}>
+              Налаштування
+            </Text>
             <Text style={[styles.subtitle, { color: colors.mutedText }]}>
-              Account controls, preferences, and premium experience states.
+              Керування акаунтом, уподобаннями та преміальним досвідом.
             </Text>
           </View>
           <ThemeToggle />
@@ -94,28 +202,46 @@ export default function SettingsScreen() {
 
         <View style={[styles.card, surfaceStyle]}>
           <Text style={[styles.cardTitle, { color: colors.surfaceText }]}>
-            {user?.name ?? "Your account"}
+            {user?.name ?? "Ваш акаунт"}
           </Text>
           <Text style={[styles.cardText, { color: colors.surfaceMutedText }]}>
-            {user?.email ?? user?.phoneNumber ?? "Profile settings"}
+            {user?.email ?? user?.phoneNumber ?? "Налаштування профілю"}
           </Text>
           <View style={styles.settingsTags}>
-            <PremiumTag label="Premium modal" tone="gold" />
-            <PremiumTag label="Bottom sheet ready" tone="navy" />
+            <PremiumTag label="Преміум" tone="gold" />
+            <PremiumTag label="Профіль готовий" tone="navy" />
           </View>
         </View>
 
-        <View style={[styles.card, surfaceStyle]}>
-          {["Notifications", "Discovery preferences", "Safety center"].map(
-            (label) => (
-              <View key={label} style={styles.settingsRow}>
-                <Text style={[styles.rowText, { color: colors.surfaceText }]}>
-                  {label}
-                </Text>
-                <Text style={styles.rowChevron}>›</Text>
+        <View style={[styles.actionsCard, surfaceStyle]}>
+          {settingActions.map((action) => (
+            <TouchableOpacity
+              key={action.title}
+              activeOpacity={0.82}
+              style={styles.settingsRow}
+              onPress={action.onPress}
+            >
+              <View style={styles.rowIcon}>
+                <Text style={styles.rowEmoji}>{action.emoji}</Text>
               </View>
-            ),
-          )}
+              <View style={styles.rowCopy}>
+                <Text style={[styles.rowText, { color: colors.surfaceText }]}>
+                  {action.title}
+                </Text>
+                <Text
+                  style={[
+                    styles.rowDescription,
+                    { color: colors.surfaceMutedText },
+                  ]}
+                >
+                  {action.text}
+                </Text>
+              </View>
+              <View style={styles.rowStatus}>
+                <Text style={styles.rowStatusText}>{action.status}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <TouchableOpacity
@@ -123,7 +249,7 @@ export default function SettingsScreen() {
           onPress={() => router.push("/onboarding")}
         >
           <Text style={[styles.secondaryText, { color: colors.surfaceText }]}>
-            Edit Profile
+            Редагувати профіль
           </Text>
         </TouchableOpacity>
 
@@ -146,10 +272,224 @@ export default function SettingsScreen() {
               },
             ]}
           >
-            Sign Out
+            Вийти
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <Modal visible={safetyOpen} transparent animationType="slide">
+        <View style={styles.safetyBackdrop}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            onPress={() => setSafetyOpen(false)}
+          />
+          <View style={styles.safetySheet}>
+            <View style={styles.safetyHandle} />
+            <View style={styles.safetyHeader}>
+              <View style={styles.safetyIcon}>
+                <Text style={styles.safetyIconText}>🛡️</Text>
+              </View>
+              <View style={styles.safetyHeaderCopy}>
+                <Text style={styles.safetyTitle}>Центр безпеки</Text>
+                <Text style={styles.safetySubtitle}>
+                  Інструменти для спокійного спілкування й контролю контактів.
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.safetyClose}
+                onPress={() => setSafetyOpen(false)}
+              >
+                <Text style={styles.safetyCloseText}>×</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={styles.safetyScroll}
+              contentContainerStyle={styles.safetyScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {safetyMessage ? (
+                <View style={styles.moderationToast}>
+                  <Text style={styles.moderationToastTitle}>Модерація</Text>
+                  <Text style={styles.moderationToastText}>
+                    {safetyMessage}
+                  </Text>
+                </View>
+              ) : null}
+
+              <View style={styles.blockPanel}>
+                <View style={styles.blockHeader}>
+                  <View style={styles.blockHeaderIcon}>
+                    <Text style={styles.blockHeaderEmoji}>🚫</Text>
+                  </View>
+                  <Text style={styles.blockTitle}>Блокувати контакт</Text>
+                </View>
+                <Text style={styles.blockText}>
+                  Контакт буде повністю видалено з чатів разом з історією
+                  повідомлень.
+                </Text>
+                {matches.length ? (
+                  matches.map((match) => {
+                    const currentUserKey = user ? getUserKey(user) : "";
+                    const blockedCandidateKey = match.userKeys.find(
+                      (userKey) => userKey !== currentUserKey,
+                    );
+                    const blockedCandidate = blockedCandidateKey
+                      ? match.users[blockedCandidateKey]
+                      : null;
+
+                    return (
+                      <TouchableOpacity
+                        key={match.id}
+                        style={styles.blockContactRow}
+                        onPress={() => handleBlockContact(match)}
+                      >
+                        <View style={styles.blockAvatar}>
+                          <Text style={styles.blockAvatarText}>
+                            {blockedCandidate?.name
+                              ?.slice(0, 1)
+                              .toUpperCase() ?? "E"}
+                          </Text>
+                        </View>
+                        <View style={styles.blockContactCopy}>
+                          <Text style={styles.blockContactName}>
+                            {blockedCandidate?.name ?? "Контакт"}
+                          </Text>
+                          <Text style={styles.blockContactHint}>
+                            Видалити з /chats
+                          </Text>
+                        </View>
+                        <Text style={styles.blockContactAction}>Блок</Text>
+                      </TouchableOpacity>
+                    );
+                  })
+                ) : (
+                  <View style={styles.blockEmptyState}>
+                    <Text style={styles.blockEmptyEmoji}>💞</Text>
+                    <Text style={styles.blockEmptyTitle}>
+                      У вас поки немає пар
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.safetyGrid}>
+                <TouchableOpacity
+                  style={styles.safetyAction}
+                  onPress={openReportReasonModal}
+                >
+                  <Text style={styles.safetyActionEmoji}>⚠️</Text>
+                  <Text style={styles.safetyActionTitle}>Поскаржитися</Text>
+                  <Text style={styles.safetyActionText}>
+                    Повідомте про проблему в додатку або роботі сервісу.
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.safetyControls}>
+                <TouchableOpacity
+                  style={styles.safetyToggleRow}
+                  onPress={toggleMessageFilter}
+                >
+                  <View style={styles.safetyToggleCopy}>
+                    <Text style={styles.safetyToggleTitle}>
+                      Фільтр повідомлень
+                    </Text>
+                    <Text style={styles.safetyToggleText}>
+                      Пріоритет взаємним парам і знайомим контактам.
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.safetySwitch,
+                      messageRequestsLimited && styles.safetySwitchActive,
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.safetySwitchKnob,
+                        messageRequestsLimited && styles.safetySwitchKnobActive,
+                      ]}
+                    />
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.safetyToggleRow}
+                  onPress={toggleProfileVisibility}
+                >
+                  <View style={styles.safetyToggleCopy}>
+                    <Text style={styles.safetyToggleTitle}>
+                      Обмежити видимість
+                    </Text>
+                    <Text style={styles.safetyToggleText}>
+                      Показувати профіль обережніше, коли потрібна пауза.
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.safetySwitch,
+                      profileVisibilityLimited && styles.safetySwitchActive,
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.safetySwitchKnob,
+                        profileVisibilityLimited &&
+                          styles.safetySwitchKnobActive,
+                      ]}
+                    />
+                  </View>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.safetyTip}>
+                <Text style={styles.safetyTipTitle}>💡 Швидка порада</Text>
+                <Text style={styles.safetyTipText}>
+                  Не переходьте в інші месенджери, доки не відчуєте довіру.
+                  Зустрічайтеся у публічному місці й повідомте близьким, куди
+                  йдете.
+                </Text>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={reportReasonOpen} transparent animationType="fade">
+        <View style={styles.reportBackdrop}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            onPress={() => setReportReasonOpen(false)}
+          />
+          <View style={styles.reportSheet}>
+            <View style={styles.reportHeader}>
+              <Text style={styles.reportTitle}>Тема звернення</Text>
+              <TouchableOpacity
+                style={styles.reportClose}
+                onPress={() => setReportReasonOpen(false)}
+              >
+                <Text style={styles.reportCloseText}>×</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.reportSubtitle}>
+              Оберіть, що саме працює не так. Це допоможе підтримці швидше
+              розібратися.
+            </Text>
+            <View style={styles.reportReasons}>
+              {reportReasons.map((reason) => (
+                <TouchableOpacity
+                  key={reason}
+                  style={styles.reportReason}
+                  onPress={() => handleReportReason(reason)}
+                >
+                  <Text style={styles.reportReasonText}>{reason}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ThemedBackground>
   );
 }
@@ -219,6 +559,16 @@ const styles = StyleSheet.create({
     ...premiumShadow,
   },
 
+  actionsCard: {
+    borderRadius: 30,
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
+    borderWidth: 1,
+    padding: 8,
+    marginTop: 16,
+    gap: 8,
+    ...premiumShadow,
+  },
+
   cardTitle: {
     color: "#111",
     fontSize: 22,
@@ -269,21 +619,518 @@ const styles = StyleSheet.create({
   },
 
   settingsRow: {
-    minHeight: 52,
-    borderBottomWidth: 1,
-    borderBottomColor: premiumColors.hairline,
+    minHeight: 78,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.46)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.74)",
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    shadowColor: "#101820",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 6,
+  },
+
+  rowIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.62)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.82)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  rowEmoji: {
+    fontSize: 23,
+    lineHeight: 28,
+  },
+
+  rowCopy: {
+    flex: 1,
+    minWidth: 0,
   },
 
   rowText: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "800",
+  },
+
+  rowDescription: {
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 3,
+  },
+
+  rowStatus: {
+    minWidth: 76,
+    minHeight: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(17, 38, 61, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.64)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+
+  rowStatusText: {
+    color: premiumColors.navy,
+    fontSize: 11,
+    fontWeight: "900",
   },
 
   rowChevron: {
     color: premiumColors.champagne,
     fontSize: 24,
+  },
+
+  safetyBackdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(16, 24, 32, 0.34)",
+  },
+
+  safetySheet: {
+    width: "100%",
+    maxWidth: isWeb ? 720 : undefined,
+    alignSelf: "center",
+    height: isWeb ? undefined : "88%",
+    maxHeight: "88%",
+    borderTopLeftRadius: 34,
+    borderTopRightRadius: 34,
+    backgroundColor: "rgba(255, 255, 255, 0.86)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.78)",
+    paddingHorizontal: isWeb ? 24 : 16,
+    paddingTop: 10,
+    paddingBottom: isWeb ? 28 : 24,
+    shadowColor: "#101820",
+    shadowOffset: { width: 0, height: -18 },
+    shadowOpacity: 0.18,
+    shadowRadius: 34,
+    elevation: 20,
+  },
+
+  safetyScroll: {
+    flex: 1,
+    marginTop: 16,
+  },
+
+  safetyScrollContent: {
+    flexGrow: 1,
+    paddingBottom: 18,
+  },
+
+  safetyHandle: {
+    width: 42,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: "rgba(16, 24, 32, 0.18)",
+    alignSelf: "center",
+    marginBottom: 18,
+  },
+
+  safetyHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  safetyIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(255, 255, 255, 0.62)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.86)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  safetyIconText: {
+    fontSize: 27,
+  },
+
+  safetyHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+  safetyTitle: {
+    color: premiumColors.ink,
+    fontSize: 24,
+    fontWeight: "900",
+  },
+
+  safetySubtitle: {
+    color: premiumColors.muted,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 4,
+  },
+
+  safetyClose: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(16, 24, 32, 0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  safetyCloseText: {
+    color: premiumColors.ink,
+    fontSize: 28,
+    lineHeight: 30,
+  },
+
+  safetyGrid: {
+    flexDirection: isWeb ? "row" : "column",
+    gap: 10,
+  },
+
+  moderationToast: {
+    borderRadius: 22,
+    backgroundColor: "rgba(29, 123, 98, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(29, 123, 98, 0.26)",
+    padding: 14,
+    marginBottom: 12,
+  },
+
+  moderationToastTitle: {
+    color: premiumColors.emerald,
+    fontSize: 12,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+
+  moderationToastText: {
+    color: premiumColors.ink,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 4,
+  },
+
+  safetyAction: {
+    flex: 1,
+    minHeight: 132,
+    borderRadius: 26,
+    backgroundColor: "rgba(255, 255, 255, 0.54)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.78)",
+    padding: 16,
+  },
+
+  safetyActionEmoji: {
+    fontSize: 28,
+  },
+
+  safetyActionTitle: {
+    color: premiumColors.ink,
+    fontSize: 16,
+    fontWeight: "900",
+    marginTop: 10,
+  },
+
+  safetyActionText: {
+    color: premiumColors.muted,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 5,
+  },
+
+  blockPanel: {
+    borderRadius: 26,
+    backgroundColor: "rgba(255, 255, 255, 0.52)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.78)",
+    padding: 14,
+    marginTop: 12,
+    gap: 10,
+  },
+
+  blockHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  blockHeaderIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(141, 52, 52, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  blockHeaderEmoji: {
+    fontSize: 18,
+  },
+
+  blockTitle: {
+    flex: 1,
+    color: premiumColors.ink,
+    fontSize: 16,
+    lineHeight: 21,
+    fontWeight: "900",
+  },
+
+  blockText: {
+    color: premiumColors.muted,
+    fontSize: 12,
+    lineHeight: 19,
+  },
+
+  blockContactRow: {
+    minHeight: 58,
+    borderRadius: 20,
+    backgroundColor: "rgba(16, 24, 32, 0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.72)",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+
+  blockAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: premiumColors.navy,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  blockAvatarText: {
+    color: premiumColors.white,
+    fontSize: 16,
+    fontWeight: "900",
+  },
+
+  blockContactCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+  blockContactName: {
+    color: premiumColors.ink,
+    fontSize: 14,
+    fontWeight: "900",
+  },
+
+  blockContactHint: {
+    color: premiumColors.muted,
+    fontSize: 12,
+    marginTop: 2,
+  },
+
+  blockContactAction: {
+    color: premiumColors.danger,
+    fontSize: 12,
+    fontWeight: "900",
+    flexShrink: 0,
+    paddingLeft: 6,
+  },
+
+  blockEmptyState: {
+    borderRadius: 20,
+    backgroundColor: "rgba(16, 24, 32, 0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.72)",
+    alignItems: "center",
+    padding: 16,
+  },
+
+  blockEmptyEmoji: {
+    fontSize: 28,
+    lineHeight: 32,
+  },
+
+  blockEmptyTitle: {
+    color: premiumColors.ink,
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: "900",
+    marginTop: 8,
+    textAlign: "center",
+  },
+
+  blockEmptyText: {
+    color: premiumColors.muted,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 4,
+    textAlign: "center",
+  },
+
+  safetyControls: {
+    gap: 10,
+    marginTop: 12,
+  },
+
+  safetyToggleRow: {
+    minHeight: 74,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.48)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.74)",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+
+  safetyToggleCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+  safetyToggleTitle: {
+    color: premiumColors.ink,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+
+  safetyToggleText: {
+    color: premiumColors.muted,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 3,
+    maxWidth: 460,
+  },
+
+  safetySwitch: {
+    width: 52,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(16, 24, 32, 0.14)",
+    padding: 3,
+  },
+
+  safetySwitchActive: {
+    backgroundColor: "rgba(29, 123, 98, 0.86)",
+  },
+
+  safetySwitchKnob: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: premiumColors.white,
+  },
+
+  safetySwitchKnobActive: {
+    transform: [{ translateX: 20 }],
+  },
+
+  safetyTip: {
+    borderRadius: 24,
+    backgroundColor: "rgba(232, 238, 244, 0.8)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.78)",
+    padding: 16,
+    marginTop: 12,
+  },
+
+  safetyTipTitle: {
+    color: premiumColors.navy,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+
+  safetyTipText: {
+    color: premiumColors.ink,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 6,
+  },
+
+  reportBackdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(16, 24, 32, 0.38)",
+  },
+
+  reportSheet: {
+    width: "100%",
+    maxWidth: isWeb ? 620 : undefined,
+    alignSelf: "center",
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    backgroundColor: "rgba(255, 255, 255, 0.92)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.82)",
+    paddingHorizontal: isWeb ? 24 : 16,
+    paddingTop: 20,
+    paddingBottom: isWeb ? 28 : 24,
+  },
+
+  reportHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+
+  reportTitle: {
+    color: premiumColors.ink,
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: "900",
+  },
+
+  reportClose: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(16, 24, 32, 0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  reportCloseText: {
+    color: premiumColors.ink,
+    fontSize: 28,
+    lineHeight: 30,
+  },
+
+  reportSubtitle: {
+    color: premiumColors.muted,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 8,
+  },
+
+  reportReasons: {
+    gap: 8,
+    marginTop: 16,
+  },
+
+  reportReason: {
+    minHeight: 50,
+    borderRadius: 18,
+    backgroundColor: "rgba(16, 24, 32, 0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.74)",
+    justifyContent: "center",
+    paddingHorizontal: 14,
+  },
+
+  reportReasonText: {
+    color: premiumColors.ink,
+    fontSize: 14,
+    fontWeight: "800",
   },
 });

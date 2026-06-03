@@ -2,6 +2,7 @@ import BottomMenu from "@/components/BottomMenu";
 import { PremiumEmptyState, PremiumLoadingState } from "@/components/PremiumUI";
 import { ThemedBackground } from "@/components/ThemedBackground";
 import { premiumColors, premiumShadow } from "@/constants/premiumDesign";
+import { getCountryLabel, getInterestLabel } from "@/constants/ukrainianLabels";
 import {
   getChatMessages,
   getMatchById,
@@ -249,7 +250,7 @@ export default function ChatScreen() {
   if (isLoading) {
     return (
       <ThemedBackground style={styles.background}>
-        <PremiumLoadingState label="Opening conversation" />
+        <PremiumLoadingState label="Відкриваємо розмову" />
       </ThemedBackground>
     );
   }
@@ -278,6 +279,7 @@ export default function ChatScreen() {
                   message.imageUri && styles.imageBubble,
                   message.emoji && styles.emojiBubble,
                   isMine ? styles.myMessage : styles.theirMessage,
+                  message.imageUri && styles.transparentBubble,
                 ]}
               >
                 {message.imageUri ? (
@@ -329,8 +331,8 @@ export default function ChatScreen() {
           })
         ) : (
           <PremiumEmptyState
-            title="It's a match"
-            text={`Start the conversation with ${otherUser?.name ?? "your match"} using a thoughtful opener.`}
+            title="У вас пара"
+            text={`Почніть розмову з ${otherUser?.name ?? "вашою парою"} з уважного повідомлення.`}
           />
         )}
       </ScrollView>
@@ -348,13 +350,13 @@ export default function ChatScreen() {
         </TouchableOpacity>
         <TextInput
           style={styles.input}
-          placeholder="Write a message..."
+          placeholder="Напишіть повідомлення..."
           placeholderTextColor="#888"
           value={draft}
           onChangeText={setDraft}
         />
         <TouchableOpacity style={styles.sendButton} onPress={handleSendText}>
-          <Text style={styles.sendText}>Senden</Text>
+          <Text style={styles.sendText}>Надіслати</Text>
         </TouchableOpacity>
       </View>
     );
@@ -363,18 +365,18 @@ export default function ChatScreen() {
   function renderProfilePanelContent() {
     return (
       <>
-        <Text style={styles.webPanelEyebrow}>Profile</Text>
+        <Text style={styles.webPanelEyebrow}>Профіль</Text>
         {photo ? (
           <Image source={{ uri: photo }} style={styles.webProfilePhoto} />
         ) : null}
         <Text style={styles.webProfileName}>
-          {otherUser?.name ?? "Match"}
+          {otherUser?.name ?? "Пара"}
           {otherUser?.age ? `, ${otherUser.age}` : ""}
         </Text>
         <Text style={styles.webProfileMeta}>
           {otherUser?.city && otherUser.country
-            ? `${otherUser.city}, ${otherUser.country}`
-            : "Matched on Extasy"}
+            ? `${otherUser.city}, ${getCountryLabel(otherUser.country)}`
+            : "Пара в Extasy"}
         </Text>
         {otherUser?.about ? (
           <Text style={styles.webProfileAbout}>{otherUser.about}</Text>
@@ -382,7 +384,9 @@ export default function ChatScreen() {
         <View style={styles.webProfileTags}>
           {otherUser?.interests?.slice(0, 6).map((interest) => (
             <View key={interest} style={styles.webProfileTag}>
-              <Text style={styles.webProfileTagText}>{interest}</Text>
+              <Text style={styles.webProfileTagText}>
+                {getInterestLabel(interest)}
+              </Text>
             </View>
           ))}
         </View>
@@ -393,7 +397,7 @@ export default function ChatScreen() {
               router.push(`/userProfile?userKey=${getUserKey(otherUser)}`)
             }
           >
-            <Text style={styles.webProfileButtonText}>Open profile</Text>
+            <Text style={styles.webProfileButtonText}>Відкрити профіль</Text>
           </TouchableOpacity>
         ) : null}
       </>
@@ -453,7 +457,7 @@ export default function ChatScreen() {
             onPress={() => setAttachmentOpen(false)}
           />
           <View style={styles.attachmentSheet}>
-            <Text style={styles.sheetTitle}>Add to message</Text>
+            <Text style={styles.sheetTitle}>Додати до повідомлення</Text>
             <View style={styles.attachmentActions}>
               <TouchableOpacity
                 style={styles.attachmentAction}
@@ -463,7 +467,7 @@ export default function ChatScreen() {
                 }}
               >
                 <Text style={styles.attachmentIcon}>▧</Text>
-                <Text style={styles.attachmentLabel}>Photo</Text>
+                <Text style={styles.attachmentLabel}>Фото</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.attachmentAction}
@@ -473,7 +477,7 @@ export default function ChatScreen() {
                 }}
               >
                 <Text style={styles.attachmentIcon}>☺</Text>
-                <Text style={styles.attachmentLabel}>Emoji</Text>
+                <Text style={styles.attachmentLabel}>Емодзі</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -484,9 +488,9 @@ export default function ChatScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.pickerWindow}>
             <View style={styles.windowHeader}>
-              <Text style={styles.sheetTitle}>Image picker</Text>
+              <Text style={styles.sheetTitle}>Вибір фото</Text>
               <TouchableOpacity onPress={() => setImagePickerOpen(false)}>
-                <Text style={styles.closeText}>Close</Text>
+                <Text style={styles.closeText}>Закрити</Text>
               </TouchableOpacity>
             </View>
             {selectedImageUri ? (
@@ -496,7 +500,7 @@ export default function ChatScreen() {
               />
             ) : (
               <View style={styles.previewEmpty}>
-                <Text style={styles.previewEmptyText}>Choose a photo</Text>
+                <Text style={styles.previewEmptyText}>Оберіть фото</Text>
               </View>
             )}
             <View style={styles.windowActions}>
@@ -504,7 +508,7 @@ export default function ChatScreen() {
                 style={styles.secondaryWindowButton}
                 onPress={handlePickImage}
               >
-                <Text style={styles.secondaryWindowText}>Pick image</Text>
+                <Text style={styles.secondaryWindowText}>Вибрати зображення</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
@@ -514,7 +518,7 @@ export default function ChatScreen() {
                 onPress={handleSendImage}
                 disabled={!selectedImageUri}
               >
-                <Text style={styles.primaryWindowText}>Send photo</Text>
+                <Text style={styles.primaryWindowText}>Надіслати фото</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -525,9 +529,9 @@ export default function ChatScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.pickerWindow}>
             <View style={styles.windowHeader}>
-              <Text style={styles.sheetTitle}>Emoji</Text>
+              <Text style={styles.sheetTitle}>Емодзі</Text>
               <TouchableOpacity onPress={() => setEmojiPickerOpen(false)}>
-                <Text style={styles.closeText}>Close</Text>
+                <Text style={styles.closeText}>Закрити</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.emojiGrid}>
@@ -555,9 +559,9 @@ export default function ChatScreen() {
             }}
           />
           <View style={styles.reactionSheet}>
-            <Text style={styles.sheetTitle}>React to photo</Text>
+            <Text style={styles.sheetTitle}>Реакція на фото</Text>
             <Text style={styles.reactionHint}>
-              Long press a photo, then choose an emoji to pin it on top.
+              Затисніть фото, а потім оберіть емодзі, щоб закріпити його зверху.
             </Text>
             <View style={styles.reactionEmojiRow}>
               {emojiOptions.slice(0, 12).map((emoji) => (
@@ -584,7 +588,7 @@ export default function ChatScreen() {
             style={styles.fullscreenClose}
             onPress={() => setFullscreenImageUri("")}
           >
-            <Text style={styles.fullscreenCloseText}>Close</Text>
+            <Text style={styles.fullscreenCloseText}>Закрити</Text>
           </TouchableOpacity>
           {fullscreenImageUri ? (
             <Image
@@ -638,7 +642,7 @@ export default function ChatScreen() {
                 style={styles.mobileTriggerImage}
               />
             ) : (
-              <Text style={styles.mobileTriggerText}>Profile</Text>
+              <Text style={styles.mobileTriggerText}>Профіль</Text>
             )}
           </TouchableOpacity>
           <ScrollView
@@ -658,6 +662,7 @@ export default function ChatScreen() {
                       message.imageUri && styles.imageBubble,
                       message.emoji && styles.emojiBubble,
                       isMine ? styles.myMessage : styles.theirMessage,
+                      message.imageUri && styles.transparentBubble,
                     ]}
                   >
                     {message.imageUri ? (
@@ -711,8 +716,8 @@ export default function ChatScreen() {
               })
             ) : (
               <PremiumEmptyState
-                title="It's a match"
-                text={`Start the conversation with ${otherUser?.name ?? "your match"} using a thoughtful opener.`}
+                title="У вас пара"
+                text={`Почніть розмову з ${otherUser?.name ?? "вашою парою"} з уважного повідомлення.`}
               />
             )}
           </ScrollView>
@@ -726,7 +731,7 @@ export default function ChatScreen() {
             </TouchableOpacity>
             <TextInput
               style={styles.input}
-              placeholder="Write a message..."
+              placeholder="Напишіть повідомлення..."
               placeholderTextColor="#888"
               value={draft}
               onChangeText={setDraft}
@@ -735,7 +740,7 @@ export default function ChatScreen() {
               style={styles.sendButton}
               onPress={handleSendText}
             >
-              <Text style={styles.sendText}>Senden</Text>
+              <Text style={styles.sendText}>Надіслати</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -751,7 +756,7 @@ export default function ChatScreen() {
             onPress={() => setAttachmentOpen(false)}
           />
           <View style={styles.attachmentSheet}>
-            <Text style={styles.sheetTitle}>Add to message</Text>
+            <Text style={styles.sheetTitle}>Додати до повідомлення</Text>
             <View style={styles.attachmentActions}>
               <TouchableOpacity
                 style={styles.attachmentAction}
@@ -761,7 +766,7 @@ export default function ChatScreen() {
                 }}
               >
                 <Text style={styles.attachmentIcon}>▧</Text>
-                <Text style={styles.attachmentLabel}>Photo</Text>
+                <Text style={styles.attachmentLabel}>Фото</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.attachmentAction}
@@ -771,7 +776,7 @@ export default function ChatScreen() {
                 }}
               >
                 <Text style={styles.attachmentIcon}>☺</Text>
-                <Text style={styles.attachmentLabel}>Emoji</Text>
+                <Text style={styles.attachmentLabel}>Емодзі</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -782,9 +787,9 @@ export default function ChatScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.pickerWindow}>
             <View style={styles.windowHeader}>
-              <Text style={styles.sheetTitle}>Image picker</Text>
+              <Text style={styles.sheetTitle}>Вибір фото</Text>
               <TouchableOpacity onPress={() => setImagePickerOpen(false)}>
-                <Text style={styles.closeText}>Close</Text>
+                <Text style={styles.closeText}>Закрити</Text>
               </TouchableOpacity>
             </View>
             {selectedImageUri ? (
@@ -794,7 +799,7 @@ export default function ChatScreen() {
               />
             ) : (
               <View style={styles.previewEmpty}>
-                <Text style={styles.previewEmptyText}>Choose a photo</Text>
+                <Text style={styles.previewEmptyText}>Оберіть фото</Text>
               </View>
             )}
             <View style={styles.windowActions}>
@@ -802,7 +807,7 @@ export default function ChatScreen() {
                 style={styles.secondaryWindowButton}
                 onPress={handlePickImage}
               >
-                <Text style={styles.secondaryWindowText}>Pick image</Text>
+                <Text style={styles.secondaryWindowText}>Вибрати зображення</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
@@ -812,7 +817,7 @@ export default function ChatScreen() {
                 onPress={handleSendImage}
                 disabled={!selectedImageUri}
               >
-                <Text style={styles.primaryWindowText}>Send photo</Text>
+                <Text style={styles.primaryWindowText}>Надіслати фото</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -823,9 +828,9 @@ export default function ChatScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.pickerWindow}>
             <View style={styles.windowHeader}>
-              <Text style={styles.sheetTitle}>Emoji</Text>
+              <Text style={styles.sheetTitle}>Емодзі</Text>
               <TouchableOpacity onPress={() => setEmojiPickerOpen(false)}>
-                <Text style={styles.closeText}>Close</Text>
+                <Text style={styles.closeText}>Закрити</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.emojiGrid}>
@@ -853,9 +858,9 @@ export default function ChatScreen() {
             }}
           />
           <View style={styles.reactionSheet}>
-            <Text style={styles.sheetTitle}>React to photo</Text>
+            <Text style={styles.sheetTitle}>Реакція на фото</Text>
             <Text style={styles.reactionHint}>
-              Long press a photo, then choose an emoji to pin it on top.
+              Затисніть фото, а потім оберіть емодзі, щоб закріпити його зверху.
             </Text>
             <View style={styles.reactionEmojiRow}>
               {emojiOptions.slice(0, 12).map((emoji) => (
@@ -882,7 +887,7 @@ export default function ChatScreen() {
             style={styles.fullscreenClose}
             onPress={() => setFullscreenImageUri("")}
           >
-            <Text style={styles.fullscreenCloseText}>Close</Text>
+            <Text style={styles.fullscreenCloseText}>Закрити</Text>
           </TouchableOpacity>
           {fullscreenImageUri ? (
             <Image
@@ -1133,7 +1138,7 @@ const styles = StyleSheet.create({
   chatSurface: {
     flex: 1,
     marginHorizontal: isWeb ? 20 : 14,
-    marginBottom: isWeb ? 132 : 124,
+    marginBottom: isWeb ? 132 : 100,
     borderRadius: isWeb ? 30 : 28,
     backgroundColor: "rgba(255, 252, 247, 0.74)",
     borderWidth: 1,
@@ -1161,7 +1166,6 @@ const styles = StyleSheet.create({
   mobileTriggerImage: {
     width: 38,
     height: 38,
-    borderRadius: 19,
     backgroundColor: premiumColors.champagneSoft,
   },
 
@@ -1194,6 +1198,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     paddingVertical: 5,
     maxWidth: isWeb ? 300 : 250,
+  },
+
+  transparentBubble: {
+    backgroundColor: "transparent",
   },
 
   emojiBubble: {
@@ -1231,17 +1239,15 @@ const styles = StyleSheet.create({
     width: isWeb ? 284 : 238,
     height: isWeb ? 220 : 190,
     borderRadius: 18,
-    backgroundColor: premiumColors.champagneSoft,
   },
 
   photoReaction: {
     position: "absolute",
+    borderRadius: 18,
     bottom: -10,
     width: 24,
     height: 24,
-    borderRadius: 12,
     backgroundColor: premiumColors.white,
-    borderWidth: 2,
     borderColor: premiumColors.porcelain,
     alignItems: "center",
     justifyContent: "center",

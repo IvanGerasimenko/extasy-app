@@ -1,8 +1,10 @@
 import { ThemedBackground } from "@/components/ThemedBackground";
+import { getCountryLabel } from "@/constants/ukrainianLabels";
 import {
   acceptIncomingLikeRequest,
   getIncomingLikeRequestsForCurrentUser,
   getLikeResponseNotificationsForCurrentUser,
+  getUnreadAcceptedLikeResponseForCurrentUser,
   getUserKey,
   markNotificationsSeenForCurrentUser,
   skipIncomingLikeRequest,
@@ -34,15 +36,21 @@ export default function NotificationsScreen() {
   }, []);
 
   async function loadNotifications() {
-    const [incomingRecords, responseRecords] = await Promise.all([
-      getIncomingLikeRequestsForCurrentUser(),
-      getLikeResponseNotificationsForCurrentUser(),
-    ]);
+    const [incomingRecords, responseRecords, unreadAcceptedResponse] =
+      await Promise.all([
+        getIncomingLikeRequestsForCurrentUser(),
+        getLikeResponseNotificationsForCurrentUser(),
+        getUnreadAcceptedLikeResponseForCurrentUser(),
+      ]);
 
     setIncomingLikes(incomingRecords);
     setResponses(responseRecords);
     setIsLoading(false);
     await markNotificationsSeenForCurrentUser();
+
+    if (unreadAcceptedResponse?.matchId) {
+      router.push(`/chat?matchId=${unreadAcceptedResponse.matchId}`);
+    }
   }
 
   async function handleAccept(request: LikeRequestRecord) {
@@ -54,13 +62,13 @@ export default function NotificationsScreen() {
       return;
     }
 
-    setMessage("Could not accept this like.");
+    setMessage("Не вдалося прийняти цей лайк.");
   }
 
   async function handleSkip(request: LikeRequestRecord) {
     await skipIncomingLikeRequest(request.id);
     await loadNotifications();
-    setMessage(`${request.fromUser.name ?? "Someone"} was skipped.`);
+    setMessage(`${request.fromUser.name ?? "Хтось"} пропущено.`);
   }
 
   function LikeCard({ request }: { request: LikeRequestRecord }) {
@@ -86,16 +94,16 @@ export default function NotificationsScreen() {
 
         <View style={styles.copy}>
           <Text style={styles.name}>
-            {request.fromUser.name ?? "Someone"}
+            {request.fromUser.name ?? "Хтось"}
             {request.fromUser.age ? `, ${request.fromUser.age}` : ""}
           </Text>
           {request.fromUser.city && request.fromUser.country ? (
             <Text style={styles.location} numberOfLines={1}>
-              {request.fromUser.city}, {request.fromUser.country}
+              {request.fromUser.city}, {getCountryLabel(request.fromUser.country)}
             </Text>
           ) : null}
           <Text style={styles.body} numberOfLines={2}>
-            Wants to match with you.
+            Хоче створити пару з вами.
           </Text>
         </View>
 
@@ -104,13 +112,13 @@ export default function NotificationsScreen() {
             style={[styles.smallButton, styles.acceptButton]}
             onPress={() => handleAccept(request)}
           >
-            <Text style={styles.acceptText}>Accept</Text>
+            <Text style={styles.acceptText}>Прийняти</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.smallButton, styles.skipButton]}
             onPress={() => handleSkip(request)}
           >
-            <Text style={styles.skipText}>Skip</Text>
+            <Text style={styles.skipText}>Пропустити</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -130,38 +138,38 @@ export default function NotificationsScreen() {
   return (
     <ThemedBackground style={styles.background}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Notifications</Text>
+        <Text style={styles.title}>Сповіщення</Text>
         <Text style={styles.subtitle}>
-          Accept likes to open a chat, or skip them.
+          Приймайте лайки, щоб відкрити чат, або пропускайте їх.
         </Text>
 
         {message ? <Text style={styles.message}>{message}</Text> : null}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Incoming Likes</Text>
+          <Text style={styles.sectionTitle}>Вхідні лайки</Text>
           {incomingLikes.length ? (
             incomingLikes.map((request) => (
               <LikeCard key={request.id} request={request} />
             ))
           ) : (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>No new likes</Text>
-              <Text style={styles.emptyText}>New likes will appear here.</Text>
+              <Text style={styles.emptyTitle}>Нових лайків немає</Text>
+              <Text style={styles.emptyText}>Нові лайки з'являться тут.</Text>
             </View>
           )}
         </View>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your Like Updates</Text>
+          <Text style={styles.sectionTitle}>Оновлення ваших лайків</Text>
           {responses.length ? (
             responses.map((request) => (
               <View key={request.id} style={styles.responseCard}>
                 <Text style={styles.responseTitle}>
-                  {request.toUser.name ?? "Someone"}
+                  {request.toUser.name ?? "Хтось"}
                 </Text>
                 <Text style={styles.responseText}>
                   {request.status === "accepted"
-                    ? "Accepted your like. Chat is open."
-                    : "Skipped your like."}
+                    ? "Прийняв(-ла) ваш лайк. Чат відкрито."
+                    : "Пропустив(-ла) ваш лайк."}
                 </Text>
                 {request.status === "accepted" && request.matchId ? (
                   <TouchableOpacity
@@ -170,16 +178,16 @@ export default function NotificationsScreen() {
                       router.push(`/chat?matchId=${request.matchId}`)
                     }
                   >
-                    <Text style={styles.chatText}>Open Chat</Text>
+                    <Text style={styles.chatText}>Відкрити чат</Text>
                   </TouchableOpacity>
                 ) : null}
               </View>
             ))
           ) : (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>No answers yet</Text>
+              <Text style={styles.emptyTitle}>Відповідей поки немає</Text>
               <Text style={styles.emptyText}>
-                When someone accepts or skips your like, it appears here.
+                Коли хтось прийме або пропустить ваш лайк, це з'явиться тут.
               </Text>
             </View>
           )}

@@ -37,7 +37,7 @@ export default function ImagePicker({
         await ExpoImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (!permission.granted) {
-        alert("Permission is required to add photos");
+        alert("Потрібен дозвіл, щоб додати фото");
         return;
       }
     }
@@ -69,7 +69,7 @@ export default function ImagePicker({
     >
       <TouchableOpacity style={styles.addPhoto} onPress={pickImage}>
         <Text style={styles.plus}>+</Text>
-        <Text style={styles.addPhotoText}>Add photo</Text>
+        <Text style={styles.addPhotoText}>Додати фото</Text>
       </TouchableOpacity>
 
       {photos.map((photo) => (

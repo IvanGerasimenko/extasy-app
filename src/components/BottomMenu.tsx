@@ -7,27 +7,32 @@ const menuItems = [
   {
     route: "/discover",
     label: "Discover",
+    emoji: "🔎",
     icon: require("../../assets/lovesearch.png"),
   },
   {
     route: "/liked",
-    label: "Matches",
+    label: "Пари",
+    emoji: "👩‍❤️‍💋‍👨",
     icon: require("../../assets/liked.png"),
   },
   {
     route: "/chats",
-    label: "Chat",
+    label: "Чат",
+    emoji: "💬",
     icon: require("../../assets/chat.png"),
     showsBadge: true,
   },
   {
     route: "/profile",
-    label: "Profile",
+    label: "Профіль",
+    emoji: "👤",
     icon: require("../../assets/profile.png"),
   },
   {
     route: "/settings",
-    label: "Settings",
+    label: "Налашт.",
+    emoji: "⚙️",
     icon: require("../../assets/logout.png"),
   },
 ] as const;
@@ -68,10 +73,15 @@ export default function BottomMenu() {
               style={[styles.button, isActive && styles.activeButton]}
               onPress={() => router.push(item.route)}
             >
-              <Image
-                source={item.icon}
-                style={[styles.icon, isActive && styles.activeIcon]}
-              />
+              <View
+                style={[styles.iconBubble, isActive && styles.activeIconBubble]}
+              >
+                <Text style={styles.emojiIcon}>{item.emoji}</Text>
+                <Image
+                  source={item.icon}
+                  style={[styles.icon, isActive && styles.activeIcon]}
+                />
+              </View>
               <Text style={[styles.label, isActive && styles.activeLabel]}>
                 {item.label}
               </Text>
@@ -93,21 +103,21 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    bottom: 22,
+    bottom: 18,
     zIndex: 20,
     alignItems: "center",
   },
 
   menu: {
-    width: "92%",
-    maxWidth: 520,
-    backgroundColor: "rgba(255, 252, 247, 0.94)",
-    borderColor: "#E6E0D8",
+    width: "91%",
+    maxWidth: 540,
+    backgroundColor: "rgba(255, 255, 255, 0.72)",
+    borderColor: "rgba(255, 255, 255, 0.76)",
     borderWidth: 1,
-    borderRadius: 26,
-    padding: 6,
+    borderRadius: 32,
+    padding: 7,
     flexDirection: "row",
-    gap: 4,
+    gap: 6,
     alignItems: "center",
     justifyContent: "space-between",
     shadowColor: "#1E1306",
@@ -115,44 +125,70 @@ const styles = StyleSheet.create({
       width: 0,
       height: 10,
     },
-    shadowOpacity: 0.14,
-    shadowRadius: 18,
-    elevation: 10,
+    shadowOpacity: 0.18,
+    shadowRadius: 26,
+    elevation: 16,
   },
 
   button: {
     flex: 1,
-    height: 54,
-    borderRadius: 20,
+    height: 62,
+    borderRadius: 25,
     backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
-    gap: 3,
+    gap: 4,
   },
 
   activeButton: {
-    backgroundColor: "#11263D",
+    backgroundColor: "rgba(255, 255, 255, 0.72)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.86)",
+    shadowColor: "#101820",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.14,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+
+  iconBubble: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "rgba(255, 255, 255, 0.34)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  activeIconBubble: {
+    backgroundColor: "rgba(17, 38, 61, 0.09)",
+    transform: [{ scale: 1.04 }],
+  },
+
+  emojiIcon: {
+    position: "absolute",
+    fontSize: 18,
   },
 
   icon: {
-    width: 21,
-    height: 21,
+    width: 18,
+    height: 18,
     resizeMode: "contain",
-    tintColor: "#69717C",
+    opacity: 0,
   },
 
   activeIcon: {
-    tintColor: "#C7A76C",
+    opacity: 0,
   },
 
   label: {
-    color: "#69717C",
+    color: "rgba(16, 24, 32, 0.64)",
     fontSize: 10,
     fontWeight: "800",
   },
 
   activeLabel: {
-    color: "#FFFCF7",
+    color: "#101820",
   },
 
   badge: {
@@ -162,12 +198,12 @@ const styles = StyleSheet.create({
     minWidth: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "#1D7B62",
+    backgroundColor: "rgba(29, 123, 98, 0.92)",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 5,
     borderWidth: 1,
-    borderColor: "#FFFCF7",
+    borderColor: "rgba(255, 255, 255, 0.86)",
   },
 
   badgeText: {

@@ -1,4 +1,3 @@
-import { BackButton } from "@/components/BackButton";
 import ProfileImagePicker from "@/components/ImagePicker";
 import {
   PremiumButton,
@@ -13,6 +12,12 @@ import {
   premiumSpacing,
   premiumType,
 } from "@/constants/premiumDesign";
+import {
+  getCountryLabel,
+  getGenderLabel,
+  getInterestLabel,
+  getLookingForLabel,
+} from "@/constants/ukrainianLabels";
 import { getSessionUser } from "@/services/auth/session";
 import { setPendingOnboardingProfile } from "@/services/onboarding/pendingProfile";
 import { router } from "expo-router";
@@ -172,37 +177,37 @@ export default function OnboardingScreen() {
     const ageNumber = Number(trimmedAge);
 
     if (!trimmedName) {
-      setError("Add your name.");
+      setError("Додайте своє ім'я.");
       return;
     }
 
     if (!trimmedAge || Number.isNaN(ageNumber) || ageNumber < 18) {
-      setError("Add a valid age. You must be 18 or older.");
+      setError("Додайте коректний вік. Вам має бути 18 або більше.");
       return;
     }
 
     if (!trimmedAbout || trimmedAbout.length < 10) {
-      setError("Write a short bio, at least 10 characters.");
+      setError("Напишіть короткий опис, щонайменше 10 символів.");
       return;
     }
 
     if (!photos[0]) {
-      setError("Add at least one profile photo.");
+      setError("Додайте хоча б одне фото профілю.");
       return;
     }
 
     if (!gender) {
-      setError("Choose your gender.");
+      setError("Оберіть свою стать.");
       return;
     }
 
     if (!lookingFor) {
-      setError("Choose who you want to meet.");
+      setError("Оберіть, з ким хочете знайомитися.");
       return;
     }
 
     if (interests.length < 3) {
-      setError("Choose at least 3 interests.");
+      setError("Оберіть щонайменше 3 інтереси.");
       return;
     }
 
@@ -226,7 +231,7 @@ export default function OnboardingScreen() {
     } catch (error) {
       setIsSaving(false);
       setError(
-        "Profile photo is too large for Safari storage. Remove it and add it again.",
+        "Фото профілю завелике для сховища Safari. Видаліть його й додайте знову.",
       );
       return;
     }
@@ -244,10 +249,7 @@ export default function OnboardingScreen() {
     onPress: () => void;
   }) {
     return (
-      <TouchableOpacity
-        style={styles.tagPressable}
-        onPress={onPress}
-      >
+      <TouchableOpacity style={styles.tagPressable} onPress={onPress}>
         <PremiumTag label={title} selected={selected} />
       </TouchableOpacity>
     );
@@ -272,44 +274,44 @@ export default function OnboardingScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <BackButton to="/welcome" />
         <PremiumHeader
-          eyebrow="Profile setup"
-          title="Build a profile worth meeting"
-          subtitle="Photos, interests, and preferences help Extasy present thoughtful matches."
+          eyebrow="Налаштування профілю"
+          title="Створіть профіль, з яким хочеться знайомитись"
+          subtitle="Фото, інтереси й уподобання допомагають Extasy підбирати уважніші знайомства."
         />
 
         <View style={styles.section}>
           <View style={styles.stepCard}>
-            <Text style={styles.stepLabel}>Photo upload</Text>
+            <Text style={styles.stepLabel}>Завантаження фото</Text>
             <Text style={styles.stepText}>
-              Lead with a clear portrait. Add more photos for context and trust.
+              Почніть із чіткого портрета. Додайте ще фото для контексту й
+              довіри.
             </Text>
           </View>
           <ProfileImagePicker photos={photos} onPhotosChange={setPhotos} />
 
           <View>
-            <Text style={styles.label}>Your name</Text>
+            <Text style={styles.label}>Ваше ім'я</Text>
             <PremiumTextInput
               style={styles.input}
-              placeholder="E.g. John Doe"
+              placeholder="Напр. Іван Петренко"
               value={name}
               onChangeText={setName}
             />
 
-            <Text style={styles.label}>Age</Text>
+            <Text style={styles.label}>Вік</Text>
             <PremiumTextInput
               style={styles.input}
-              placeholder="E.g. 28"
+              placeholder="Напр. 28"
               keyboardType="number-pad"
               value={age}
               onChangeText={setAge}
             />
 
-            <Text style={styles.label}>About you</Text>
+            <Text style={styles.label}>Про вас</Text>
             <PremiumTextInput
               style={styles.textarea}
-              placeholder="Tell others a little bit about yourself..."
+              placeholder="Розкажіть трохи про себе..."
               multiline
               value={about}
               onChangeText={setAbout}
@@ -317,20 +319,20 @@ export default function OnboardingScreen() {
           </View>
 
           <View>
-            <Text style={styles.label}>Location</Text>
+            <Text style={styles.label}>Локація</Text>
             <PremiumTextInput
               style={styles.input}
-              placeholder="City, e.g. Berlin"
+              placeholder="Місто, напр. Берлін"
               value={city}
               onChangeText={setCity}
             />
 
-            <Text style={styles.label}>Country</Text>
+            <Text style={styles.label}>Країна</Text>
             <View style={styles.tags}>
               {countryOptions.map((item) => (
                 <Tag
                   key={item}
-                  title={item}
+                  title={getCountryLabel(item)}
                   selected={country === item}
                   onPress={() => setCountry(item)}
                 />
@@ -339,12 +341,12 @@ export default function OnboardingScreen() {
           </View>
 
           <View>
-            <Text style={styles.label}>Gender</Text>
+            <Text style={styles.label}>Стать</Text>
             <View style={styles.optionsRow}>
               {genders.map((item) => (
                 <Tag
                   key={item}
-                  title={item}
+                  title={getGenderLabel(item)}
                   selected={gender === item}
                   onPress={() => setGender(item)}
                 />
@@ -353,12 +355,12 @@ export default function OnboardingScreen() {
           </View>
 
           <View>
-            <Text style={styles.label}>Interested in</Text>
+            <Text style={styles.label}>Цікавлять</Text>
             <View style={styles.optionsRow}>
               {lookingForOptions.map((item) => (
                 <Tag
                   key={item}
-                  title={item}
+                  title={getLookingForLabel(item)}
                   selected={lookingFor === item}
                   onPress={() => setLookingFor(item)}
                 />
@@ -367,12 +369,12 @@ export default function OnboardingScreen() {
           </View>
 
           <View>
-            <Text style={styles.label}>Interests</Text>
+            <Text style={styles.label}>Інтереси</Text>
             <View style={styles.tags}>
               {interestsList.map((item) => (
                 <Tag
                   key={item}
-                  title={item}
+                  title={getInterestLabel(item)}
                   selected={interests.includes(item)}
                   onPress={() => toggleInterest(item)}
                 />
@@ -383,7 +385,7 @@ export default function OnboardingScreen() {
             {error ? <Text style={styles.error}>{error}</Text> : null}
 
             <PremiumButton
-              title={isSaving ? "Saving profile..." : "Start matching"}
+              title={isSaving ? "Зберігаємо профіль..." : "Почати знайомства"}
               onPress={handleStartMatching}
               disabled={isSaving}
             />

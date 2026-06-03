@@ -23,70 +23,70 @@ import {
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const countryOptions = [
-  { label: "Afghanistan", code: "+93", placeholder: "70 123 4567" },
-  { label: "Albania", code: "+355", placeholder: "66 123 4567" },
-  { label: "Algeria", code: "+213", placeholder: "551 23 45 67" },
-  { label: "Argentina", code: "+54", placeholder: "9 11 2345 6789" },
-  { label: "Armenia", code: "+374", placeholder: "77 123456" },
-  { label: "Australia", code: "+61", placeholder: "412 345 678" },
-  { label: "Austria", code: "+43", placeholder: "664 1234567" },
-  { label: "Azerbaijan", code: "+994", placeholder: "50 123 45 67" },
-  { label: "Belarus", code: "+375", placeholder: "29 123 45 67" },
-  { label: "Belgium", code: "+32", placeholder: "470 12 34 56" },
-  { label: "Brazil", code: "+55", placeholder: "11 91234 5678" },
-  { label: "Bulgaria", code: "+359", placeholder: "88 123 4567" },
-  { label: "Canada", code: "+1", placeholder: "555 123 4567" },
-  { label: "Chile", code: "+56", placeholder: "9 1234 5678" },
-  { label: "China", code: "+86", placeholder: "131 2345 6789" },
-  { label: "Colombia", code: "+57", placeholder: "300 1234567" },
-  { label: "Croatia", code: "+385", placeholder: "91 234 5678" },
-  { label: "Cyprus", code: "+357", placeholder: "96 123456" },
-  { label: "Czech Republic", code: "+420", placeholder: "601 123 456" },
-  { label: "Denmark", code: "+45", placeholder: "20 12 34 56" },
-  { label: "Egypt", code: "+20", placeholder: "100 123 4567" },
-  { label: "Estonia", code: "+372", placeholder: "5123 4567" },
-  { label: "Finland", code: "+358", placeholder: "40 123 4567" },
-  { label: "France", code: "+33", placeholder: "6 12 34 56 78" },
-  { label: "Georgia", code: "+995", placeholder: "555 12 34 56" },
-  { label: "Germany", code: "+49", placeholder: "151 23456789" },
-  { label: "Greece", code: "+30", placeholder: "691 234 5678" },
-  { label: "Hungary", code: "+36", placeholder: "20 123 4567" },
-  { label: "Iceland", code: "+354", placeholder: "611 1234" },
-  { label: "India", code: "+91", placeholder: "98765 43210" },
-  { label: "Indonesia", code: "+62", placeholder: "812 3456 7890" },
-  { label: "Ireland", code: "+353", placeholder: "85 123 4567" },
-  { label: "Israel", code: "+972", placeholder: "50 123 4567" },
-  { label: "Italy", code: "+39", placeholder: "312 345 6789" },
-  { label: "Japan", code: "+81", placeholder: "90 1234 5678" },
-  { label: "Kazakhstan", code: "+7", placeholder: "701 123 4567" },
-  { label: "Latvia", code: "+371", placeholder: "21 234 567" },
-  { label: "Lithuania", code: "+370", placeholder: "612 34567" },
-  { label: "Luxembourg", code: "+352", placeholder: "621 123 456" },
-  { label: "Mexico", code: "+52", placeholder: "55 1234 5678" },
-  { label: "Moldova", code: "+373", placeholder: "69 123 456" },
-  { label: "Netherlands", code: "+31", placeholder: "6 12345678" },
-  { label: "New Zealand", code: "+64", placeholder: "21 123 4567" },
-  { label: "Norway", code: "+47", placeholder: "412 34 567" },
-  { label: "Poland", code: "+48", placeholder: "512 345 678" },
-  { label: "Portugal", code: "+351", placeholder: "912 345 678" },
-  { label: "Romania", code: "+40", placeholder: "712 345 678" },
-  { label: "Russia", code: "+7", placeholder: "999 123 45 67" },
-  { label: "Serbia", code: "+381", placeholder: "60 1234567" },
-  { label: "Slovakia", code: "+421", placeholder: "901 123 456" },
-  { label: "Slovenia", code: "+386", placeholder: "31 234 567" },
-  { label: "South Africa", code: "+27", placeholder: "82 123 4567" },
-  { label: "South Korea", code: "+82", placeholder: "10 1234 5678" },
-  { label: "Spain", code: "+34", placeholder: "612 34 56 78" },
-  { label: "Sweden", code: "+46", placeholder: "70 123 45 67" },
-  { label: "Switzerland", code: "+41", placeholder: "78 123 45 67" },
-  { label: "Thailand", code: "+66", placeholder: "81 234 5678" },
-  { label: "Turkey", code: "+90", placeholder: "532 123 4567" },
-  { label: "Ukraine", code: "+380", placeholder: "67 123 4567" },
-  { label: "United Arab Emirates", code: "+971", placeholder: "50 123 4567" },
-  { label: "United Kingdom", code: "+44", placeholder: "7400 123456" },
-  { label: "United States", code: "+1", placeholder: "555 123 4567" },
-  { label: "Uzbekistan", code: "+998", placeholder: "90 123 45 67" },
-  { label: "Vietnam", code: "+84", placeholder: "91 234 56 78" },
+  { label: "Афганістан", code: "+93", placeholder: "70 123 4567" },
+  { label: "Албанія", code: "+355", placeholder: "66 123 4567" },
+  { label: "Алжир", code: "+213", placeholder: "551 23 45 67" },
+  { label: "Аргентина", code: "+54", placeholder: "9 11 2345 6789" },
+  { label: "Вірменія", code: "+374", placeholder: "77 123456" },
+  { label: "Австралія", code: "+61", placeholder: "412 345 678" },
+  { label: "Австрія", code: "+43", placeholder: "664 1234567" },
+  { label: "Азербайджан", code: "+994", placeholder: "50 123 45 67" },
+  { label: "Білорусь", code: "+375", placeholder: "29 123 45 67" },
+  { label: "Бельгія", code: "+32", placeholder: "470 12 34 56" },
+  { label: "Бразилія", code: "+55", placeholder: "11 91234 5678" },
+  { label: "Болгарія", code: "+359", placeholder: "88 123 4567" },
+  { label: "Канада", code: "+1", placeholder: "555 123 4567" },
+  { label: "Чилі", code: "+56", placeholder: "9 1234 5678" },
+  { label: "Китай", code: "+86", placeholder: "131 2345 6789" },
+  { label: "Колумбія", code: "+57", placeholder: "300 1234567" },
+  { label: "Хорватія", code: "+385", placeholder: "91 234 5678" },
+  { label: "Кіпр", code: "+357", placeholder: "96 123456" },
+  { label: "Чехія", code: "+420", placeholder: "601 123 456" },
+  { label: "Данія", code: "+45", placeholder: "20 12 34 56" },
+  { label: "Єгипет", code: "+20", placeholder: "100 123 4567" },
+  { label: "Естонія", code: "+372", placeholder: "5123 4567" },
+  { label: "Фінляндія", code: "+358", placeholder: "40 123 4567" },
+  { label: "Франція", code: "+33", placeholder: "6 12 34 56 78" },
+  { label: "Грузія", code: "+995", placeholder: "555 12 34 56" },
+  { label: "Німеччина", code: "+49", placeholder: "151 23456789" },
+  { label: "Греція", code: "+30", placeholder: "691 234 5678" },
+  { label: "Угорщина", code: "+36", placeholder: "20 123 4567" },
+  { label: "Ісландія", code: "+354", placeholder: "611 1234" },
+  { label: "Індія", code: "+91", placeholder: "98765 43210" },
+  { label: "Індонезія", code: "+62", placeholder: "812 3456 7890" },
+  { label: "Ірландія", code: "+353", placeholder: "85 123 4567" },
+  { label: "Ізраїль", code: "+972", placeholder: "50 123 4567" },
+  { label: "Італія", code: "+39", placeholder: "312 345 6789" },
+  { label: "Японія", code: "+81", placeholder: "90 1234 5678" },
+  { label: "Казахстан", code: "+7", placeholder: "701 123 4567" },
+  { label: "Латвія", code: "+371", placeholder: "21 234 567" },
+  { label: "Литва", code: "+370", placeholder: "612 34567" },
+  { label: "Люксембург", code: "+352", placeholder: "621 123 456" },
+  { label: "Мексика", code: "+52", placeholder: "55 1234 5678" },
+  { label: "Молдова", code: "+373", placeholder: "69 123 456" },
+  { label: "Нідерланди", code: "+31", placeholder: "6 12345678" },
+  { label: "Нова Зеландія", code: "+64", placeholder: "21 123 4567" },
+  { label: "Норвегія", code: "+47", placeholder: "412 34 567" },
+  { label: "Польща", code: "+48", placeholder: "512 345 678" },
+  { label: "Португалія", code: "+351", placeholder: "912 345 678" },
+  { label: "Румунія", code: "+40", placeholder: "712 345 678" },
+  { label: "Росія", code: "+7", placeholder: "999 123 45 67" },
+  { label: "Сербія", code: "+381", placeholder: "60 1234567" },
+  { label: "Словаччина", code: "+421", placeholder: "901 123 456" },
+  { label: "Словенія", code: "+386", placeholder: "31 234 567" },
+  { label: "Південна Африка", code: "+27", placeholder: "82 123 4567" },
+  { label: "Південна Корея", code: "+82", placeholder: "10 1234 5678" },
+  { label: "Іспанія", code: "+34", placeholder: "612 34 56 78" },
+  { label: "Швеція", code: "+46", placeholder: "70 123 45 67" },
+  { label: "Швейцарія", code: "+41", placeholder: "78 123 45 67" },
+  { label: "Таїланд", code: "+66", placeholder: "81 234 5678" },
+  { label: "Туреччина", code: "+90", placeholder: "532 123 4567" },
+  { label: "Україна", code: "+380", placeholder: "67 123 4567" },
+  { label: "ОАЕ", code: "+971", placeholder: "50 123 4567" },
+  { label: "Велика Британія", code: "+44", placeholder: "7400 123456" },
+  { label: "США", code: "+1", placeholder: "555 123 4567" },
+  { label: "Узбекистан", code: "+998", placeholder: "90 123 45 67" },
+  { label: "В'єтнам", code: "+84", placeholder: "91 234 56 78" },
 ];
 
 type PhoneAuthResponse = {
@@ -111,7 +111,7 @@ export default function LoginScreen() {
     const trimmedEmail = email.trim().toLowerCase();
 
     if (!trimmedEmail || !password.trim()) {
-      setEmailMessage("Enter your email and password.");
+      setEmailMessage("Введіть email і пароль.");
       return;
     }
 
@@ -125,7 +125,7 @@ export default function LoginScreen() {
     const user = await signInLocalAccount(trimmedEmail, password);
 
     if (!user) {
-      setEmailMessage("No account found for these login details.");
+      setEmailMessage("Акаунт із такими даними не знайдено.");
       return;
     }
 
@@ -134,12 +134,12 @@ export default function LoginScreen() {
 
   async function requestCode() {
     if (!API_URL) {
-      setMessage("API URL is missing.");
+      setMessage("API URL відсутній.");
       return;
     }
 
     if (!phoneNumber.trim()) {
-      setMessage("Enter your phone number.");
+      setMessage("Введіть номер телефону.");
       return;
     }
 
@@ -161,16 +161,18 @@ export default function LoginScreen() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.message || "Failed to send code.");
+        throw new Error(data?.message || "Не вдалося надіслати код.");
       }
 
       setCodeSent(true);
       setMessage(
-        data?.devCode ? `Code sent. Test code: ${data.devCode}` : "Code sent.",
+        data?.devCode
+          ? `Код надіслано. Тестовий код: ${data.devCode}`
+          : "Код надіслано.",
       );
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : "Failed to send code.",
+        error instanceof Error ? error.message : "Не вдалося надіслати код.",
       );
     } finally {
       setIsLoading(false);
@@ -179,12 +181,12 @@ export default function LoginScreen() {
 
   async function verifyCode() {
     if (!API_URL) {
-      setMessage("API URL is missing.");
+      setMessage("API URL відсутній.");
       return;
     }
 
     if (!verificationCode.trim()) {
-      setMessage("Enter the verification code.");
+      setMessage("Введіть код підтвердження.");
       return;
     }
 
@@ -209,7 +211,7 @@ export default function LoginScreen() {
       };
 
       if (!response.ok) {
-        throw new Error(data?.message || "Code verification failed.");
+        throw new Error(data?.message || "Не вдалося підтвердити код.");
       }
 
       await saveSessionUser(data.user);
@@ -219,7 +221,7 @@ export default function LoginScreen() {
       );
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : "Code verification failed.",
+        error instanceof Error ? error.message : "Не вдалося підтвердити код.",
       );
     } finally {
       setIsLoading(false);
@@ -238,8 +240,8 @@ export default function LoginScreen() {
         >
           <BackButton to="/welcome" />
 
-          <Text style={styles.title}>Log In</Text>
-          <Text style={styles.subtitle}>Welcome back to Extasy.</Text>
+          <Text style={styles.title}>Увійти</Text>
+          <Text style={styles.subtitle}>Раді бачити вас знову в Extasy.</Text>
 
           <View style={styles.modeRow}>
             <TouchableOpacity
@@ -271,7 +273,7 @@ export default function LoginScreen() {
                   authMode === "phone" && styles.activeModeText,
                 ]}
               >
-                Phone
+                Телефон
               </Text>
             </TouchableOpacity>
           </View>
@@ -290,10 +292,10 @@ export default function LoginScreen() {
                   onChangeText={setEmail}
                 />
 
-                <Text style={styles.label}>Password</Text>
+                <Text style={styles.label}>Пароль</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Your password"
+                  placeholder="Ваш пароль"
                   placeholderTextColor="#ffffff"
                   secureTextEntry
                   value={password}
@@ -304,7 +306,7 @@ export default function LoginScreen() {
                   style={styles.button}
                   onPress={handleEmailLogin}
                 >
-                  <Text style={styles.buttonText}>Log In</Text>
+                  <Text style={styles.buttonText}>Увійти</Text>
                 </TouchableOpacity>
 
                 {emailMessage ? (
@@ -313,7 +315,7 @@ export default function LoginScreen() {
               </>
             ) : (
               <>
-                <Text style={styles.label}>Country code</Text>
+                <Text style={styles.label}>Код країни</Text>
                 <TouchableOpacity
                   style={styles.selectButton}
                   onPress={() => setCountrySelectOpen(true)}
@@ -325,7 +327,7 @@ export default function LoginScreen() {
                   <Text style={styles.selectArrow}>v</Text>
                 </TouchableOpacity>
 
-                <Text style={styles.label}>Phone number</Text>
+                <Text style={styles.label}>Номер телефону</Text>
                 <TextInput
                   style={styles.input}
                   placeholder={selectedCountry.placeholder}
@@ -338,10 +340,10 @@ export default function LoginScreen() {
 
                 {codeSent ? (
                   <>
-                    <Text style={styles.label}>Verification code</Text>
+                    <Text style={styles.label}>Код підтвердження</Text>
                     <TextInput
                       style={styles.input}
-                      placeholder="6-digit code"
+                      placeholder="6-значний код"
                       placeholderTextColor="#999"
                       keyboardType="number-pad"
                       value={verificationCode}
@@ -361,10 +363,10 @@ export default function LoginScreen() {
                 >
                   <Text style={styles.buttonText}>
                     {isLoading
-                      ? "Please wait..."
+                      ? "Зачекайте..."
                       : codeSent
-                        ? "Verify Code"
-                        : "Send Code"}
+                        ? "Підтвердити код"
+                        : "Надіслати код"}
                   </Text>
                 </TouchableOpacity>
 
@@ -379,7 +381,7 @@ export default function LoginScreen() {
                     disabled={isLoading}
                   >
                     <Text style={styles.secondaryText}>
-                      Change phone number
+                      Змінити номер телефону
                     </Text>
                   </TouchableOpacity>
                 ) : null}
@@ -398,9 +400,9 @@ export default function LoginScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select country</Text>
+              <Text style={styles.modalTitle}>Оберіть країну</Text>
               <TouchableOpacity onPress={() => setCountrySelectOpen(false)}>
-                <Text style={styles.modalClose}>Close</Text>
+                <Text style={styles.modalClose}>Закрити</Text>
               </TouchableOpacity>
             </View>
 

@@ -9,9 +9,11 @@ import {
   premiumShadow,
   premiumSpacing,
 } from "@/constants/premiumDesign";
+import { getCountryLabel } from "@/constants/ukrainianLabels";
 import {
   getLikedProfilesForCurrentUser,
   getUserKey,
+  openAcceptedLikedProfileChat,
   type LikedProfileRecord,
 } from "@/services/auth/session";
 import { router, usePathname } from "expo-router";
@@ -54,10 +56,23 @@ export default function LikedScreen() {
     };
   }, [pathname]);
 
+  async function handleOpenRecord(record: LikedProfileRecord) {
+    if (record.status === "accepted") {
+      const match = await openAcceptedLikedProfileChat(getUserKey(record.user));
+
+      if (match) {
+        router.push(`/chat?matchId=${match.id}`);
+        return;
+      }
+    }
+
+    router.push(`/userProfile?userKey=${getUserKey(record.user)}`);
+  }
+
   if (isLoading) {
     return (
       <ThemedBackground style={styles.background}>
-        <PremiumLoadingState label="Loading matches" />
+        <PremiumLoadingState label="Завантажуємо пари" />
       </ThemedBackground>
     );
   }
@@ -66,9 +81,9 @@ export default function LikedScreen() {
     <ThemedBackground style={styles.background}>
       <ScrollView contentContainerStyle={styles.container}>
         <PremiumHeader
-          eyebrow="Matches"
-          title="Connections"
-          subtitle="Profiles you saved or connected with, plus mutual match status."
+          eyebrow="Пари"
+          title="Контакти"
+          subtitle="Профілі, які ви зберегли або з якими збіглися, разом зі статусом взаємності."
         />
 
         {likedProfiles.length ? (
@@ -77,20 +92,18 @@ export default function LikedScreen() {
             let statusLabel;
 
             if (record.status === "accepted") {
-              statusLabel = "Accepted";
+              statusLabel = "Прийнято";
             } else if (record.status === "skipped") {
-              statusLabel = "Skipped";
+              statusLabel = "Пропущено";
             } else {
-              statusLabel = "Waiting";
+              statusLabel = "Очікує";
             }
 
             return (
               <TouchableOpacity
                 key={record.user.id}
                 style={styles.likedCard}
-                onPress={() =>
-                  router.push(`/userProfile?userKey=${getUserKey(record.user)}`)
-                }
+                onPress={() => handleOpenRecord(record)}
               >
                 <TouchableOpacity
                   onPress={() =>
@@ -116,7 +129,7 @@ export default function LikedScreen() {
                   </Text>
                   {record.user.city && record.user.country ? (
                     <Text style={styles.location} numberOfLines={1}>
-                      {record.user.city}, {record.user.country}
+                      {record.user.city}, {getCountryLabel(record.user.country)}
                     </Text>
                   ) : null}
                   <Text style={styles.about} numberOfLines={2}>
@@ -144,14 +157,12 @@ export default function LikedScreen() {
                   </Text>
                 </View>
 
-                {record.status === "accepted" && record.matchId ? (
+                {record.status === "accepted" ? (
                   <TouchableOpacity
                     style={styles.chatButton}
-                    onPress={() =>
-                      router.push(`/chat?matchId=${record.matchId}`)
-                    }
+                    onPress={() => handleOpenRecord(record)}
                   >
-                    <Text style={styles.chatText}>Chat</Text>
+                    <Text style={styles.chatText}>Чат</Text>
                   </TouchableOpacity>
                 ) : null}
               </TouchableOpacity>
@@ -159,8 +170,8 @@ export default function LikedScreen() {
           })
         ) : (
           <PremiumEmptyState
-            title="No matches yet"
-            text="Profiles you connect with will appear here with their current status."
+            title="Пар поки немає"
+            text="Профілі, з якими ви встановите контакт, з'являться тут зі своїм статусом."
           />
         )}
       </ScrollView>

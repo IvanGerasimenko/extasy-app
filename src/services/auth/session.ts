@@ -8,6 +8,7 @@ const LIKE_REQUESTS_KEY = "extasy.like.requests";
 const VIEWED_NOTIFICATIONS_KEY = "extasy.viewed.notifications";
 const MATCHES_KEY = "extasy.matches";
 const MESSAGES_KEY = "extasy.messages";
+const BLOCKED_USERS_KEY = "extasy.blocked.users";
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 export type SessionUser = {
@@ -27,6 +28,7 @@ export type SessionUser = {
   interests?: string[];
   likesCount?: number;
   matchesCount?: number;
+  isDiscoverHidden?: boolean;
   onboardingCompleted: boolean;
   createdAt: string;
 };
@@ -82,21 +84,6 @@ export type LikeRequestRecord = {
 };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const BLOCKED_EMAIL_DOMAINS = new Set([
-  "10minutemail.com",
-  "dispostable.com",
-  "example.com",
-  "fake.com",
-  "guerrillamail.com",
-  "mailinator.com",
-  "sharklasers.com",
-  "temp-mail.org",
-  "tempmail.com",
-  "test.com",
-  "throwawaymail.com",
-  "trashmail.com",
-  "yopmail.com",
-]);
 
 const SUSPICIOUS_EMAIL_PARTS = [
   "fake",
@@ -164,8 +151,43 @@ export async function getLikedUserKeysForCurrentUser() {
     return [] as string[];
   }
 
+  const currentUserKey = getUserKey(user);
   const likes = await getLikes();
-  return likes[getUserKey(user)] ?? [];
+  const blockedUsers = await getBlockedUsers();
+
+  return (likes[currentUserKey] ?? []).filter(
+    (likedUserKey) =>
+      !areUsersBlocked(currentUserKey, likedUserKey, blockedUsers),
+  );
+}
+
+export async function getUnavailableDiscoverUserKeysForCurrentUser() {
+  const user = await getSessionUser();
+
+  if (!user) {
+    return [] as string[];
+  }
+
+  const currentUserKey = getUserKey(user);
+  const likedUserKeys = await getLikedUserKeysForCurrentUser();
+  const matches = await getCurrentUserMatches();
+  const blockedUsers = await getBlockedUsers();
+  const blockedUserKeys = blockedUsers[currentUserKey] ?? [];
+  const blockedByUserKeys = Object.entries(blockedUsers)
+    .filter(([, blockedKeys]) => blockedKeys.includes(currentUserKey))
+    .map(([blockedByUserKey]) => blockedByUserKey);
+  const matchedUserKeys = matches.flatMap((match) =>
+    match.userKeys.filter((userKey) => userKey !== currentUserKey),
+  );
+
+  return Array.from(
+    new Set([
+      ...likedUserKeys,
+      ...matchedUserKeys,
+      ...blockedUserKeys,
+      ...blockedByUserKeys,
+    ]),
+  );
 }
 
 export async function getLikedProfilesForCurrentUser() {
@@ -180,9 +202,14 @@ export async function getLikedProfilesForCurrentUser() {
   const users = await getLocalAccountUsers();
   const matches = await getCurrentUserMatches();
   const likeRequests = await getLikeRequests();
+  const blockedUsers = await getBlockedUsers();
   const likedProfiles: LikedProfileRecord[] = [];
 
   likedUserKeys.forEach((likedUserKey) => {
+    if (areUsersBlocked(currentUserKey, likedUserKey, blockedUsers)) {
+      return;
+    }
+
     const likedUser = users.find(
       (localUser) => getUserKey(localUser) === likedUserKey,
     );
@@ -200,11 +227,76 @@ export async function getLikedProfilesForCurrentUser() {
       user: likedUser,
       status: request?.status ?? (match ? "accepted" : "pending"),
       isMutual: Boolean(match?.userKeys.includes(currentUserKey)),
-      matchId: match?.id,
+      matchId: match?.id ?? request?.matchId,
     });
   });
 
   return likedProfiles;
+}
+
+export async function openAcceptedLikedProfileChat(targetUserKey: string) {
+  const currentUser = await getSessionUser();
+
+  if (!currentUser) {
+    return null;
+  }
+
+  const currentUserKey = getUserKey(currentUser);
+  const users = await getLocalAccountUsers();
+  const targetUser = users.find(
+    (localUser) => getUserKey(localUser) === targetUserKey,
+  );
+
+  if (!targetUser || targetUserKey === currentUserKey) {
+    return null;
+  }
+
+  const blockedUsers = await getBlockedUsers();
+
+  if (areUsersBlocked(currentUserKey, targetUserKey, blockedUsers)) {
+    return null;
+  }
+
+  const matches = await getCurrentUserMatches();
+  const existingMatch = matches.find((match) =>
+    match.userKeys.includes(targetUserKey),
+  );
+
+  if (existingMatch) {
+    return existingMatch;
+  }
+
+  const likeRequests = await getLikeRequests();
+  const acceptedRequest = likeRequests.find(
+    (request) =>
+      request.status === "accepted" &&
+      ((request.fromUserKey === currentUserKey &&
+        request.toUserKey === targetUserKey) ||
+        (request.fromUserKey === targetUserKey &&
+          request.toUserKey === currentUserKey)),
+  );
+
+  if (!acceptedRequest) {
+    return null;
+  }
+
+  const match = await createOrGetMatch(currentUser, targetUser);
+  const updatedRequests = likeRequests.map((request) =>
+    request.status === "accepted" &&
+    ((request.fromUserKey === currentUserKey &&
+      request.toUserKey === targetUserKey) ||
+      (request.fromUserKey === targetUserKey &&
+        request.toUserKey === currentUserKey))
+      ? {
+          ...request,
+          matchId: match.id,
+        }
+      : request,
+  );
+
+  await saveLikeRequests(updatedRequests);
+
+  return match;
 }
 
 export function getUserKey(user: SessionUser) {
@@ -221,11 +313,11 @@ export function getEmailValidationError(email: string) {
   const [localPart, domain] = normalizedEmail.split("@");
 
   if (!EMAIL_PATTERN.test(normalizedEmail) || !localPart || !domain) {
-    return "Enter a valid email address.";
+    return "Введіть коректну email-адресу.";
   }
 
   if (localPart.length < 3 || localPart.length > 64) {
-    return "Email username looks invalid.";
+    return "Ім'я користувача в email виглядає некоректно.";
   }
 
   if (
@@ -233,7 +325,7 @@ export function getEmailValidationError(email: string) {
     localPart.endsWith(".") ||
     localPart.includes("..")
   ) {
-    return "Email username looks invalid.";
+    return "Ім'я користувача в email виглядає некоректно.";
   }
 
   const domainParts = domain.split(".");
@@ -244,11 +336,7 @@ export function getEmailValidationError(email: string) {
     domainParts.some((part) => part.length < 2) ||
     !/^[a-z]{2,24}$/.test(topLevelDomain)
   ) {
-    return "Email domain looks invalid.";
-  }
-
-  if (BLOCKED_EMAIL_DOMAINS.has(domain)) {
-    return "Use a real email provider, not a test or temporary email.";
+    return "Домен email виглядає некоректно.";
   }
 
   if (
@@ -256,7 +344,7 @@ export function getEmailValidationError(email: string) {
       (part) => localPart === part || localPart.includes(`${part}.`),
     )
   ) {
-    return "This email looks like a test email. Use your real email.";
+    return "Цей email схожий на тестовий. Використайте справжню адресу.";
   }
 
   return null;
@@ -289,11 +377,11 @@ export async function registerLocalAccount(
   const email = user.email?.toLowerCase();
 
   if (!email) {
-    throw new Error("Email is required.");
+    throw new Error("Email обов'язковий.");
   }
 
   if (accounts.some((account) => account.user.email?.toLowerCase() === email)) {
-    throw new Error("Account already exists.");
+    throw new Error("Акаунт уже існує.");
   }
 
   await saveLocalAccounts([...accounts, { user, password }]);
@@ -411,6 +499,26 @@ export async function updateSessionStats(stats: {
   return updatedUser;
 }
 
+export async function updateSessionDiscoverVisibility(
+  isDiscoverHidden: boolean,
+) {
+  const user = await getSessionUser();
+
+  if (!user) {
+    return null;
+  }
+
+  const updatedUser: SessionUser = {
+    ...user,
+    isDiscoverHidden,
+  };
+
+  await saveSessionUser(updatedUser);
+  await syncLocalAccountUser(updatedUser);
+
+  return updatedUser;
+}
+
 export async function recordProfileLike(targetUser: SessionUser) {
   const currentUser = await getSessionUser();
 
@@ -444,7 +552,8 @@ export async function recordProfileLike(targetUser: SessionUser) {
       const savedMatch = existingRequest.matchId
         ? await getMatchById(existingRequest.matchId)
         : null;
-      const match = savedMatch ?? (await createOrGetMatch(currentUser, targetUser));
+      const match =
+        savedMatch ?? (await createOrGetMatch(currentUser, targetUser));
 
       return {
         isMatch: true,
@@ -465,10 +574,9 @@ export async function recordProfileLike(targetUser: SessionUser) {
   }
 
   if (reverseRequest?.status === "accepted") {
-    const match =
-      reverseRequest.matchId
-        ? await getMatchById(reverseRequest.matchId)
-        : await createOrGetMatch(currentUser, targetUser);
+    const match = reverseRequest.matchId
+      ? await getMatchById(reverseRequest.matchId)
+      : await createOrGetMatch(currentUser, targetUser);
 
     return {
       isMatch: true,
@@ -484,7 +592,9 @@ export async function recordProfileLike(targetUser: SessionUser) {
     try {
       await saveLikes(likes);
     } catch {
-      throw new Error("Storage is full. Clear old Safari data and try again.");
+      throw new Error(
+        "Сховище заповнене. Очистьте старі дані Safari й спробуйте знову.",
+      );
     }
   }
 
@@ -492,7 +602,10 @@ export async function recordProfileLike(targetUser: SessionUser) {
   const now = new Date().toISOString();
 
   if (reverseRequest?.status === "pending") {
-    const match = await createOrGetMatch(updatedUser ?? currentUser, targetUser);
+    const match = await createOrGetMatch(
+      updatedUser ?? currentUser,
+      targetUser,
+    );
     const acceptedReverseRequest: LikeRequestRecord = {
       ...reverseRequest,
       fromUser: compactUserForRelationStorage(targetUser),
@@ -543,7 +656,9 @@ export async function recordProfileLike(targetUser: SessionUser) {
   try {
     await saveLikeRequests([...likeRequests, request]);
   } catch {
-    throw new Error("Storage is full. Clear old Safari data and try again.");
+    throw new Error(
+      "Сховище заповнене. Очистьте старі дані Safari й спробуйте знову.",
+    );
   }
 
   return {
@@ -563,10 +678,13 @@ export async function getIncomingLikeRequestsForCurrentUser() {
 
   const currentUserKey = getUserKey(currentUser);
   const likeRequests = await getLikeRequests();
+  const blockedUsers = await getBlockedUsers();
 
   return likeRequests.filter(
     (request) =>
-      request.toUserKey === currentUserKey && request.status === "pending",
+      request.toUserKey === currentUserKey &&
+      request.status === "pending" &&
+      !areUsersBlocked(currentUserKey, request.fromUserKey, blockedUsers),
   );
 }
 
@@ -579,10 +697,48 @@ export async function getLikeResponseNotificationsForCurrentUser() {
 
   const currentUserKey = getUserKey(currentUser);
   const likeRequests = await getLikeRequests();
+  const blockedUsers = await getBlockedUsers();
 
   return likeRequests.filter(
     (request) =>
-      request.fromUserKey === currentUserKey && request.status !== "pending",
+      request.fromUserKey === currentUserKey &&
+      request.status !== "pending" &&
+      !areUsersBlocked(currentUserKey, request.toUserKey, blockedUsers),
+  );
+}
+
+export async function getUnreadAcceptedLikeResponseForCurrentUser() {
+  const currentUser = await getSessionUser();
+
+  if (!currentUser) {
+    return null;
+  }
+
+  const currentUserKey = getUserKey(currentUser);
+  const likeRequests = await getLikeRequests();
+  const blockedUsers = await getBlockedUsers();
+  const viewedNotifications = await getViewedNotifications();
+  const viewedKeys = viewedNotifications[currentUserKey] ?? [];
+
+  return (
+    likeRequests
+      .filter(
+        (request) =>
+          request.fromUserKey === currentUserKey &&
+          request.status === "accepted" &&
+          Boolean(request.matchId) &&
+          !areUsersBlocked(currentUserKey, request.toUserKey, blockedUsers) &&
+          !viewedKeys.includes(`response:${request.id}:accepted`),
+      )
+      .sort(
+        (firstRequest, secondRequest) =>
+          new Date(
+            secondRequest.respondedAt ?? secondRequest.createdAt,
+          ).getTime() -
+          new Date(
+            firstRequest.respondedAt ?? firstRequest.createdAt,
+          ).getTime(),
+      )[0] ?? null
   );
 }
 
@@ -707,13 +863,55 @@ export async function getCurrentUserMatches() {
 
   const currentUserKey = getUserKey(currentUser);
   const matches = await getMatches();
+  const blockedUserKeys = await getBlockedUserKeys(currentUserKey);
 
-  return matches.filter((match) => match.userKeys.includes(currentUserKey));
+  const visibleMatches = matches.filter(
+    (match) =>
+      match.userKeys.includes(currentUserKey) &&
+      !match.userKeys.some(
+        (userKey) =>
+          userKey !== currentUserKey && blockedUserKeys.includes(userKey),
+      ),
+  );
+  const seenMatchedUserKeys = new Set<string>();
+
+  return visibleMatches.filter((match) => {
+    const matchedUserKey = match.userKeys.find(
+      (userKey) => userKey !== currentUserKey,
+    );
+
+    if (!matchedUserKey || seenMatchedUserKeys.has(matchedUserKey)) {
+      return false;
+    }
+
+    seenMatchedUserKeys.add(matchedUserKey);
+    return true;
+  });
 }
 
 export async function getMatchById(matchId: string) {
+  const currentUser = await getSessionUser();
   const matches = await getMatches();
-  return matches.find((match) => match.id === matchId) ?? null;
+  const match = matches.find((item) => item.id === matchId) ?? null;
+
+  if (!currentUser || !match) {
+    return match;
+  }
+
+  const currentUserKey = getUserKey(currentUser);
+  const otherUserKey = match.userKeys.find(
+    (userKey) => userKey !== currentUserKey,
+  );
+
+  if (!match.userKeys.includes(currentUserKey) || !otherUserKey) {
+    return null;
+  }
+
+  const blockedUsers = await getBlockedUsers();
+
+  return areUsersBlocked(currentUserKey, otherUserKey, blockedUsers)
+    ? null
+    : match;
 }
 
 export async function getChatMessages(matchId: string) {
@@ -726,8 +924,7 @@ export async function sendChatMessage(
   content: string | ChatMessagePayload,
 ) {
   const currentUser = await getSessionUser();
-  const payload =
-    typeof content === "string" ? { text: content } : content;
+  const payload = typeof content === "string" ? { text: content } : content;
   const trimmedText = payload.text?.trim();
   const imageUri = payload.imageUri?.trim();
   const emoji = payload.emoji?.trim();
@@ -778,6 +975,100 @@ export async function reactToChatMessage(messageId: string, emoji: string) {
   await saveMessages(updatedMessages);
 
   return updatedMessage;
+}
+
+export async function getBlockedUserKeysForCurrentUser() {
+  const currentUser = await getSessionUser();
+
+  if (!currentUser) {
+    return [] as string[];
+  }
+
+  return getBlockedUserKeys(getUserKey(currentUser));
+}
+
+export async function blockMatchContact(matchId: string) {
+  const currentUser = await getSessionUser();
+
+  if (!currentUser) {
+    return null;
+  }
+
+  const currentUserKey = getUserKey(currentUser);
+  const matches = await getMatches();
+  const match = matches.find(
+    (item) => item.id === matchId && item.userKeys.includes(currentUserKey),
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const blockedUserKey = match.userKeys.find(
+    (userKey) => userKey !== currentUserKey,
+  );
+
+  if (!blockedUserKey) {
+    return null;
+  }
+
+  const blockedUsers = await getBlockedUsers();
+  const currentBlockedKeys = blockedUsers[currentUserKey] ?? [];
+  const nextBlockedKeys = Array.from(
+    new Set([...currentBlockedKeys, blockedUserKey]),
+  );
+
+  await saveBlockedUsers({
+    ...blockedUsers,
+    [currentUserKey]: nextBlockedKeys,
+  });
+
+  const blockedMatchIds = new Set(
+    matches
+      .filter(
+        (item) =>
+          item.userKeys.includes(currentUserKey) &&
+          item.userKeys.includes(blockedUserKey),
+      )
+      .map((item) => item.id),
+  );
+
+  await saveMatches(matches.filter((item) => !blockedMatchIds.has(item.id)));
+
+  const messages = await getMessages();
+  await saveMessages(
+    messages.filter((message) => !blockedMatchIds.has(message.matchId)),
+  );
+
+  const likes = await getLikes();
+  const nextLikes = {
+    ...likes,
+    [currentUserKey]: (likes[currentUserKey] ?? []).filter(
+      (userKey) => userKey !== blockedUserKey,
+    ),
+    [blockedUserKey]: (likes[blockedUserKey] ?? []).filter(
+      (userKey) => userKey !== currentUserKey,
+    ),
+  };
+  await saveLikes(nextLikes);
+
+  const likeRequests = await getLikeRequests();
+  await saveLikeRequests(
+    likeRequests.filter(
+      (request) =>
+        !isUserPair(
+          request.fromUserKey,
+          request.toUserKey,
+          currentUserKey,
+          blockedUserKey,
+        ),
+    ),
+  );
+
+  return {
+    blockedUserKey,
+    blockedUser: match.users[blockedUserKey] ?? null,
+  };
 }
 
 async function getLikes() {
@@ -837,13 +1128,24 @@ async function saveLikeRequests(requests: LikeRequestRecord[]) {
 
 async function getNotificationKeysForUser(userKey: string) {
   const likeRequests = await getLikeRequests();
+  const blockedUsers = await getBlockedUsers();
 
   return likeRequests
-    .filter(
-      (request) =>
-        (request.toUserKey === userKey && request.status === "pending") ||
-        (request.fromUserKey === userKey && request.status !== "pending"),
-    )
+    .filter((request) => {
+      const otherUserKey =
+        request.toUserKey === userKey
+          ? request.fromUserKey
+          : request.fromUserKey === userKey
+            ? request.toUserKey
+            : "";
+
+      return (
+        Boolean(otherUserKey) &&
+        !areUsersBlocked(userKey, otherUserKey, blockedUsers) &&
+        ((request.toUserKey === userKey && request.status === "pending") ||
+          (request.fromUserKey === userKey && request.status !== "pending"))
+      );
+    })
     .map((request) => {
       if (request.toUserKey === userKey) {
         return `incoming:${request.id}`;
@@ -935,6 +1237,55 @@ async function getMessages() {
 
 async function saveMessages(messages: ChatMessage[]) {
   await setItem(MESSAGES_KEY, JSON.stringify(messages));
+}
+
+async function getBlockedUsers() {
+  const rawBlockedUsers = await getItem(BLOCKED_USERS_KEY);
+
+  if (!rawBlockedUsers) {
+    return {} as Record<string, string[]>;
+  }
+
+  try {
+    return JSON.parse(rawBlockedUsers) as Record<string, string[]>;
+  } catch {
+    await deleteItem(BLOCKED_USERS_KEY);
+    return {} as Record<string, string[]>;
+  }
+}
+
+async function getBlockedUserKeys(currentUserKey: string) {
+  const blockedUsers = await getBlockedUsers();
+  return blockedUsers[currentUserKey] ?? [];
+}
+
+async function saveBlockedUsers(blockedUsers: Record<string, string[]>) {
+  await setItem(BLOCKED_USERS_KEY, JSON.stringify(blockedUsers));
+}
+
+function areUsersBlocked(
+  firstUserKey: string,
+  secondUserKey: string,
+  blockedUsers: Record<string, string[]>,
+) {
+  return (
+    blockedUsers[firstUserKey]?.includes(secondUserKey) ||
+    blockedUsers[secondUserKey]?.includes(firstUserKey)
+  );
+}
+
+function isUserPair(
+  firstUserKey: string,
+  secondUserKey: string,
+  targetFirstUserKey: string,
+  targetSecondUserKey: string,
+) {
+  return (
+    (firstUserKey === targetFirstUserKey &&
+      secondUserKey === targetSecondUserKey) ||
+    (firstUserKey === targetSecondUserKey &&
+      secondUserKey === targetFirstUserKey)
+  );
 }
 
 async function createOrGetMatch(

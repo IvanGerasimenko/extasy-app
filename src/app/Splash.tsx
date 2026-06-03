@@ -1,3 +1,4 @@
+import { ThemedLogo } from "@/components/ThemedLogo";
 import { getSessionUser } from "@/services/auth/session";
 import { router } from "expo-router";
 import React, { useEffect } from "react";
@@ -7,7 +8,6 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { ThemedLogo } from "@/components/ThemedLogo";
 
 export default function SplashScreen() {
   useEffect(() => {

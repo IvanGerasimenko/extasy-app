@@ -52,27 +52,27 @@ export default function WelcomeScreen() {
           />
           <View style={styles.heroOverlay}>
             <Text style={styles.heroTitle}>
-              Meaningful matches, quietly curated.
+              Українські знайомства поруч у Європі.
             </Text>
             <Text style={styles.subtitle}>
-              Quality profiles, safer connections, and conversations that feel
-              intentional from the first message.
+              Якісні профілі, безпечніші контакти й розмови, що відчуваються
+              щирими з першого повідомлення.
             </Text>
             <View style={styles.heroTags}>
-              <PremiumTag label="Quality profiles" tone="gold" />
-              <PremiumTag label="Safer connections" tone="emerald" />
+              <PremiumTag label="Якісні профілі" tone="gold" />
+              <PremiumTag label="Безпечніші контакти" tone="emerald" />
             </View>
           </View>
         </View>
 
         <View style={{ width: "100%" }}>
           <AuthButton
-            title="Continue with Google"
+            title="Продовжити з Google"
             icon={require("../../assets/google.png")}
             onPress={handleGoogleLogin}
           />
           <AuthButton
-            title="Sign in with Email or Phone"
+            title="Увійти через email або телефон"
             icon={require("../../assets/email.png")}
             onPress={() => router.push("/login")}
           />
@@ -80,13 +80,13 @@ export default function WelcomeScreen() {
 
         <View style={styles.signupWrap}>
           <Text style={[styles.accountText, { color: colors.mutedText }]}>
-            Don't have an account?
+            Ще немає акаунта?
           </Text>
           <Text
             style={[styles.signupText, { color: colors.text }]}
             onPress={() => router.push("/registration")}
           >
-            Sign Up
+            Зареєструватися
           </Text>
         </View>
       </ScrollView>
@@ -107,6 +107,7 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: Platform.OS === "web" ? 1120 : 380,
     paddingHorizontal: Platform.OS === "web" ? 36 : 10,
+    marginTop: Platform.OS === "web" ? 54 : 30,
   },
 
   themeToggleWrap: {

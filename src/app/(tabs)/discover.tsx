@@ -12,8 +12,14 @@ import {
   premiumSpacing,
 } from "@/constants/premiumDesign";
 import {
-  getLikedUserKeysForCurrentUser,
+  getCountryLabel,
+  getGenderLabel,
+  getInterestLabel,
+  getLookingForLabel,
+} from "@/constants/ukrainianLabels";
+import {
   getLocalAccountUsers,
+  getUnavailableDiscoverUserKeysForCurrentUser,
   getSessionUser,
   getUserKey,
   recordProfileLike,
@@ -139,7 +145,7 @@ function profileFromUser(user: SessionUser): DiscoverProfile {
 
   return {
     id: `user-${user.id}`,
-    name: user.name ?? "You",
+    name: user.name ?? "Ви",
     age: user.age ?? "",
     about: user.about ?? "",
     city: user.city ?? "",
@@ -155,26 +161,26 @@ function profileFromUser(user: SessionUser): DiscoverProfile {
 function getDiscoverProfiles(
   currentUser: SessionUser,
   localUsers: SessionUser[],
-  likedUserKeys: string[],
+  unavailableUserKeys: string[],
 ) {
-  const availableProfiles = localUsers
+  return localUsers
     .filter((localUser) => hasCompleteProfile(localUser))
+    .filter((localUser) => !localUser.isDiscoverHidden)
     .filter((localUser) => !isSameUser(localUser, currentUser))
-    .filter((localUser) => !likedUserKeys.includes(getUserKey(localUser)));
-
-  const genderMatchedProfiles = availableProfiles.filter((localUser) =>
-    acceptsGender(currentUser.lookingFor, localUser.gender),
-  );
-
-  const preferredProfiles = genderMatchedProfiles.filter(
-    (localUser) =>
-      isCompatibleMatch(currentUser, localUser) &&
-      isNearbyProfile(currentUser, localUser),
-  );
-
-  return (
-    preferredProfiles.length ? preferredProfiles : genderMatchedProfiles
-  ).map(profileFromUser);
+    .filter((localUser) => !unavailableUserKeys.includes(getUserKey(localUser)))
+    .filter((localUser) => acceptsGender(currentUser.lookingFor, localUser.gender))
+    .map((localUser) => ({
+      localUser,
+      score:
+        (isCompatibleMatch(currentUser, localUser) ? 4 : 0) +
+        (acceptsGender(currentUser.lookingFor, localUser.gender) ? 2 : 0) +
+        (isNearbyProfile(currentUser, localUser) ? 1 : 0),
+    }))
+    .sort(
+      (firstProfile, secondProfile) =>
+        secondProfile.score - firstProfile.score,
+    )
+    .map(({ localUser }) => profileFromUser(localUser));
 }
 
 export default function DiscoverScreen() {
@@ -236,11 +242,12 @@ export default function DiscoverScreen() {
       }
 
       const localUsers = await getLocalAccountUsers();
-      const likedUserKeys = await getLikedUserKeysForCurrentUser();
+      const unavailableUserKeys =
+        await getUnavailableDiscoverUserKeysForCurrentUser();
       const discoverProfiles = getDiscoverProfiles(
         sessionUser,
         localUsers,
-        likedUserKeys,
+        unavailableUserKeys,
       );
 
       setUser(sessionUser);
@@ -273,7 +280,7 @@ export default function DiscoverScreen() {
       setReaction(
         error instanceof Error
           ? error.message
-          : "Could not save this like. Try again.",
+          : "Не вдалося зберегти лайк. Спробуйте ще раз.",
       );
       return;
     }
@@ -283,9 +290,9 @@ export default function DiscoverScreen() {
     }
 
     if (likeResult?.isMatch && likeResult.match) {
-      setReaction(`It's a match with ${decidedMatch.name}`);
+      setReaction(`У вас пара з ${decidedMatch.name}`);
     } else {
-      setReaction(`${decidedMatch.name} received your like`);
+      setReaction(`${decidedMatch.name} отримав(-ла) ваш лайк`);
     }
   }
 
@@ -298,7 +305,7 @@ export default function DiscoverScreen() {
 
     isDecidingRef.current = true;
     setIsDeciding(true);
-    setReaction(nextReaction === "Liked" ? "Liked" : "");
+    setReaction(nextReaction === "Liked" ? "Лайк" : "");
 
     Animated.timing(cardTranslateX, {
       toValue:
@@ -323,11 +330,12 @@ export default function DiscoverScreen() {
     }
 
     getLocalAccountUsers().then(async (localUsers) => {
-      const likedUserKeys = await getLikedUserKeysForCurrentUser();
+      const unavailableUserKeys =
+        await getUnavailableDiscoverUserKeysForCurrentUser();
       const discoverProfiles = getDiscoverProfiles(
         user,
         localUsers,
-        likedUserKeys,
+        unavailableUserKeys,
       );
 
       setDeck(discoverProfiles);
@@ -365,12 +373,12 @@ export default function DiscoverScreen() {
       >
         <PremiumHeader
           eyebrow="Extasy"
-          title="Discover"
-          subtitle="Intentional profiles selected for calmer, higher-quality matching."
+          title="Пошук"
+          subtitle="Уважно підібрані профілі для спокійніших і якісніших знайомств."
           right={
             <View style={styles.headerPill}>
               <Text style={styles.headerPillText}>
-                {remainingProfiles} nearby
+                {remainingProfiles} доступно
               </Text>
             </View>
           }
@@ -428,7 +436,7 @@ export default function DiscoverScreen() {
                 style={styles.expandButton}
                 onPress={() => setFullscreenOpen(true)}
               >
-                <Text style={styles.expandText}>Gallery</Text>
+                <Text style={styles.expandText}>Галерея</Text>
               </TouchableOpacity>
 
               <View style={styles.matchInfo}>
@@ -441,14 +449,15 @@ export default function DiscoverScreen() {
 
                 <View style={styles.matchMetaRow}>
                   <Text style={styles.matchMeta}>
-                    {activeMatch.gender} looking for {activeMatch.lookingFor}
+                    {getGenderLabel(activeMatch.gender)} шукає{" "}
+                    {getLookingForLabel(activeMatch.lookingFor)}
                   </Text>
-                  <Text style={styles.intentPill}>Intentional</Text>
+                  <Text style={styles.intentPill}>Свідомо</Text>
                 </View>
 
                 {activeMatch.city && activeMatch.country ? (
                   <Text style={styles.locationText}>
-                    {activeMatch.city}, {activeMatch.country}
+                    {activeMatch.city}, {getCountryLabel(activeMatch.country)}
                   </Text>
                 ) : null}
 
@@ -458,7 +467,11 @@ export default function DiscoverScreen() {
 
                 <View style={styles.tags}>
                   {activeMatch.interests.slice(0, 5).map((interest) => (
-                    <PremiumTag key={interest} label={interest} tone="gold" />
+                    <PremiumTag
+                      key={interest}
+                      label={getInterestLabel(interest)}
+                      tone="gold"
+                    />
                   ))}
                 </View>
               </View>
@@ -467,7 +480,7 @@ export default function DiscoverScreen() {
             <View style={styles.floatingActions}>
               <TouchableOpacity
                 style={[styles.actionButton, styles.passButton]}
-                onPress={() => animateDecision("Passed for now")}
+                onPress={() => animateDecision("Пропущено")}
                 disabled={isDeciding}
               >
                 <Text style={styles.passText}>×</Text>
@@ -475,7 +488,7 @@ export default function DiscoverScreen() {
 
               <TouchableOpacity
                 style={[styles.actionButton, styles.saveButton]}
-                onPress={() => setReaction(`${activeMatch.name} saved`)}
+                onPress={() => setReaction(`${activeMatch.name} збережено`)}
                 disabled={isDeciding}
               >
                 <Text style={styles.saveText}>☆</Text>
@@ -495,9 +508,9 @@ export default function DiscoverScreen() {
           </Animated.View>
         ) : (
           <PremiumEmptyState
-            title="No more profiles"
-            text="You have seen every complete profile near you for now."
-            action="Refresh curation"
+            title="Профілі закінчилися"
+            text="Наразі ви переглянули всі доступні заповнені профілі."
+            action="Оновити добірку"
             onAction={resetDeck}
           />
         )}
@@ -515,7 +528,7 @@ export default function DiscoverScreen() {
             style={styles.fullscreenClose}
             onPress={() => setFullscreenOpen(false)}
           >
-            <Text style={styles.fullscreenCloseText}>Close</Text>
+            <Text style={styles.fullscreenCloseText}>Закрити</Text>
           </TouchableOpacity>
 
           {activeMatch?.photos.length ? (
@@ -586,7 +599,11 @@ const styles = StyleSheet.create({
         ? 14
         : premiumSpacing.screenX,
     paddingTop: isWeb ? 34 : isCompactViewport ? 42 : premiumSpacing.screenTop,
-    paddingBottom: isWeb ? 150 : isCompactViewport ? 168 : premiumSpacing.screenBottom,
+    paddingBottom: isWeb
+      ? 150
+      : isCompactViewport
+        ? 168
+        : premiumSpacing.screenBottom,
   },
 
   headerPill: {

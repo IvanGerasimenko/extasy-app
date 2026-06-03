@@ -1,4 +1,10 @@
 import { ThemedBackground } from "@/components/ThemedBackground";
+import {
+  getCountryLabel,
+  getGenderLabel,
+  getInterestLabel,
+  getLookingForLabel,
+} from "@/constants/ukrainianLabels";
 import { getSessionUser, type SessionUser } from "@/services/auth/session";
 import { router } from "expo-router";
 import React, {
@@ -40,9 +46,9 @@ export default function ProfileScreen() {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const fullscreenCarouselRef = useRef<ScrollView | null>(null);
-  let locationText = "Add your city and country so nearby people can find you.";
+  let locationText = "Додайте місто й країну, щоб люди поруч могли вас знайти.";
   if (user?.city && user?.country) {
-    locationText = `${user.city}, ${user.country}`;
+    locationText = `${user.city}, ${getCountryLabel(user.country)}`;
   }
 
   const photos = useMemo(() => {
@@ -158,6 +164,7 @@ export default function ProfileScreen() {
             style={styles.iconButton}
             onPress={() => router.push("/onboarding")}
           >
+            <Text style={styles.editEmoji}>✎</Text>
             <Image
               source={require("../../../assets/edit.png")}
               style={styles.iconImage}
@@ -195,67 +202,74 @@ export default function ProfileScreen() {
 
           <View style={styles.summaryCard}>
             <Text style={styles.name}>
-              {user?.name ?? "Your profile"}
+              {user?.name ?? "Ваш профіль"}
               {user?.age ? `, ${user.age}` : ""}
             </Text>
             <Text style={styles.meta}>
-              {user?.gender ?? "Profile"} looking for{" "}
-              {user?.lookingFor ?? "matches"}
+              {getGenderLabel(user?.gender) || "Профіль"} шукає{" "}
+              {getLookingForLabel(user?.lookingFor) || "пари"}
             </Text>
             <Text style={styles.summaryLocation}>{locationText}</Text>
+            <View style={styles.moodRow}>
+              <Text style={styles.moodChip}>🩶</Text>
+              <Text style={styles.moodChip}>🌙</Text>
+              <Text style={styles.moodChip}>☕️</Text>
+            </View>
           </View>
         </View>
 
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
             <Text style={styles.statNumber}>{user?.likesCount ?? 0}</Text>
-            <Text style={styles.statLabel}>Likes</Text>
+            <Text style={styles.statLabel}>👍 Лайки</Text>
           </View>
           <View style={styles.statBox}>
             <Text style={styles.statNumber}>{user?.matchesCount ?? 0}</Text>
-            <Text style={styles.statLabel}>Matches</Text>
+            <Text style={styles.statLabel}>👩‍❤️‍💋‍👨 Пари</Text>
           </View>
           <View style={styles.statBox}>
             <Text style={styles.statNumber}>{photos.length}</Text>
-            <Text style={styles.statLabel}>Photos</Text>
+            <Text style={styles.statLabel}>📸 Фото</Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
+          <Text style={styles.sectionTitle}>🪞 Про себе</Text>
           <Text style={styles.bodyText}>
             {user?.about ??
-              "Add a short bio so people know what makes you you."}
+              "Додайте короткий опис, щоб люди краще зрозуміли, хто ви."}
           </Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Location</Text>
+          <Text style={styles.sectionTitle}>📍 Локація</Text>
           <Text style={styles.bodyText}>
             {user?.city && user.country
-              ? `${user.city}, ${user.country}`
-              : "Add your city and country so nearby people can find you."}
+              ? `${user.city}, ${getCountryLabel(user.country)}`
+              : "Додайте місто й країну, щоб люди поруч могли вас знайти."}
           </Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Interests</Text>
+          <Text style={styles.sectionTitle}>💫 Інтереси</Text>
           <View style={styles.tags}>
             {user?.interests?.length ? (
               user.interests.map((interest) => (
                 <View key={interest} style={styles.tag}>
-                  <Text style={styles.tagText}>{interest}</Text>
+                  <Text style={styles.tagText}>
+                    {getInterestLabel(interest)}
+                  </Text>
                 </View>
               ))
             ) : (
-              <Text style={styles.bodyText}>No interests yet.</Text>
+              <Text style={styles.bodyText}>Інтересів поки немає.</Text>
             )}
           </View>
         </View>
 
         {photos.length ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Photos</Text>
+            <Text style={styles.sectionTitle}>📸 Фото</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -289,7 +303,7 @@ export default function ProfileScreen() {
             style={styles.fullscreenClose}
             onPress={() => setFullscreenOpen(false)}
           >
-            <Text style={styles.fullscreenCloseText}>Close</Text>
+            <Text style={styles.fullscreenCloseText}>Закрити</Text>
           </TouchableOpacity>
 
           {photos.length ? (
@@ -348,27 +362,41 @@ const styles = StyleSheet.create({
   },
 
   container: {
-    width: "100%",
-    maxWidth: Platform.OS === "web" ? 860 : 560,
+    maxWidth: Platform.OS === "web" ? 900 : 560,
     alignSelf: "center",
-    paddingHorizontal: Platform.OS === "web" ? 34 : 20,
-    paddingTop: Platform.OS === "web" ? 34 : 64,
-    paddingBottom: Platform.OS === "web" ? 150 : 120,
+    paddingTop: Platform.OS === "web" ? 34 : 58,
+    paddingBottom: Platform.OS === "web" ? 150 : 136,
   },
 
   iconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.78)",
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "rgba(255, 255, 255, 0.48)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.78)",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#101820",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 8,
   },
 
   iconImage: {
-    width: 22,
-    height: 22,
+    position: "absolute",
+    width: 18,
+    height: 18,
     resizeMode: "contain",
+    opacity: 0,
+  },
+
+  editEmoji: {
+    color: "#101820",
+    fontSize: 25,
+    fontFamily: systemFontBold,
+    lineHeight: 28,
   },
 
   loadingContainer: {
@@ -380,6 +408,7 @@ const styles = StyleSheet.create({
   topbar: {
     flexDirection: "row",
     justifyContent: "flex-end",
+    marginBottom: 12,
   },
 
   topbarButton: {
@@ -397,30 +426,44 @@ const styles = StyleSheet.create({
   },
 
   hero: {
-    alignItems: Platform.OS === "web" ? "flex-start" : "center",
-    marginTop: 16,
+    alignItems: "center",
+    marginTop: 4,
     marginBottom: 24,
+    borderRadius: 38,
+    backgroundColor: "rgba(255, 255, 255, 0.34)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.72)",
+    padding: Platform.OS === "web" ? 24 : 16,
+    overflow: "hidden",
+    shadowColor: "#101820",
+    shadowOffset: { width: 0, height: 26 },
+    shadowOpacity: 0.16,
+    shadowRadius: 38,
+    elevation: 14,
   },
 
   avatar: {
-    width: Platform.OS === "web" ? 220 : 150,
-    height: Platform.OS === "web" ? 220 : 150,
-    borderRadius: Platform.OS === "web" ? 28 : 64,
+    width: Platform.OS === "web" ? 236 : 184,
+    height: Platform.OS === "web" ? 236 : 184,
+    borderRadius: Platform.OS === "web" ? 40 : 48,
     backgroundColor: "#E8E2DC",
   },
 
   avatarWrap: {
-    width: Platform.OS === "web" ? 240 : 168,
-    height: Platform.OS === "web" ? 240 : 168,
+    width: Platform.OS === "web" ? 262 : 214,
+    height: Platform.OS === "web" ? 262 : 214,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#ffffff",
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
     minWidth: Platform.OS === "web" ? undefined : "100%",
-    borderRadius: Platform.OS === "web" ? 32 : 24,
-    shadowColor: "#1E1306",
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: Platform.OS === "web" ? 0.1 : 0,
-    shadowRadius: 22,
+    borderRadius: 44,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.78)",
+    shadowColor: "#101820",
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: Platform.OS === "web" ? 0.14 : 0.1,
+    shadowRadius: 30,
+    elevation: 10,
   },
 
   photoCounter: {
@@ -428,14 +471,16 @@ const styles = StyleSheet.create({
     top: 8,
     right: 8,
     borderRadius: 999,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    backgroundColor: "rgba(255, 255, 255, 0.56)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.76)",
     paddingHorizontal: 10,
     height: 26,
     justifyContent: "center",
   },
 
   photoCounterText: {
-    color: "#FFF",
+    color: "#101820",
     fontSize: 11,
     fontFamily: systemFontBold,
   },
@@ -449,6 +494,38 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
+  floatingEmoji: {
+    position: "absolute",
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "rgba(255, 255, 255, 0.56)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.8)",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#101820",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.13,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+
+  floatingEmojiTop: {
+    top: 20,
+    left: Platform.OS === "web" ? -16 : 18,
+  },
+
+  floatingEmojiBottom: {
+    right: Platform.OS === "web" ? -14 : 18,
+    bottom: 24,
+  },
+
+  floatingEmojiText: {
+    fontSize: 23,
+    lineHeight: 28,
+  },
+
   avatarInitial: {
     color: "#FFF",
     fontSize: 44,
@@ -458,12 +535,17 @@ const styles = StyleSheet.create({
   summaryCard: {
     width: "100%",
     maxWidth: Platform.OS === "web" ? 680 : undefined,
-    borderRadius: 26,
-    backgroundColor: "rgb(255, 255, 255)",
+    borderRadius: 30,
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.82)",
-    padding: 18,
-    marginTop: 16,
+    borderColor: "rgba(255, 255, 255, 0.76)",
+    padding: 20,
+    marginTop: 18,
+    shadowColor: "#101820",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.09,
+    shadowRadius: 24,
+    elevation: 8,
   },
 
   name: {
@@ -491,20 +573,47 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
+  moodRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 10,
+    marginTop: 16,
+  },
+
+  moodChip: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    textAlign: "center",
+    lineHeight: 40,
+    fontSize: 21,
+    backgroundColor: "rgba(255, 255, 255, 0.58)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.82)",
+    overflow: "hidden",
+  },
+
   statsRow: {
     flexDirection: "row",
-    gap: 10,
-    marginBottom: 18,
+    gap: 12,
+    marginBottom: 20,
     maxWidth: Platform.OS === "web" ? 760 : undefined,
   },
 
   statBox: {
     flex: 1,
-    minHeight: 82,
-    borderRadius: 18,
-    backgroundColor: "rgb(255, 255, 255)",
+    minHeight: 88,
+    borderRadius: 26,
+    backgroundColor: "rgba(255, 255, 255, 0.46)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.76)",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#101820",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 7,
   },
 
   statNumber: {
@@ -522,13 +631,18 @@ const styles = StyleSheet.create({
   },
 
   section: {
-    marginTop: 18,
+    marginTop: 16,
     maxWidth: Platform.OS === "web" ? 860 : undefined,
-    borderRadius: 24,
-    backgroundColor: "rgb(255, 255, 255)",
+    borderRadius: 30,
+    backgroundColor: "rgba(255, 255, 255, 0.46)",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.82)",
-    padding: 16,
+    borderColor: "rgba(255, 255, 255, 0.76)",
+    padding: 18,
+    shadowColor: "#101820",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 22,
+    elevation: 7,
   },
 
   sectionTitle: {
@@ -557,7 +671,9 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     justifyContent: "center",
-    backgroundColor: "#111",
+    backgroundColor: "rgba(16, 24, 32, 0.78)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.3)",
   },
 
   tagText: {

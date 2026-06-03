@@ -101,7 +101,7 @@ export default function ProfileSavingScreen() {
         }, remainingDelay);
       } catch {
         if (isMounted) {
-          setError("Could not save your profile. Please try again.");
+          setError("Не вдалося зберегти профіль. Спробуйте ще раз.");
         }
       }
     }
@@ -168,10 +168,10 @@ export default function ProfileSavingScreen() {
         </View>
 
         <Text style={styles.title} adjustsFontSizeToFit numberOfLines={1}>
-          Creating your profile
+          Створюємо ваш профіль
         </Text>
         <Text style={styles.subtitle}>
-          Polishing your photos and match details.
+          Готуємо ваші фото й деталі для знайомств.
         </Text>
 
         {error ? (
@@ -181,7 +181,7 @@ export default function ProfileSavingScreen() {
               style={styles.retryButton}
               onPress={() => router.replace("/onboarding")}
             >
-              <Text style={styles.retryText}>Back to Profile</Text>
+              <Text style={styles.retryText}>Повернутися до профілю</Text>
             </TouchableOpacity>
           </>
         ) : null}

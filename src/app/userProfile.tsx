@@ -8,6 +8,12 @@ import {
 import { ThemedBackground } from "@/components/ThemedBackground";
 import { premiumColors, premiumShadow } from "@/constants/premiumDesign";
 import {
+  getCountryLabel,
+  getGenderLabel,
+  getInterestLabel,
+  getLookingForLabel,
+} from "@/constants/ukrainianLabels";
+import {
   getLocalAccountUsers,
   getUserKey,
   type SessionUser,
@@ -140,7 +146,7 @@ export default function UserProfileScreen() {
   if (isLoading) {
     return (
       <ThemedBackground style={styles.background}>
-        <PremiumLoadingState label="Loading profile" />
+        <PremiumLoadingState label="Завантажуємо профіль" />
       </ThemedBackground>
     );
   }
@@ -157,8 +163,8 @@ export default function UserProfileScreen() {
 
         {!user ? (
           <PremiumEmptyState
-            title="Profile not found"
-            text="This profile is no longer available."
+            title="Профіль не знайдено"
+            text="Цей профіль більше недоступний."
           />
         ) : (
           <>
@@ -191,11 +197,12 @@ export default function UserProfileScreen() {
                     {user.name}, {user.age}
                   </Text>
                   <Text style={styles.meta}>
-                    {user.gender} looking for {user.lookingFor}
+                    {getGenderLabel(user.gender)} шукає{" "}
+                    {getLookingForLabel(user.lookingFor)}
                   </Text>
                   {user.city && user.country ? (
                     <Text style={styles.locationText}>
-                      {user.city}, {user.country}
+                      {user.city}, {getCountryLabel(user.country)}
                     </Text>
                   ) : null}
                 </View>
@@ -204,10 +211,10 @@ export default function UserProfileScreen() {
             </View>
 
             <View style={styles.compatibilityBlock}>
-              <Text style={styles.compatibilityTitle}>Compatibility</Text>
+              <Text style={styles.compatibilityTitle}>Сумісність</Text>
               <Text style={styles.compatibilityText}>
-                Similar pace, shared interests, and aligned intent. Visual
-                indicator only.
+                Схожий темп, спільні інтереси й близькі наміри. Лише візуальний
+                індикатор.
               </Text>
               <View style={styles.compatibilityTrack}>
                 <View style={styles.compatibilityFill} />
@@ -216,44 +223,48 @@ export default function UserProfileScreen() {
 
             {user.city && user.country ? (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Location</Text>
+                <Text style={styles.sectionTitle}>Локація</Text>
                 <Text style={styles.bodyText}>
-                  {user.city}, {user.country}
+                  {user.city}, {getCountryLabel(user.country)}
                 </Text>
               </View>
             ) : null}
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>About</Text>
+              <Text style={styles.sectionTitle}>Про себе</Text>
               <Text style={styles.bodyText}>{user.about}</Text>
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Interests</Text>
+              <Text style={styles.sectionTitle}>Інтереси</Text>
               <View style={styles.tags}>
                 {user.interests?.map((interest) => (
-                  <PremiumTag key={interest} label={interest} tone="emerald" />
+                  <PremiumTag
+                    key={interest}
+                    label={getInterestLabel(interest)}
+                    tone="emerald"
+                  />
                 ))}
               </View>
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Conversation starters</Text>
+              <Text style={styles.sectionTitle}>Почати розмову</Text>
               <View style={styles.starterCard}>
                 <Text style={styles.starterText}>
-                  Ask about a favorite weekend ritual
+                  Запитайте про улюблений ритуал вихідного дня
                 </Text>
               </View>
               <View style={styles.starterCard}>
                 <Text style={styles.starterText}>
-                  Share what makes a great first coffee
+                  Поділіться, що робить першу каву вдалою
                 </Text>
               </View>
             </View>
 
             {photos.length ? (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Photos</Text>
+                <Text style={styles.sectionTitle}>Фото</Text>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -291,7 +302,7 @@ export default function UserProfileScreen() {
             style={styles.fullscreenClose}
             onPress={() => setFullscreenOpen(false)}
           >
-            <Text style={styles.fullscreenCloseText}>Close</Text>
+            <Text style={styles.fullscreenCloseText}>Закрити</Text>
           </TouchableOpacity>
 
           {photos.length ? (

@@ -28,7 +28,7 @@ export default function RegisterScreen() {
     const trimmedEmail = email.trim().toLowerCase();
 
     if (!trimmedName) {
-      setError("Enter your name.");
+      setError("Введіть своє ім'я.");
       return;
     }
 
@@ -40,7 +40,7 @@ export default function RegisterScreen() {
     }
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+      setError("Пароль має містити щонайменше 6 символів.");
       return;
     }
 
@@ -57,7 +57,7 @@ export default function RegisterScreen() {
       );
     } catch (error) {
       setError(
-        error instanceof Error ? error.message : "Account creation failed.",
+        error instanceof Error ? error.message : "Не вдалося створити акаунт.",
       );
       return;
     }
@@ -77,17 +77,17 @@ export default function RegisterScreen() {
         >
           <BackButton to="/welcome" />
 
-          <Text style={styles.title}>Create account</Text>
+          <Text style={styles.title}>Створити акаунт</Text>
           <Text style={styles.subtitle}>
-            Start with email, then complete your dating profile.
+            Почніть з email, а потім заповніть профіль для знайомств.
           </Text>
 
           <View style={styles.form}>
             <View>
-              <Text style={styles.label}>Name</Text>
+              <Text style={styles.label}>Ім'я</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Ivan"
+                placeholder="Іван"
                 placeholderTextColor="#999"
                 value={name}
                 onChangeText={setName}
@@ -108,10 +108,10 @@ export default function RegisterScreen() {
             </View>
 
             <View>
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>Пароль</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Create password"
+                placeholder="Створіть пароль"
                 placeholderTextColor="#999"
                 secureTextEntry
                 value={password}
@@ -125,7 +125,7 @@ export default function RegisterScreen() {
               style={styles.button}
               onPress={handleCreateAccount}
             >
-              <Text style={styles.buttonText}>Create Account</Text>
+              <Text style={styles.buttonText}>Створити акаунт</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
