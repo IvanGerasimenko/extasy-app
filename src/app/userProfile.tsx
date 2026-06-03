@@ -1,9 +1,8 @@
 import BottomMenu from "@/components/BottomMenu";
 import {
-  CompatibilityBadge,
   PremiumEmptyState,
   PremiumLoadingState,
-  PremiumTag
+  PremiumTag,
 } from "@/components/PremiumUI";
 import { ThemedBackground } from "@/components/ThemedBackground";
 import { premiumColors, premiumShadow } from "@/constants/premiumDesign";
@@ -190,34 +189,22 @@ export default function UserProfileScreen() {
                   </Text>
                 </View>
               ) : null}
-
-              <View style={styles.heroCopy}>
-                <View>
-                  <Text style={styles.name}>
-                    {user.name}, {user.age}
-                  </Text>
-                  <Text style={styles.meta}>
-                    {getGenderLabel(user.gender)} шукає{" "}
-                    {getLookingForLabel(user.lookingFor)}
-                  </Text>
-                  {user.city && user.country ? (
-                    <Text style={styles.locationText}>
-                      {user.city}, {getCountryLabel(user.country)}
-                    </Text>
-                  ) : null}
-                </View>
-                <CompatibilityBadge value="86%" />
-              </View>
             </View>
 
-            <View style={styles.compatibilityBlock}>
-              <Text style={styles.compatibilityTitle}>Сумісність</Text>
-              <Text style={styles.compatibilityText}>
-                Схожий темп, спільні інтереси й близькі наміри. Лише візуальний
-                індикатор.
-              </Text>
-              <View style={styles.compatibilityTrack}>
-                <View style={styles.compatibilityFill} />
+            <View style={styles.heroCopy}>
+              <View>
+                <Text style={styles.name}>
+                  {user.name}, {user.age}
+                </Text>
+                <Text style={styles.meta}>
+                  {getGenderLabel(user.gender)} шукає{" "}
+                  {getLookingForLabel(user.lookingFor)}
+                </Text>
+                {user.city && user.country ? (
+                  <Text style={styles.locationText}>
+                    {user.city}, {getCountryLabel(user.country)}
+                  </Text>
+                ) : null}
               </View>
             </View>
 
@@ -225,7 +212,7 @@ export default function UserProfileScreen() {
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Локація</Text>
                 <Text style={styles.bodyText}>
-                  {user.city}, {getCountryLabel(user.country)}
+                  {user.city}, {getCountryLabel(user.country + "  📍")}
                 </Text>
               </View>
             ) : null}
@@ -245,20 +232,6 @@ export default function UserProfileScreen() {
                     tone="emerald"
                   />
                 ))}
-              </View>
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Почати розмову</Text>
-              <View style={styles.starterCard}>
-                <Text style={styles.starterText}>
-                  Запитайте про улюблений ритуал вихідного дня
-                </Text>
-              </View>
-              <View style={styles.starterCard}>
-                <Text style={styles.starterText}>
-                  Поділіться, що робить першу каву вдалою
-                </Text>
               </View>
             </View>
 
@@ -404,7 +377,7 @@ const styles = StyleSheet.create({
 
   heroShade: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(16, 24, 32, 0.26)",
+    backgroundColor: "rgba(16, 24, 32, 0.10)",
   },
 
   heroCopy: {
@@ -413,8 +386,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    backgroundColor: "rgba(255, 252, 247, 0.78)",
+    backgroundColor: "rgba(255, 252, 247)",
     padding: 18,
+    minWidth: "100%",
+    marginTop: 30,
   },
 
   name: {
@@ -444,7 +419,6 @@ const styles = StyleSheet.create({
     right: 16,
     minWidth: 54,
     height: 32,
-    borderRadius: 999,
     backgroundColor: "rgba(16, 24, 32, 0.58)",
     paddingHorizontal: 12,
     alignItems: "center",

@@ -42,6 +42,29 @@ function createSmsCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+const serverStartTime = Date.now();
+
+function formatUptime(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${hours}h ${minutes}m  ${seconds}s `;
+}
+
+app.get("/uptime", (req, res) => {
+  const uptimeMS = Date.now() - serverStartTime;
+
+  res.json({
+    uptime: formatUptime(uptimeMS),
+  });
+});
+
+setInterval(() => {
+  console.log("Время идет:", formatUptime(Date.now() - serverStartTime));
+}, 1000);
+
 app.get("/", (req, res) => {
   res.json({ message: "Backend is running" });
 });

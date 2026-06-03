@@ -1,7 +1,6 @@
 import {
   CompatibilityBadge,
   PremiumEmptyState,
-  PremiumHeader,
   PremiumLoadingState,
   PremiumTag,
 } from "@/components/PremiumUI";
@@ -19,8 +18,8 @@ import {
 } from "@/constants/ukrainianLabels";
 import {
   getLocalAccountUsers,
-  getUnavailableDiscoverUserKeysForCurrentUser,
   getSessionUser,
+  getUnavailableDiscoverUserKeysForCurrentUser,
   getUserKey,
   recordProfileLike,
   type SessionUser,
@@ -168,7 +167,9 @@ function getDiscoverProfiles(
     .filter((localUser) => !localUser.isDiscoverHidden)
     .filter((localUser) => !isSameUser(localUser, currentUser))
     .filter((localUser) => !unavailableUserKeys.includes(getUserKey(localUser)))
-    .filter((localUser) => acceptsGender(currentUser.lookingFor, localUser.gender))
+    .filter((localUser) =>
+      acceptsGender(currentUser.lookingFor, localUser.gender),
+    )
     .map((localUser) => ({
       localUser,
       score:
@@ -177,8 +178,7 @@ function getDiscoverProfiles(
         (isNearbyProfile(currentUser, localUser) ? 1 : 0),
     }))
     .sort(
-      (firstProfile, secondProfile) =>
-        secondProfile.score - firstProfile.score,
+      (firstProfile, secondProfile) => secondProfile.score - firstProfile.score,
     )
     .map(({ localUser }) => profileFromUser(localUser));
 }
@@ -371,18 +371,14 @@ export default function DiscoverScreen() {
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
-        <PremiumHeader
-          eyebrow="Extasy"
-          title="Пошук"
-          subtitle="Уважно підібрані профілі для спокійніших і якісніших знайомств."
-          right={
-            <View style={styles.headerPill}>
-              <Text style={styles.headerPillText}>
-                {remainingProfiles} доступно
-              </Text>
-            </View>
-          }
-        />
+        <View>
+          <Text style={styles.extasytitle}>Extasy</Text>
+        </View>
+        <View style={styles.headerPill}>
+          <Text style={styles.headerPillText}>
+            {remainingProfiles} доступно
+          </Text>
+        </View>
 
         {activeMatch ? (
           <Animated.View
@@ -593,17 +589,8 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: isWeb ? 680 : 560,
     alignSelf: "center",
-    paddingHorizontal: isWeb
-      ? 34
-      : isCompactViewport
-        ? 14
-        : premiumSpacing.screenX,
-    paddingTop: isWeb ? 34 : isCompactViewport ? 42 : premiumSpacing.screenTop,
-    paddingBottom: isWeb
-      ? 150
-      : isCompactViewport
-        ? 168
-        : premiumSpacing.screenBottom,
+    paddingHorizontal: 10,
+    paddingTop: 10,
   },
 
   headerPill: {
@@ -616,6 +603,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  extasytitle: {
+    color: "#ff9189",
+    fontSize: 13,
+    fontWeight: "800",
+    marginBottom: 20,
+    marginTop: 20,
+  },
 
   headerPillText: {
     color: premiumColors.navy,
@@ -624,7 +618,7 @@ const styles = StyleSheet.create({
   },
 
   matchCard: {
-    minHeight: isWeb ? 560 : isCompactViewport ? 610 : 660,
+    minHeight: isWeb ? 560 : isCompactViewport ? 580 : 360,
     maxWidth: isWeb ? 540 : undefined,
     marginBottom: isCompactViewport ? 42 : 48,
     borderRadius: premiumSpacing.cardRadius,

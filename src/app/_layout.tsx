@@ -1,7 +1,7 @@
+import { ThemeProvider } from "@/services/theme/ThemeContext";
 import { Stack } from "expo-router";
 import React from "react";
 import { Platform, Text, TextInput } from "react-native";
-import { ThemeProvider } from "@/services/theme/ThemeContext";
 
 const appFont = Platform.select({
   ios: "System",
