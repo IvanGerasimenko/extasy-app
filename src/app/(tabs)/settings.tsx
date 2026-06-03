@@ -26,6 +26,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -42,6 +43,11 @@ export default function SettingsScreen() {
   const [matches, setMatches] = useState<MatchRecord[]>([]);
   const [safetyMessage, setSafetyMessage] = useState("");
   const [reportReasonOpen, setReportReasonOpen] = useState(false);
+  const [selectedReportReason, setSelectedReportReason] = useState<
+    string | null
+  >(null);
+  const [customProblemText, setCustomProblemText] = useState("");
+
   const reportReasons = [
     "Помилка в додатку",
     "Проблема з входом",
@@ -160,6 +166,13 @@ export default function SettingsScreen() {
   }
 
   function handleReportReason(reason: string) {
+    setSelectedReportReason(reason);
+
+    if (reason === "Інша проблема") {
+      return;
+    }
+
+    setCustomProblemText("");
     setReportReasonOpen(false);
     setSafetyMessage(
       `Підтримка: звернення отримано. Тема: ${reason}. Ми перевіримо роботу додатка і підкажемо наступний крок.`,
@@ -167,7 +180,25 @@ export default function SettingsScreen() {
     setTimeout(() => setSafetyOpen(true), 180);
   }
 
+  function handleCustomProblemSubmit() {
+    const problemText = customProblemText.trim();
+
+    if (!problemText) {
+      setSafetyMessage("Підтримка: опишіть проблему перед відправкою.");
+      return;
+    }
+
+    setReportReasonOpen(false);
+    setSafetyMessage(
+      `Підтримка: звернення отримано. Тема: Інша проблема. Опис: ${problemText}`,
+    );
+    setCustomProblemText("");
+    setTimeout(() => setSafetyOpen(true), 180);
+  }
+
   function openReportReasonModal() {
+    setSelectedReportReason(null);
+    setCustomProblemText("");
     setSafetyOpen(false);
     setTimeout(() => setReportReasonOpen(true), 220);
   }
@@ -480,13 +511,40 @@ export default function SettingsScreen() {
               {reportReasons.map((reason) => (
                 <TouchableOpacity
                   key={reason}
-                  style={styles.reportReason}
+                  style={[
+                    styles.reportReason,
+                    selectedReportReason === reason &&
+                      styles.reportReasonSelected,
+                  ]}
                   onPress={() => handleReportReason(reason)}
                 >
                   <Text style={styles.reportReasonText}>{reason}</Text>
                 </TouchableOpacity>
               ))}
             </View>
+
+            {selectedReportReason === "Інша проблема" ? (
+              <View style={styles.customProblemBox}>
+                <TextInput
+                  style={styles.customProblemInput}
+                  placeholder="Опишіть проблему..."
+                  placeholderTextColor={premiumColors.muted}
+                  value={customProblemText}
+                  onChangeText={setCustomProblemText}
+                  multiline
+                  textAlignVertical="top"
+                />
+                <TouchableOpacity
+                  activeOpacity={0.82}
+                  style={styles.sendProblemButton}
+                  onPress={handleCustomProblemSubmit}
+                >
+                  <Text style={styles.sendProblemButtonText}>
+                    Відправити проблему
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
           </View>
         </View>
       </Modal>
@@ -1128,9 +1186,47 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
 
+  reportReasonSelected: {
+    backgroundColor: "rgba(29, 123, 98, 0.12)",
+    borderColor: "rgba(29, 123, 98, 0.34)",
+  },
+
   reportReasonText: {
     color: premiumColors.ink,
     fontSize: 14,
     fontWeight: "800",
+  },
+
+  customProblemBox: {
+    gap: 10,
+    marginTop: 14,
+  },
+
+  customProblemInput: {
+    minHeight: 116,
+    borderRadius: 18,
+    backgroundColor: "rgba(16, 24, 32, 0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(16, 24, 32, 0.12)",
+    color: premiumColors.ink,
+    fontSize: 14,
+    lineHeight: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+
+  sendProblemButton: {
+    minHeight: 52,
+    borderRadius: 18,
+    backgroundColor: premiumColors.navy,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+
+  sendProblemButtonText: {
+    color: premiumColors.white,
+    fontSize: 15,
+    fontWeight: "900",
   },
 });

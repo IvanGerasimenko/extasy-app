@@ -175,10 +175,7 @@ export default function ProfileScreen() {
         <View style={styles.hero}>
           {photos[0] ? (
             <View style={styles.avatarWrap} {...swipeResponder.panHandlers}>
-              <TouchableOpacity
-                activeOpacity={0.88}
-                onPress={() => setFullscreenOpen(true)}
-              >
+              <TouchableOpacity onPress={() => setFullscreenOpen(true)}>
                 <Image
                   source={{ uri: photos[photoIndex] ?? photos[0] }}
                   style={styles.avatar}
@@ -437,7 +434,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     shadowColor: "#101820",
     shadowOffset: { width: 0, height: 26 },
-    shadowOpacity: 0.16,
     shadowRadius: 38,
     elevation: 14,
   },
@@ -445,8 +441,9 @@ const styles = StyleSheet.create({
   avatar: {
     width: Platform.OS === "web" ? 236 : 184,
     height: Platform.OS === "web" ? 236 : 184,
-    borderRadius: Platform.OS === "web" ? 40 : 48,
-    backgroundColor: "#E8E2DC",
+    borderRadius: Platform.OS === "web" ? 40 : 900,
+    borderWidth: 2,
+    borderColor: "rgba(228, 205, 255, 0.8)",
   },
 
   avatarWrap: {
@@ -454,16 +451,13 @@ const styles = StyleSheet.create({
     height: Platform.OS === "web" ? 262 : 214,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.5)",
     minWidth: Platform.OS === "web" ? undefined : "100%",
-    borderRadius: 44,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.78)",
     shadowColor: "#101820",
     shadowOffset: { width: 0, height: 18 },
-    shadowOpacity: Platform.OS === "web" ? 0.14 : 0.1,
-    shadowRadius: 30,
+    position: "relative",
+    top: Platform.OS === "web" ? -12 : 50,
     elevation: 10,
+    zIndex: 1,
   },
 
   photoCounter: {

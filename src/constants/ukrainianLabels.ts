@@ -5,8 +5,8 @@ const genderLabels: Record<string, string> = {
 };
 
 const lookingForLabels: Record<string, string> = {
-  Women: "Жінок",
-  Men: "Чоловіків",
+  Women: "Жінку",
+  Men: "Чоловіка",
   "Non-binary": "Небінарних людей",
 };
 
@@ -54,15 +54,15 @@ const interestLabels: Record<string, string> = {
 };
 
 export function getGenderLabel(value?: string) {
-  return value ? genderLabels[value] ?? value : "";
+  return value ? (genderLabels[value] ?? value) : "";
 }
 
 export function getLookingForLabel(value?: string) {
-  return value ? lookingForLabels[value] ?? value : "";
+  return value ? (lookingForLabels[value] ?? value) : "";
 }
 
 export function getCountryLabel(value?: string) {
-  return value ? countryLabels[value] ?? value : "";
+  return value ? (countryLabels[value] ?? value) : "";
 }
 
 export function getInterestLabel(value: string) {
