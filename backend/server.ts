@@ -42,6 +42,7 @@ function createSmsCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+// this is serverStartTime a backend
 const serverStartTime = Date.now();
 
 function formatUptime(ms: number): string {
@@ -49,7 +50,6 @@ function formatUptime(ms: number): string {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-
   return `${hours}h ${minutes}m  ${seconds}s `;
 }
 
@@ -62,7 +62,7 @@ app.get("/uptime", (req, res) => {
 });
 
 setInterval(() => {
-  console.log("Время идет:", formatUptime(Date.now() - serverStartTime));
+  console.log("Time is starting:", formatUptime(Date.now() - serverStartTime));
 }, 1000);
 
 app.get("/", (req, res) => {
