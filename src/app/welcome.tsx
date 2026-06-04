@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
 
   container: {
     width: "100%",
-    maxWidth: Platform.OS === "web" ? 1120 : 380,
+    maxWidth: Platform.OS === "web" ? 550 : 380,
     paddingHorizontal: Platform.OS === "web" ? 36 : 10,
     marginTop: Platform.OS === "web" ? 54 : 30,
   },
@@ -119,9 +119,10 @@ const styles = StyleSheet.create({
 
   people: {
     width: "100%",
-    height: Platform.OS === "web" ? 560 : 430,
-    borderRadius: 34,
-    opacity: 0.94,
+    height: Platform.OS === "web" ? 200 : 430,
+    padding: Platform.OS === "web" ? 400 : 10,
+    borderRadius: Platform.OS === "web" ? 100 : 34,
+    opacity: Platform.OS === "web" ? 0.5 : 0.94,
   },
 
   logo: {
