@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router"; // или 'solito', в зависимости от вашего роутера
+import { useRouter } from "expo-router";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity } from "react-native";
 
@@ -13,7 +13,6 @@ export const BackButton: React.FC<BackButtonProps> = ({ to = "/welcome" }) => {
     <TouchableOpacity
       style={styles.button}
       onPress={() => router.push(to)}
-      activeOpacity={0.7} // Делает нажатие более приятным (опционально)
     >
       <Text style={styles.back}>‹</Text>
     </TouchableOpacity>

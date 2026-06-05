@@ -1,5 +1,5 @@
 import { ThemedBackground } from "@/components/ThemedBackground";
-import { getCountryLabel } from "@/constants/ukrainianLabels";
+import { getCountryLabel } from "@/constants/germanLabels";
 import {
   acceptIncomingLikeRequest,
   getIncomingLikeRequestsForCurrentUser,
@@ -62,13 +62,13 @@ export default function NotificationsScreen() {
       return;
     }
 
-    setMessage("Не вдалося прийняти цей лайк.");
+    setMessage("Dieser Like konnte nicht angenommen werden.");
   }
 
   async function handleSkip(request: LikeRequestRecord) {
     await skipIncomingLikeRequest(request.id);
     await loadNotifications();
-    setMessage(`${request.fromUser.name ?? "Хтось"} пропущено.`);
+    setMessage(`${request.fromUser.name ?? "Jemand"} übersprungen.`);
   }
 
   function LikeCard({ request }: { request: LikeRequestRecord }) {
@@ -94,7 +94,7 @@ export default function NotificationsScreen() {
 
         <View style={styles.copy}>
           <Text style={styles.name}>
-            {request.fromUser.name ?? "Хтось"}
+            {request.fromUser.name ?? "Jemand"}
             {request.fromUser.age ? `, ${request.fromUser.age}` : ""}
           </Text>
           {request.fromUser.city && request.fromUser.country ? (
@@ -103,7 +103,7 @@ export default function NotificationsScreen() {
             </Text>
           ) : null}
           <Text style={styles.body} numberOfLines={2}>
-            Хоче створити пару з вами.
+            Möchte mit dir matchen.
           </Text>
         </View>
 
@@ -112,13 +112,13 @@ export default function NotificationsScreen() {
             style={[styles.smallButton, styles.acceptButton]}
             onPress={() => handleAccept(request)}
           >
-            <Text style={styles.acceptText}>Прийняти</Text>
+            <Text style={styles.acceptText}>Annehmen</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.smallButton, styles.skipButton]}
             onPress={() => handleSkip(request)}
           >
-            <Text style={styles.skipText}>Пропустити</Text>
+            <Text style={styles.skipText}>Überspringen</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -138,38 +138,38 @@ export default function NotificationsScreen() {
   return (
     <ThemedBackground style={styles.background}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Сповіщення</Text>
+        <Text style={styles.title}>Benachrichtigungen</Text>
         <Text style={styles.subtitle}>
-          Приймайте лайки, щоб відкрити чат, або пропускайте їх.
+          Nimm Likes an, um einen Chat zu öffnen, oder überspringe sie.
         </Text>
 
         {message ? <Text style={styles.message}>{message}</Text> : null}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Вхідні лайки</Text>
+          <Text style={styles.sectionTitle}>Eingehende Likes</Text>
           {incomingLikes.length ? (
             incomingLikes.map((request) => (
               <LikeCard key={request.id} request={request} />
             ))
           ) : (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>Нових лайків немає</Text>
-              <Text style={styles.emptyText}>Нові лайки з'являться тут.</Text>
+              <Text style={styles.emptyTitle}>Keine neuen Likes</Text>
+              <Text style={styles.emptyText}>Neue Likes erscheinen hier.</Text>
             </View>
           )}
         </View>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Оновлення ваших лайків</Text>
+          <Text style={styles.sectionTitle}>Updates zu deinen Likes</Text>
           {responses.length ? (
             responses.map((request) => (
               <View key={request.id} style={styles.responseCard}>
                 <Text style={styles.responseTitle}>
-                  {request.toUser.name ?? "Хтось"}
+                  {request.toUser.name ?? "Jemand"}
                 </Text>
                 <Text style={styles.responseText}>
                   {request.status === "accepted"
-                    ? "Прийняв(-ла) ваш лайк. Чат відкрито."
-                    : "Пропустив(-ла) ваш лайк."}
+                    ? "Hat deinen Like angenommen. Der Chat ist geöffnet."
+                    : "Hat deinen Like übersprungen."}
                 </Text>
                 {request.status === "accepted" && request.matchId ? (
                   <TouchableOpacity
@@ -178,16 +178,16 @@ export default function NotificationsScreen() {
                       router.push(`/chat?matchId=${request.matchId}`)
                     }
                   >
-                    <Text style={styles.chatText}>Відкрити чат</Text>
+                    <Text style={styles.chatText}>Chat öffnen</Text>
                   </TouchableOpacity>
                 ) : null}
               </View>
             ))
           ) : (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>Відповідей поки немає</Text>
+              <Text style={styles.emptyTitle}>Noch keine Antworten</Text>
               <Text style={styles.emptyText}>
-                Коли хтось прийме або пропустить ваш лайк, це з'явиться тут.
+                Wenn jemand deinen Like annimmt oder überspringt, erscheint es hier.
               </Text>
             </View>
           )}

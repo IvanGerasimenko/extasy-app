@@ -9,7 +9,7 @@ import {
   premiumShadow,
   premiumSpacing,
 } from "@/constants/premiumDesign";
-import { getCountryLabel } from "@/constants/ukrainianLabels";
+import { getCountryLabel } from "@/constants/germanLabels";
 import {
   getLikedProfilesForCurrentUser,
   getUserKey,
@@ -72,7 +72,7 @@ export default function LikedScreen() {
   if (isLoading) {
     return (
       <ThemedBackground style={styles.background}>
-        <PremiumLoadingState label="Завантажуємо пари" />
+        <PremiumLoadingState label="Matches werden geladen" />
       </ThemedBackground>
     );
   }
@@ -81,9 +81,9 @@ export default function LikedScreen() {
     <ThemedBackground style={styles.background}>
       <ScrollView contentContainerStyle={styles.container}>
         <PremiumHeader
-          eyebrow="Пари"
-          title="Контакти"
-          subtitle="Профілі, які ви зберегли або з якими збіглися, разом зі статусом взаємності."
+          eyebrow="Matches"
+          title="Kontakte"
+          subtitle="Profile, die du gespeichert hast oder mit denen du gematcht hast, inklusive Status."
         />
 
         {likedProfiles.length ? (
@@ -92,11 +92,11 @@ export default function LikedScreen() {
             let statusLabel;
 
             if (record.status === "accepted") {
-              statusLabel = "Прийнято";
+              statusLabel = "Angenommen";
             } else if (record.status === "skipped") {
-              statusLabel = "Пропущено";
+              statusLabel = "Übersprungen";
             } else {
-              statusLabel = "Очікує";
+              statusLabel = "Wartet";
             }
 
             return (
@@ -162,7 +162,7 @@ export default function LikedScreen() {
                     style={styles.chatButton}
                     onPress={() => handleOpenRecord(record)}
                   >
-                    <Text style={styles.chatText}>Чат</Text>
+                    <Text style={styles.chatText}>Chat</Text>
                   </TouchableOpacity>
                 ) : null}
               </TouchableOpacity>
@@ -170,8 +170,8 @@ export default function LikedScreen() {
           })
         ) : (
           <PremiumEmptyState
-            title="Пар поки немає"
-            text="Профілі, з якими ви встановите контакт, з'являться тут зі своїм статусом."
+            title="Noch keine Matches"
+            text="Profile, mit denen du Kontakt aufnimmst, erscheinen hier mit ihrem Status."
           />
         )}
       </ScrollView>

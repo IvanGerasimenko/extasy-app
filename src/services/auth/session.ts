@@ -313,11 +313,11 @@ export function getEmailValidationError(email: string) {
   const [localPart, domain] = normalizedEmail.split("@");
 
   if (!EMAIL_PATTERN.test(normalizedEmail) || !localPart || !domain) {
-    return "Введіть коректну email-адресу.";
+    return "Gib eine gültige E-Mail-Adresse ein.";
   }
 
   if (localPart.length < 3 || localPart.length > 64) {
-    return "Ім'я користувача в email виглядає некоректно.";
+    return "Der Benutzername in der E-Mail-Adresse wirkt ungültig.";
   }
 
   if (
@@ -325,7 +325,7 @@ export function getEmailValidationError(email: string) {
     localPart.endsWith(".") ||
     localPart.includes("..")
   ) {
-    return "Ім'я користувача в email виглядає некоректно.";
+    return "Der Benutzername in der E-Mail-Adresse wirkt ungültig.";
   }
 
   const domainParts = domain.split(".");
@@ -336,7 +336,7 @@ export function getEmailValidationError(email: string) {
     domainParts.some((part) => part.length < 2) ||
     !/^[a-z]{2,24}$/.test(topLevelDomain)
   ) {
-    return "Домен email виглядає некоректно.";
+    return "Die E-Mail-Domain wirkt ungültig.";
   }
 
   if (
@@ -344,7 +344,7 @@ export function getEmailValidationError(email: string) {
       (part) => localPart === part || localPart.includes(`${part}.`),
     )
   ) {
-    return "Цей email схожий на тестовий. Використайте справжню адресу.";
+    return "Diese E-Mail sieht wie eine Testadresse aus. Verwende eine echte Adresse.";
   }
 
   return null;
@@ -377,11 +377,11 @@ export async function registerLocalAccount(
   const email = user.email?.toLowerCase();
 
   if (!email) {
-    throw new Error("Email обов'язковий.");
+    throw new Error("E-Mail ist erforderlich.");
   }
 
   if (accounts.some((account) => account.user.email?.toLowerCase() === email)) {
-    throw new Error("Акаунт уже існує.");
+    throw new Error("Das Konto existiert bereits.");
   }
 
   await saveLocalAccounts([...accounts, { user, password }]);
@@ -593,7 +593,7 @@ export async function recordProfileLike(targetUser: SessionUser) {
       await saveLikes(likes);
     } catch {
       throw new Error(
-        "Сховище заповнене. Очистьте старі дані Safari й спробуйте знову.",
+        "Der Speicher ist voll. Lösche alte Safari-Daten und versuche es erneut.",
       );
     }
   }
@@ -657,7 +657,7 @@ export async function recordProfileLike(targetUser: SessionUser) {
     await saveLikeRequests([...likeRequests, request]);
   } catch {
     throw new Error(
-      "Сховище заповнене. Очистьте старі дані Safari й спробуйте знову.",
+      "Der Speicher ist voll. Lösche alte Safari-Daten und versuche es erneut.",
     );
   }
 

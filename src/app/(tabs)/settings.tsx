@@ -49,13 +49,13 @@ export default function SettingsScreen() {
   const [customProblemText, setCustomProblemText] = useState("");
 
   const reportReasons = [
-    "Помилка в додатку",
-    "Проблема з входом",
-    "Discover працює неправильно",
-    "Чати або повідомлення зникають",
-    "Проблема з преміумом",
-    "Питання безпеки або приватності",
-    "Інша проблема",
+    "Fehler in der App",
+    "Problem beim Login",
+    "Discover funktioniert nicht richtig",
+    "Chats oder Nachrichten verschwinden",
+    "Problem mit Premium",
+    "Sicherheits- oder Datenschutzfrage",
+    "Anderes Problem",
   ];
   const { colors } = useAppTheme();
   const surfaceStyle = {
@@ -65,23 +65,23 @@ export default function SettingsScreen() {
   const settingActions = [
     {
       emoji: "🔔",
-      title: "Сповіщення",
-      text: "Лайки, пари та нові повідомлення.",
-      status: "Активно",
+      title: "Benachrichtigungen",
+      text: "Likes, Matches und neue Nachrichten.",
+      status: "Aktiv",
       onPress: () => router.push("/notifications"),
     },
     {
       emoji: "🎯",
-      title: "Уподобання пошуку",
-      text: "Стать, країна, інтереси та профіль.",
-      status: "Змінити",
+      title: "Suchpräferenzen",
+      text: "Geschlecht, Land, Interessen und Profil.",
+      status: "Ändern",
       onPress: () => router.push("/onboarding"),
     },
     {
       emoji: "🛡️",
-      title: "Центр безпеки",
-      text: "Спокійні знайомства й контроль контакту.",
-      status: "Увімкнено",
+      title: "Sicherheitscenter",
+      text: "Ruhiges Dating und Kontrolle über Kontakte.",
+      status: "Aktiviert",
       onPress: () => setSafetyOpen(true),
     },
   ];
@@ -123,7 +123,7 @@ export default function SettingsScreen() {
     const result = await blockMatchContact(match.id);
 
     if (!result) {
-      setSafetyMessage("Модерація: не вдалося заблокувати контакт.");
+      setSafetyMessage("Moderation: Der Kontakt konnte nicht blockiert werden.");
       return;
     }
 
@@ -133,7 +133,7 @@ export default function SettingsScreen() {
       ),
     );
     setSafetyMessage(
-      `Модерація: ${result.blockedUser?.name ?? "контакт"} заблоковано. Чат і повідомлення видалено.`,
+      `Moderation: ${result.blockedUser?.name ?? "Kontakt"} wurde blockiert. Chat und Nachrichten wurden gelöscht.`,
     );
   }
 
@@ -142,8 +142,8 @@ export default function SettingsScreen() {
       const nextValue = !currentValue;
       setSafetyMessage(
         nextValue
-          ? "Модерація: фільтр повідомлень увімкнено. Підозрілі контакти буде приглушено."
-          : "Модерація: фільтр повідомлень вимкнено. Ви бачитимете більше повідомлень.",
+          ? "Moderation: Nachrichtenfilter aktiviert. Verdächtige Kontakte werden stummgeschaltet."
+          : "Moderation: Nachrichtenfilter deaktiviert. Du siehst mehr Nachrichten.",
       );
       return nextValue;
     });
@@ -160,22 +160,22 @@ export default function SettingsScreen() {
     setProfileVisibilityLimited(nextValue);
     setSafetyMessage(
       nextValue
-        ? "Модерація: видимість обмежено. Ваш профіль не показується в Discover."
-        : "Модерація: видимість відновлено. Ваш профіль знову може з'являтися в Discover.",
+        ? "Moderation: Sichtbarkeit eingeschränkt. Dein Profil wird in Discover nicht angezeigt."
+        : "Moderation: Sichtbarkeit wiederhergestellt. Dein Profil kann wieder in Discover erscheinen.",
     );
   }
 
   function handleReportReason(reason: string) {
     setSelectedReportReason(reason);
 
-    if (reason === "Інша проблема") {
+    if (reason === "Anderes Problem") {
       return;
     }
 
     setCustomProblemText("");
     setReportReasonOpen(false);
     setSafetyMessage(
-      `Підтримка: звернення отримано. Тема: ${reason}. Ми перевіримо роботу додатка і підкажемо наступний крок.`,
+      `Support: Anfrage erhalten. Thema: ${reason}. Wir prüfen die App und melden uns mit dem nächsten Schritt.`,
     );
     setTimeout(() => setSafetyOpen(true), 180);
   }
@@ -184,13 +184,13 @@ export default function SettingsScreen() {
     const problemText = customProblemText.trim();
 
     if (!problemText) {
-      setSafetyMessage("Підтримка: опишіть проблему перед відправкою.");
+      setSafetyMessage("Support: Beschreibe das Problem vor dem Senden.");
       return;
     }
 
     setReportReasonOpen(false);
     setSafetyMessage(
-      `Підтримка: звернення отримано. Тема: Інша проблема. Опис: ${problemText}`,
+      `Support: Anfrage erhalten. Thema: Anderes Problem. Beschreibung: ${problemText}`,
     );
     setCustomProblemText("");
     setTimeout(() => setSafetyOpen(true), 180);
@@ -222,10 +222,10 @@ export default function SettingsScreen() {
               Extasy
             </Text>
             <Text style={[styles.title, { color: colors.text }]}>
-              Налаштування
+              Einstellungen
             </Text>
             <Text style={[styles.subtitle, { color: colors.mutedText }]}>
-              Керування акаунтом, уподобаннями та преміальним досвідом.
+              Verwalte Konto, Vorlieben und Premium-Erlebnis.
             </Text>
           </View>
           <ThemeToggle />
@@ -233,14 +233,14 @@ export default function SettingsScreen() {
 
         <View style={[styles.card, surfaceStyle]}>
           <Text style={[styles.cardTitle, { color: colors.surfaceText }]}>
-            {user?.name ?? "Ваш акаунт"}
+            {user?.name ?? "Dein Konto"}
           </Text>
           <Text style={[styles.cardText, { color: colors.surfaceMutedText }]}>
-            {user?.email ?? user?.phoneNumber ?? "Налаштування профілю"}
+            {user?.email ?? user?.phoneNumber ?? "Profileinstellungen"}
           </Text>
           <View style={styles.settingsTags}>
-            <PremiumTag label="Преміум" tone="gold" />
-            <PremiumTag label="Профіль готовий" tone="navy" />
+            <PremiumTag label="Premium" tone="gold" />
+            <PremiumTag label="Profil bereit" tone="navy" />
           </View>
         </View>
 
@@ -280,7 +280,7 @@ export default function SettingsScreen() {
           onPress={() => router.push("/onboarding")}
         >
           <Text style={[styles.secondaryText, { color: colors.surfaceText }]}>
-            Редагувати профіль
+            Profil bearbeiten
           </Text>
         </TouchableOpacity>
 
@@ -303,7 +303,7 @@ export default function SettingsScreen() {
               },
             ]}
           >
-            Вийти
+            Abmelden
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -321,9 +321,9 @@ export default function SettingsScreen() {
                 <Text style={styles.safetyIconText}>🛡️</Text>
               </View>
               <View style={styles.safetyHeaderCopy}>
-                <Text style={styles.safetyTitle}>Центр безпеки</Text>
+                <Text style={styles.safetyTitle}>Sicherheitscenter</Text>
                 <Text style={styles.safetySubtitle}>
-                  Інструменти для спокійного спілкування й контролю контактів.
+                  Tools für ruhige Gespräche und Kontrolle über Kontakte.
                 </Text>
               </View>
               <TouchableOpacity
@@ -341,7 +341,7 @@ export default function SettingsScreen() {
             >
               {safetyMessage ? (
                 <View style={styles.moderationToast}>
-                  <Text style={styles.moderationToastTitle}>Модерація</Text>
+                  <Text style={styles.moderationToastTitle}>Moderation</Text>
                   <Text style={styles.moderationToastText}>
                     {safetyMessage}
                   </Text>
@@ -353,11 +353,11 @@ export default function SettingsScreen() {
                   <View style={styles.blockHeaderIcon}>
                     <Text style={styles.blockHeaderEmoji}>🚫</Text>
                   </View>
-                  <Text style={styles.blockTitle}>Блокувати контакт</Text>
+                  <Text style={styles.blockTitle}>Kontakt blockieren</Text>
                 </View>
                 <Text style={styles.blockText}>
-                  Контакт буде повністю видалено з чатів разом з історією
-                  повідомлень.
+                  Der Kontakt wird vollständig aus deinen Chats entfernt, inklusive
+                  Nachrichtenverlauf.
                 </Text>
                 {matches.length ? (
                   matches.map((match) => {
@@ -384,13 +384,13 @@ export default function SettingsScreen() {
                         </View>
                         <View style={styles.blockContactCopy}>
                           <Text style={styles.blockContactName}>
-                            {blockedCandidate?.name ?? "Контакт"}
+                            {blockedCandidate?.name ?? "Kontakt"}
                           </Text>
                           <Text style={styles.blockContactHint}>
-                            Видалити з /chats
+                            Aus /chats entfernen
                           </Text>
                         </View>
-                        <Text style={styles.blockContactAction}>Блок</Text>
+                        <Text style={styles.blockContactAction}>Blockieren</Text>
                       </TouchableOpacity>
                     );
                   })
@@ -398,7 +398,7 @@ export default function SettingsScreen() {
                   <View style={styles.blockEmptyState}>
                     <Text style={styles.blockEmptyEmoji}>💞</Text>
                     <Text style={styles.blockEmptyTitle}>
-                      У вас поки немає пар
+                      Du hast noch keine Matches
                     </Text>
                   </View>
                 )}
@@ -410,9 +410,9 @@ export default function SettingsScreen() {
                   onPress={openReportReasonModal}
                 >
                   <Text style={styles.safetyActionEmoji}>⚠️</Text>
-                  <Text style={styles.safetyActionTitle}>Поскаржитися</Text>
+                  <Text style={styles.safetyActionTitle}>Melden</Text>
                   <Text style={styles.safetyActionText}>
-                    Повідомте про проблему в додатку або роботі сервісу.
+                    Melde ein Problem mit der App oder dem Service.
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -424,10 +424,10 @@ export default function SettingsScreen() {
                 >
                   <View style={styles.safetyToggleCopy}>
                     <Text style={styles.safetyToggleTitle}>
-                      Фільтр повідомлень
+                      Nachrichtenfilter
                     </Text>
                     <Text style={styles.safetyToggleText}>
-                      Пріоритет взаємним парам і знайомим контактам.
+                      Priorität für gegenseitige Matches und bekannte Kontakte.
                     </Text>
                   </View>
                   <View
@@ -451,10 +451,10 @@ export default function SettingsScreen() {
                 >
                   <View style={styles.safetyToggleCopy}>
                     <Text style={styles.safetyToggleTitle}>
-                      Обмежити видимість
+                      Sichtbarkeit einschränken
                     </Text>
                     <Text style={styles.safetyToggleText}>
-                      Показувати профіль обережніше, коли потрібна пауза.
+                      Profil vorsichtiger anzeigen, wenn du eine Pause brauchst.
                     </Text>
                   </View>
                   <View
@@ -475,11 +475,11 @@ export default function SettingsScreen() {
               </View>
 
               <View style={styles.safetyTip}>
-                <Text style={styles.safetyTipTitle}>💡 Швидка порада</Text>
+                <Text style={styles.safetyTipTitle}>💡 Kurzer Tipp</Text>
                 <Text style={styles.safetyTipText}>
-                  Не переходьте в інші месенджери, доки не відчуєте довіру.
-                  Зустрічайтеся у публічному місці й повідомте близьким, куди
-                  йдете.
+                  Wechsle nicht in andere Messenger, bevor Vertrauen da ist.
+                  Triff dich an öffentlichen Orten und sag vertrauten Personen, wohin
+                  du gehst.
                 </Text>
               </View>
             </ScrollView>
@@ -495,7 +495,7 @@ export default function SettingsScreen() {
           />
           <View style={styles.reportSheet}>
             <View style={styles.reportHeader}>
-              <Text style={styles.reportTitle}>Тема звернення</Text>
+              <Text style={styles.reportTitle}>Thema der Anfrage</Text>
               <TouchableOpacity
                 style={styles.reportClose}
                 onPress={() => setReportReasonOpen(false)}
@@ -504,8 +504,8 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
             <Text style={styles.reportSubtitle}>
-              Оберіть, що саме працює не так. Це допоможе підтримці швидше
-              розібратися.
+              Wähle aus, was nicht funktioniert. Das hilft dem Support,
+              schneller zu helfen.
             </Text>
             <View style={styles.reportReasons}>
               {reportReasons.map((reason) => (
@@ -523,11 +523,11 @@ export default function SettingsScreen() {
               ))}
             </View>
 
-            {selectedReportReason === "Інша проблема" ? (
+            {selectedReportReason === "Anderes Problem" ? (
               <View style={styles.customProblemBox}>
                 <TextInput
                   style={styles.customProblemInput}
-                  placeholder="Опишіть проблему..."
+                  placeholder="Problem beschreiben..."
                   placeholderTextColor={premiumColors.muted}
                   value={customProblemText}
                   onChangeText={setCustomProblemText}
@@ -540,7 +540,7 @@ export default function SettingsScreen() {
                   onPress={handleCustomProblemSubmit}
                 >
                   <Text style={styles.sendProblemButtonText}>
-                    Відправити проблему
+                    Problem senden
                   </Text>
                 </TouchableOpacity>
               </View>

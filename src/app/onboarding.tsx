@@ -17,7 +17,7 @@ import {
   getGenderLabel,
   getInterestLabel,
   getLookingForLabel,
-} from "@/constants/ukrainianLabels";
+} from "@/constants/germanLabels";
 import { getSessionUser } from "@/services/auth/session";
 import { setPendingOnboardingProfile } from "@/services/onboarding/pendingProfile";
 import { router } from "expo-router";
@@ -176,37 +176,37 @@ export default function OnboardingScreen() {
     const ageNumber = Number(trimmedAge);
 
     if (!trimmedName) {
-      setError("Додайте своє ім'я.");
+      setError("Füge deinen Namen hinzu.");
       return;
     }
 
     if (!trimmedAge || Number.isNaN(ageNumber) || ageNumber < 18) {
-      setError("Додайте коректний вік. Вам має бути 18 або більше.");
+      setError("Gib ein gültiges Alter ein. Du musst mindestens 18 Jahre alt sein.");
       return;
     }
 
     if (!trimmedAbout || trimmedAbout.length < 10) {
-      setError("Напишіть короткий опис, щонайменше 10 символів.");
+      setError("Schreibe eine kurze Beschreibung mit mindestens 10 Zeichen.");
       return;
     }
 
     if (!photos[0]) {
-      setError("Додайте хоча б одне фото профілю.");
+      setError("Füge mindestens ein Profilfoto hinzu.");
       return;
     }
 
     if (!gender) {
-      setError("Оберіть свою стать.");
+      setError("Wähle dein Geschlecht aus.");
       return;
     }
 
     if (!lookingFor) {
-      setError("Оберіть, з ким хочете знайомитися.");
+      setError("Wähle aus, wen du kennenlernen möchtest.");
       return;
     }
 
     if (interests.length < 3) {
-      setError("Оберіть щонайменше 3 інтереси.");
+      setError("Wähle mindestens 3 Interessen aus.");
       return;
     }
 
@@ -230,7 +230,7 @@ export default function OnboardingScreen() {
     } catch (error) {
       setIsSaving(false);
       setError(
-        "Фото профілю завелике для сховища Safari. Видаліть його й додайте знову.",
+        "Das Profilfoto ist zu groß für den Safari-Speicher. Entferne es und füge es erneut hinzu.",
       );
       return;
     }
@@ -274,43 +274,43 @@ export default function OnboardingScreen() {
         showsVerticalScrollIndicator={false}
       >
         <PremiumHeader
-          eyebrow="Налаштування профілю"
-          title="Створіть профіль, з яким хочеться знайомитись"
-          subtitle="Фото, інтереси й уподобання допомагають Extasy підбирати уважніші знайомства."
+          eyebrow="Profileinstellungen"
+          title="Erstelle ein Profil, das Lust auf ein Kennenlernen macht"
+          subtitle="Fotos, Interessen und Vorlieben helfen Extasy, passendere Kontakte in Deutschland vorzuschlagen."
         />
 
         <View style={styles.section}>
           <View style={styles.stepCard}>
-            <Text style={styles.stepLabel}>Завантаження фото</Text>
+            <Text style={styles.stepLabel}>Fotos hochladen</Text>
             <Text style={styles.stepText}>
-              Почніть із чіткого портрета. Додайте ще фото для контексту й
-              довіри.
+              Beginne mit einem klaren Porträt. Füge weitere Fotos für Kontext und
+              Vertrauen hinzu.
             </Text>
           </View>
           <ProfileImagePicker photos={photos} onPhotosChange={setPhotos} />
 
           <View>
-            <Text style={styles.label}>Ваше ім'я</Text>
+            <Text style={styles.label}>Dein Name</Text>
             <PremiumTextInput
               style={styles.input}
-              placeholder="Напр. Іван Петренко"
+              placeholder="z. B. Max Müller"
               value={name}
               onChangeText={setName}
             />
 
-            <Text style={styles.label}>Вік</Text>
+            <Text style={styles.label}>Alter</Text>
             <PremiumTextInput
               style={styles.input}
-              placeholder="Напр. 28"
+              placeholder="z. B. 28"
               keyboardType="number-pad"
               value={age}
               onChangeText={setAge}
             />
 
-            <Text style={styles.label}>Про вас</Text>
+            <Text style={styles.label}>Über dich</Text>
             <PremiumTextInput
               style={styles.textarea}
-              placeholder="Розкажіть трохи про себе..."
+              placeholder="Erzähl kurz etwas über dich..."
               multiline
               value={about}
               onChangeText={setAbout}
@@ -318,15 +318,15 @@ export default function OnboardingScreen() {
           </View>
 
           <View>
-            <Text style={styles.label}>Локація</Text>
+            <Text style={styles.label}>Standort</Text>
             <PremiumTextInput
               style={styles.input}
-              placeholder="Місто, напр. Берлін"
+              placeholder="Stadt, z. B. Berlin"
               value={city}
               onChangeText={setCity}
             />
 
-            <Text style={styles.label}>Країна</Text>
+            <Text style={styles.label}>Land</Text>
             <View style={styles.tags}>
               {countryOptions.map((item) => (
                 <Tag
@@ -340,7 +340,7 @@ export default function OnboardingScreen() {
           </View>
 
           <View>
-            <Text style={styles.label}>Стать</Text>
+            <Text style={styles.label}>Geschlecht</Text>
             <View style={styles.optionsRow}>
               {genders.map((item) => (
                 <Tag
@@ -354,7 +354,7 @@ export default function OnboardingScreen() {
           </View>
 
           <View>
-            <Text style={styles.label}>Цікавлять</Text>
+            <Text style={styles.label}>Interessiert an</Text>
             <View style={styles.optionsRow}>
               {lookingForOptions.map((item) => (
                 <Tag
@@ -368,7 +368,7 @@ export default function OnboardingScreen() {
           </View>
 
           <View>
-            <Text style={styles.label}>Інтереси</Text>
+            <Text style={styles.label}>Interessen</Text>
             <View style={styles.tags}>
               {interestsList.map((item) => (
                 <Tag
@@ -384,7 +384,7 @@ export default function OnboardingScreen() {
             {error ? <Text style={styles.error}>{error}</Text> : null}
 
             <PremiumButton
-              title={isSaving ? "Зберігаємо профіль..." : "Почати знайомства"}
+              title={isSaving ? "Profil wird gespeichert..." : "Dates starten"}
               onPress={handleStartMatching}
               disabled={isSaving}
             />

@@ -11,7 +11,7 @@ import {
   getGenderLabel,
   getInterestLabel,
   getLookingForLabel,
-} from "@/constants/ukrainianLabels";
+} from "@/constants/germanLabels";
 import {
   getLocalAccountUsers,
   getUserKey,
@@ -145,7 +145,7 @@ export default function UserProfileScreen() {
   if (isLoading) {
     return (
       <ThemedBackground style={styles.background}>
-        <PremiumLoadingState label="Завантажуємо профіль" />
+        <PremiumLoadingState label="Profil wird geladen" />
       </ThemedBackground>
     );
   }
@@ -162,8 +162,8 @@ export default function UserProfileScreen() {
 
         {!user ? (
           <PremiumEmptyState
-            title="Профіль не знайдено"
-            text="Цей профіль більше недоступний."
+            title="Profil nicht gefunden"
+            text="Dieses Profil ist nicht mehr verfügbar."
           />
         ) : (
           <>
@@ -197,7 +197,7 @@ export default function UserProfileScreen() {
                   {user.name}, {user.age}
                 </Text>
                 <Text style={styles.meta}>
-                  {getGenderLabel(user.gender)} шукає{" "}
+                  {getGenderLabel(user.gender)} sucht{" "}
                   {getLookingForLabel(user.lookingFor)}
                 </Text>
                 {user.city && user.country ? (
@@ -210,7 +210,7 @@ export default function UserProfileScreen() {
 
             {user.city && user.country ? (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Локація</Text>
+                <Text style={styles.sectionTitle}>Standort</Text>
                 <Text style={styles.bodyText}>
                   {user.city}, {getCountryLabel(user.country + "  📍")}
                 </Text>
@@ -218,12 +218,12 @@ export default function UserProfileScreen() {
             ) : null}
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Про себе</Text>
+              <Text style={styles.sectionTitle}>Über mich</Text>
               <Text style={styles.bodyText}>{user.about}</Text>
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Інтереси</Text>
+              <Text style={styles.sectionTitle}>Interessen</Text>
               <View style={styles.tags}>
                 {user.interests?.map((interest) => (
                   <PremiumTag
@@ -237,7 +237,7 @@ export default function UserProfileScreen() {
 
             {photos.length ? (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Фото</Text>
+                <Text style={styles.sectionTitle}>Fotos</Text>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -275,7 +275,7 @@ export default function UserProfileScreen() {
             style={styles.fullscreenClose}
             onPress={() => setFullscreenOpen(false)}
           >
-            <Text style={styles.fullscreenCloseText}>Закрити</Text>
+            <Text style={styles.fullscreenCloseText}>Schließen</Text>
           </TouchableOpacity>
 
           {photos.length ? (

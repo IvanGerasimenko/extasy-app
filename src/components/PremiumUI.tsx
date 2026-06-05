@@ -127,7 +127,7 @@ export function CompatibilityBadge({ value = "86%" }: { value?: string }) {
   return (
     <View style={styles.compatibilityBadge}>
       <Text style={styles.compatibilityValue}>{value}</Text>
-      <Text style={styles.compatibilityLabel}>збіг</Text>
+      <Text style={styles.compatibilityLabel}>Match</Text>
     </View>
   );
 }
@@ -155,7 +155,7 @@ export function PremiumSearchBar({
       <TextInput
         value={value}
         onChangeText={onChangeText}
-        placeholder="Пошук пар"
+        placeholder="Matches suchen"
         placeholderTextColor="#8C8580"
         style={styles.searchInput}
       />
@@ -188,7 +188,7 @@ export function PremiumEmptyState({
   );
 }
 
-export function PremiumLoadingState({ label = "Підбираємо профілі" }) {
+export function PremiumLoadingState({ label = "Profile werden ausgewählt" }) {
   return (
     <View style={styles.loading}>
       <ActivityIndicator color={premiumColors.navy} size="large" />

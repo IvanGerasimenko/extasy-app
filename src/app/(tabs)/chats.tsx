@@ -10,7 +10,7 @@ import {
   premiumShadow,
   premiumSpacing,
 } from "@/constants/premiumDesign";
-import { getCountryLabel } from "@/constants/ukrainianLabels";
+import { getCountryLabel } from "@/constants/germanLabels";
 import {
   getCurrentUserMatches,
   getSessionUser,
@@ -77,14 +77,14 @@ export default function ChatsScreen() {
   if (isLoading) {
     return (
       <ThemedBackground style={styles.background}>
-        <PremiumLoadingState label="Завантажуємо розмови" />
+        <PremiumLoadingState label="Gespräche werden geladen" />
       </ThemedBackground>
     );
   }
 
   const visibleMatches = matches.filter((match) => {
     const otherUser = getOtherUser(match, currentUserKey);
-    return (otherUser?.name ?? "Пара")
+    return (otherUser?.name ?? "Match")
       .toLowerCase()
       .includes(query.trim().toLowerCase());
   });
@@ -93,9 +93,9 @@ export default function ChatsScreen() {
     <ThemedBackground style={styles.background}>
       <ScrollView contentContainerStyle={styles.container}>
         <PremiumHeader
-          eyebrow="Вхідні"
-          title="Розмови"
-          subtitle="Спокійний простір для уважних повідомлень після взаємної симпатії."
+          eyebrow="Posteingang"
+          title="Gespräche"
+          subtitle="Ein ruhiger Ort für aufmerksame Nachrichten nach gegenseitiger Sympathie."
         />
         <PremiumSearchBar value={query} onChangeText={setQuery} />
 
@@ -140,10 +140,10 @@ export default function ChatsScreen() {
                 <View style={styles.chatCopy}>
                   <View style={styles.chatTitleRow}>
                     <Text style={styles.chatName}>
-                      {otherUser?.name ?? "Пара"}
+                      {otherUser?.name ?? "Match"}
                     </Text>
                     <Text style={styles.timeText}>
-                      {index ? "Учора" : "Зараз"}
+                      {index ? "Gestern" : "Jetzt"}
                     </Text>
                   </View>
                   {otherUser?.city && otherUser.country ? (
@@ -153,8 +153,8 @@ export default function ChatsScreen() {
                   ) : null}
                   <Text style={styles.chatPreview}>
                     {index
-                      ? "На вас чекає змістовна розмова."
-                      : "У вас взаємна симпатія. Привітайтесь щиро."}
+                      ? "Ein wertvolles Gespräch wartet auf dich."
+                      : "Ihr mögt euch beide. Sag ehrlich Hallo."}
                   </Text>
                 </View>
 
@@ -164,8 +164,8 @@ export default function ChatsScreen() {
           })
         ) : (
           <PremiumEmptyState
-            title="Чатів поки немає"
-            text="Коли симпатія стане взаємною, розмова з'явиться тут."
+            title="Noch keine Chats"
+            text="Wenn Sympathie gegenseitig wird, erscheint das Gespräch hier."
           />
         )}
       </ScrollView>

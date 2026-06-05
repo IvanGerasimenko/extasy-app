@@ -4,7 +4,7 @@ import {
   getGenderLabel,
   getInterestLabel,
   getLookingForLabel,
-} from "@/constants/ukrainianLabels";
+} from "@/constants/germanLabels";
 import { getSessionUser, type SessionUser } from "@/services/auth/session";
 import { router } from "expo-router";
 import React, {
@@ -46,7 +46,7 @@ export default function ProfileScreen() {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const fullscreenCarouselRef = useRef<ScrollView | null>(null);
-  let locationText = "Додайте місто й країну, щоб люди поруч могли вас знайти.";
+  let locationText = "Füge Stadt und Land hinzu, damit Menschen in deiner Nähe dich finden können.";
   if (user?.city && user?.country) {
     locationText = `${user.city}, ${getCountryLabel(user.country)}`;
   }
@@ -199,12 +199,12 @@ export default function ProfileScreen() {
 
           <View style={styles.summaryCard}>
             <Text style={styles.name}>
-              {user?.name ?? "Ваш профіль"}
+              {user?.name ?? "Dein Profil"}
               {user?.age ? `, ${user.age}` : ""}
             </Text>
             <Text style={styles.meta}>
-              {getGenderLabel(user?.gender) || "Профіль"} шукає{" "}
-              {getLookingForLabel(user?.lookingFor) || "пари"}
+              {getGenderLabel(user?.gender) || "Profil"} sucht{" "}
+              {getLookingForLabel(user?.lookingFor) || "Matches"}
             </Text>
             <Text style={styles.summaryLocation}>{locationText}</Text>
             <View style={styles.moodRow}>
@@ -218,37 +218,37 @@ export default function ProfileScreen() {
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
             <Text style={styles.statNumber}>{user?.likesCount ?? 0}</Text>
-            <Text style={styles.statLabel}>👍 Лайки</Text>
+            <Text style={styles.statLabel}>👍 Likes</Text>
           </View>
           <View style={styles.statBox}>
             <Text style={styles.statNumber}>{user?.matchesCount ?? 0}</Text>
-            <Text style={styles.statLabel}>👩‍❤️‍💋‍👨 Пари</Text>
+            <Text style={styles.statLabel}>👩‍❤️‍💋‍👨 Matches</Text>
           </View>
           <View style={styles.statBox}>
             <Text style={styles.statNumber}>{photos.length}</Text>
-            <Text style={styles.statLabel}>📸 Фото</Text>
+            <Text style={styles.statLabel}>📸 Fotos</Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🪞 Про себе</Text>
+          <Text style={styles.sectionTitle}>🪞 Über mich</Text>
           <Text style={styles.bodyText}>
             {user?.about ??
-              "Додайте короткий опис, щоб люди краще зрозуміли, хто ви."}
+              "Füge eine kurze Beschreibung hinzu, damit andere besser verstehen, wer du bist."}
           </Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📍 Локація</Text>
+          <Text style={styles.sectionTitle}>📍 Standort</Text>
           <Text style={styles.bodyText}>
             {user?.city && user.country
               ? `${user.city}, ${getCountryLabel(user.country)}`
-              : "Додайте місто й країну, щоб люди поруч могли вас знайти."}
+              : "Füge Stadt und Land hinzu, damit Menschen in deiner Nähe dich finden können."}
           </Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>💫 Інтереси</Text>
+          <Text style={styles.sectionTitle}>💫 Interessen</Text>
           <View style={styles.tags}>
             {user?.interests?.length ? (
               user.interests.map((interest) => (
@@ -259,14 +259,14 @@ export default function ProfileScreen() {
                 </View>
               ))
             ) : (
-              <Text style={styles.bodyText}>Інтересів поки немає.</Text>
+              <Text style={styles.bodyText}>Noch keine Interessen vorhanden.</Text>
             )}
           </View>
         </View>
 
         {photos.length ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📸 Фото</Text>
+            <Text style={styles.sectionTitle}>📸 Fotos</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -300,7 +300,7 @@ export default function ProfileScreen() {
             style={styles.fullscreenClose}
             onPress={() => setFullscreenOpen(false)}
           >
-            <Text style={styles.fullscreenCloseText}>Закрити</Text>
+            <Text style={styles.fullscreenCloseText}>Schließen</Text>
           </TouchableOpacity>
 
           {photos.length ? (

@@ -52,27 +52,27 @@ export default function WelcomeScreen() {
           />
           <View style={styles.heroOverlay}>
             <Text style={styles.heroTitle}>
-              Українські знайомства поруч у Європі.
+              Niveauvolle Dates in Deutschland.
             </Text>
             <Text style={styles.subtitle}>
-              Якісні профілі, безпечніші контакти й розмови, що відчуваються
-              щирими з першого повідомлення.
+              Geprüfte Profile, sichere Kontakte und Gespräche, die sich
+              schon ab der ersten Nachricht echt anfühlen.
             </Text>
             <View style={styles.heroTags}>
-              <PremiumTag label="Якісні профілі" tone="gold" />
-              <PremiumTag label="Безпечніші контакти" tone="emerald" />
+              <PremiumTag label="Geprüfte Profile" tone="gold" />
+              <PremiumTag label="Sichere Kontakte" tone="emerald" />
             </View>
           </View>
         </View>
 
         <View style={{ width: "100%" }}>
           <AuthButton
-            title="Продовжити з Google"
+            title="Mit Google fortfahren"
             icon={require("../../assets/google.png")}
             onPress={handleGoogleLogin}
           />
           <AuthButton
-            title="Увійти через email або телефон"
+            title="Mit E-Mail oder Telefon einloggen"
             icon={require("../../assets/email.png")}
             onPress={() => router.push("/login")}
           />
@@ -80,13 +80,13 @@ export default function WelcomeScreen() {
 
         <View style={styles.signupWrap}>
           <Text style={[styles.accountText, { color: colors.mutedText }]}>
-            Ще немає акаунта?
+            Noch kein Konto?
           </Text>
           <Text
             style={[styles.signupText, { color: colors.text }]}
             onPress={() => router.push("/registration")}
           >
-            Зареєструватися
+            Registrieren
           </Text>
         </View>
       </ScrollView>

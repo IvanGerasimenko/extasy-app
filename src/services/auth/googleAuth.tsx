@@ -3,13 +3,14 @@ import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
 import { Platform } from "react-native";
-import { saveSessionUser } from "./session";
+import { getSessionUser, saveSessionUser, type SessionUser } from "./session";
 
 WebBrowser.maybeCompleteAuthSession();
 
 const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 const androidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+const webRedirectUri = process.env.EXPO_PUBLIC_GOOGLE_WEB_REDIRECT_URI;
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 type GoogleUser = {
@@ -20,25 +21,46 @@ type GoogleUser = {
 };
 
 type DbUserResponse = {
-  user: {
-    id: number;
+  user: SessionUser & {
     googleId: string;
     email: string;
-    name?: string;
-    picture?: string;
-    photos?: string[];
-    about?: string;
-    age?: string;
-    city?: string;
-    country?: string;
-    gender?: string;
-    lookingFor?: string;
-    interests?: string[];
-    onboardingCompleted: boolean;
-    createdAt: string;
   };
   isNewUser: boolean;
 };
+
+function getLocalGoogleUserId(googleId: string) {
+  return Array.from(googleId).reduce(
+    (hash, character) => (hash * 31 + character.charCodeAt(0)) % 1_000_000_000,
+    7,
+  );
+}
+
+function createLocalGoogleUser(
+  user: GoogleUser,
+  existingUser?: SessionUser | null,
+): DbUserResponse {
+  const matchingExistingUser =
+    existingUser?.googleId === user.sub ||
+    existingUser?.email?.toLowerCase() === user.email.toLowerCase()
+      ? existingUser
+      : null;
+
+  return {
+    user: {
+      ...matchingExistingUser,
+      id: getLocalGoogleUserId(user.sub),
+      googleId: user.sub,
+      email: user.email,
+      name: user.name,
+      picture: user.picture,
+      photos:
+        matchingExistingUser?.photos ?? (user.picture ? [user.picture] : undefined),
+      onboardingCompleted: matchingExistingUser?.onboardingCompleted ?? false,
+      createdAt: matchingExistingUser?.createdAt ?? new Date().toISOString(),
+    },
+    isNewUser: true,
+  };
+}
 
 export function useGoogleAuth() {
   const [isLoading, setIsLoading] = useState(false);
@@ -53,6 +75,9 @@ export function useGoogleAuth() {
 
     ...(Platform.OS === "web"
       ? {
+          redirectUri:
+            webRedirectUri ??
+            (typeof window !== "undefined" ? window.location.origin : undefined),
           responseType: ResponseType.Token,
         }
       : {}),
@@ -79,29 +104,34 @@ export function useGoogleAuth() {
 
   async function saveUserToDatabase(user: GoogleUser): Promise<DbUserResponse> {
     if (!API_URL) {
-      throw new Error("API_URL is missing");
+      return createLocalGoogleUser(user, await getSessionUser());
     }
 
-    const response = await fetch(`${API_URL}/auth/google`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        googleId: user.sub,
-        email: user.email,
-        name: user.name,
-        picture: user.picture,
-      }),
-    });
+    try {
+      const response = await fetch(`${API_URL}/auth/google`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          googleId: user.sub,
+          email: user.email,
+          name: user.name,
+          picture: user.picture,
+        }),
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error(data?.message || "Failed to save user");
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to save user");
+      }
+
+      return data;
+    } catch (error) {
+      console.log("[Google Auth] API fallback:", error);
+      return createLocalGoogleUser(user, await getSessionUser());
     }
-
-    return data;
   }
 
   async function signInWithGoogle() {

@@ -15,7 +15,7 @@ import {
   getGenderLabel,
   getInterestLabel,
   getLookingForLabel,
-} from "@/constants/ukrainianLabels";
+} from "@/constants/germanLabels";
 import {
   getLocalAccountUsers,
   getSessionUser,
@@ -144,7 +144,7 @@ function profileFromUser(user: SessionUser): DiscoverProfile {
 
   return {
     id: `user-${user.id}`,
-    name: user.name ?? "Ви",
+    name: user.name ?? "Du",
     age: user.age ?? "",
     about: user.about ?? "",
     city: user.city ?? "",
@@ -280,7 +280,7 @@ export default function DiscoverScreen() {
       setReaction(
         error instanceof Error
           ? error.message
-          : "Не вдалося зберегти лайк. Спробуйте ще раз.",
+          : "Der Like konnte nicht gespeichert werden. Bitte versuche es erneut.",
       );
       return;
     }
@@ -290,9 +290,9 @@ export default function DiscoverScreen() {
     }
 
     if (likeResult?.isMatch && likeResult.match) {
-      setReaction(`У вас пара з ${decidedMatch.name}`);
+      setReaction(`Ihr habt ein Match mit ${decidedMatch.name}`);
     } else {
-      setReaction(`${decidedMatch.name} отримав(-ла) ваш лайк`);
+      setReaction(`${decidedMatch.name} hat dein Like erhalten`);
     }
   }
 
@@ -305,7 +305,7 @@ export default function DiscoverScreen() {
 
     isDecidingRef.current = true;
     setIsDeciding(true);
-    setReaction(nextReaction === "Liked" ? "Лайк" : "");
+    setReaction(nextReaction === "Liked" ? "Like" : "");
 
     Animated.timing(cardTranslateX, {
       toValue:
@@ -376,7 +376,7 @@ export default function DiscoverScreen() {
         </View>
         <View style={styles.headerPill}>
           <Text style={styles.headerPillText}>
-            {remainingProfiles} доступно
+            {remainingProfiles} verfügbar
           </Text>
         </View>
 
@@ -432,7 +432,7 @@ export default function DiscoverScreen() {
                 style={styles.expandButton}
                 onPress={() => setFullscreenOpen(true)}
               >
-                <Text style={styles.expandText}>Галерея</Text>
+                <Text style={styles.expandText}>Galerie</Text>
               </TouchableOpacity>
 
               <View style={styles.matchInfo}>
@@ -445,10 +445,10 @@ export default function DiscoverScreen() {
 
                 <View style={styles.matchMetaRow}>
                   <Text style={styles.matchMeta}>
-                    {getGenderLabel(activeMatch.gender)} шукає{" "}
+                    {getGenderLabel(activeMatch.gender)} sucht{" "}
                     {getLookingForLabel(activeMatch.lookingFor)}
                   </Text>
-                  <Text style={styles.intentPill}>Свідомо</Text>
+                  <Text style={styles.intentPill}>Bewusst</Text>
                 </View>
 
                 {activeMatch.city && activeMatch.country ? (
@@ -476,7 +476,7 @@ export default function DiscoverScreen() {
             <View style={styles.floatingActions}>
               <TouchableOpacity
                 style={[styles.actionButton, styles.passButton]}
-                onPress={() => animateDecision("Пропущено")}
+                onPress={() => animateDecision("Übersprungen")}
                 disabled={isDeciding}
               >
                 <Text style={styles.passText}>×</Text>
@@ -484,7 +484,7 @@ export default function DiscoverScreen() {
 
               <TouchableOpacity
                 style={[styles.actionButton, styles.saveButton]}
-                onPress={() => setReaction(`${activeMatch.name} збережено`)}
+                onPress={() => setReaction(`${activeMatch.name} gespeichert`)}
                 disabled={isDeciding}
               >
                 <Text style={styles.saveText}>☆</Text>
@@ -504,9 +504,9 @@ export default function DiscoverScreen() {
           </Animated.View>
         ) : (
           <PremiumEmptyState
-            title="Профілі закінчилися"
-            text="Наразі ви переглянули всі доступні заповнені профілі."
-            action="Оновити добірку"
+            title="Keine Profile mehr"
+            text="Du hast aktuell alle verfügbaren vollständigen Profile gesehen."
+            action="Auswahl aktualisieren"
             onAction={resetDeck}
           />
         )}
@@ -524,7 +524,7 @@ export default function DiscoverScreen() {
             style={styles.fullscreenClose}
             onPress={() => setFullscreenOpen(false)}
           >
-            <Text style={styles.fullscreenCloseText}>Закрити</Text>
+            <Text style={styles.fullscreenCloseText}>Schließen</Text>
           </TouchableOpacity>
 
           {activeMatch?.photos.length ? (

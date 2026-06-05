@@ -10,7 +10,7 @@ export function ThemeToggle() {
     <Pressable
       accessibilityRole="switch"
       accessibilityState={{ checked: isDark }}
-      accessibilityLabel="Перемкнути тему"
+      accessibilityLabel="Theme wechseln"
       hitSlop={12}
       style={[
         styles.toggle,
