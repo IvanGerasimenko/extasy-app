@@ -4,6 +4,8 @@ import express from "express";
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// In-memory data storage for users and phone verification codes
 type User = {
   id: number;
   googleId?: string;
@@ -225,3 +227,5 @@ const HOST = process.env.HOST || "0.0.0.0";
 app.listen(PORT, HOST, () => {
   console.log(`Backend running on http://${HOST}:${PORT}`);
 });
+
+console.log("Server connect");

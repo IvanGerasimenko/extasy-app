@@ -148,7 +148,6 @@ export default function OnboardingScreen() {
         : user.picture
           ? [user.picture]
           : [];
-
       setPhotos(savedPhotos);
     }
 

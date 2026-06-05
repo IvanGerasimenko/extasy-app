@@ -1,11 +1,11 @@
 import { BackButton } from "@/components/BackButton";
+import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   getEmailValidationError,
   registerLocalAccount,
 } from "@/services/auth/session";
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   KeyboardAvoidingView,
   Platform,
