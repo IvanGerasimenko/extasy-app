@@ -73,11 +73,7 @@ export function useGoogleAuth() {
     androidClientId,
     scopes: ["openid", "profile", "email"],
 
-    ...(Platform.OS === "web"
-      ? {
-          redirectUri:
-            webRedirectUri ??
-            (typeof window !== "undefined" ? window.location.origin : undefined),
+    ...(Platform.OS === "web"  ?  {redirectUri: webRedirectUri ??  (typeof window !== "undefined" ? window.location.origin : undefined),
           responseType: ResponseType.Token,
         }
       : {}),

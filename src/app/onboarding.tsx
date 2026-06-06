@@ -7,17 +7,17 @@ import {
 } from "@/components/PremiumUI";
 import { ThemedBackground } from "@/components/ThemedBackground";
 import {
-  premiumColors,
-  premiumShadow,
-  premiumSpacing,
-  premiumType,
-} from "@/constants/premiumDesign";
-import {
   getCountryLabel,
   getGenderLabel,
   getInterestLabel,
   getLookingForLabel,
 } from "@/constants/germanLabels";
+import {
+  premiumColors,
+  premiumShadow,
+  premiumSpacing,
+  premiumType,
+} from "@/constants/premiumDesign";
 import { getSessionUser } from "@/services/auth/session";
 import { setPendingOnboardingProfile } from "@/services/onboarding/pendingProfile";
 import { router } from "expo-router";
@@ -31,48 +31,61 @@ import {
   View,
 } from "react-native";
 
-const genders = ["Woman", "Men", "Non-binary"];
-const lookingForOptions = ["Women", "Men", "Non-binary"];
+const genders = ["Weibliche", "Männliche", "Divers"];
+const lookingForOptions = ["Weibliche", "Männliche", "Divers"];
 const countryOptions = [
-  "Germany",
-  "United States",
-  "United Kingdom",
-  "Ukraine",
-  "Poland",
-  "France",
-  "Spain",
-  "Italy",
-  "Netherlands",
-  "Austria",
-  "Switzerland",
-  "Canada",
-  "Australia",
-  "Other",
+  "Deutschland",
+  "Österreich",
+  "Schweiz",
+  "Frankreich",
+  "Spanien",
+  "Italien",
+  "Niederlande",
+  "Belgien",
+  "Schweiz",
+  "Polen",
+  "Tschechien",
+  "Ungarn",
+  "Slowakei",
+  "Slowenien",
+  "Kroatien",
+  "Bosnien und Herzegowina",
+  "Montenegro",
+  "Serbien",
+  "Mazedonien",
 ];
 const interestsList = [
-  "Coffee",
-  "Travel",
+  "Kaffee",
+  "Reisen",
   "Music",
   "Art",
-  "Books",
+  "Bücher",
   "Fitness",
   "Cooking",
-  "Movies",
-  "Development",
+  "Filme",
+  "Entwicklung",
   "Anime",
   "Gaming",
   "Photography",
   "Fashion",
   "Sports",
-  "Dancing",
+  "Tanzen",
   "Yoga",
   "Club",
-  "Bloging",
-  "Board Games",
+  "Bloggen",
+  "Brettspiele",
   "Pets",
-  "Reading",
-  "Writing",
+  "Lesen",
+  "Schreiben",
   "Hiking",
+  "Camping",
+  "Fotografie",
+  "Mode",
+  "Sport",
+  "Tanzen",
+  "Yoga",
+  "Club",
+  "Bloggen",
 ];
 const FULL_HD_MAX_SIZE = 1920;
 const FULL_HD_JPEG_QUALITY = 0.92;
