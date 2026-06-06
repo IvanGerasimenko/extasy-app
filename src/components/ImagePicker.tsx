@@ -1,5 +1,5 @@
-import * as ExpoImagePicker from "expo-image-picker";
 import { premiumColors, premiumShadow } from "@/constants/premiumDesign";
+import * as ExpoImagePicker from "expo-image-picker";
 import React from "react";
 import {
   Image,
@@ -23,7 +23,9 @@ export default function ImagePicker({
   photos,
   onPhotosChange,
 }: ImagePickerProps) {
-  async function createPersistentPhoto(asset: ExpoImagePicker.ImagePickerAsset) {
+  async function createPersistentPhoto(
+    asset: ExpoImagePicker.ImagePickerAsset,
+  ) {
     if (Platform.OS === "web") {
       return resizeWebImage(asset.uri);
     }
@@ -37,7 +39,9 @@ export default function ImagePicker({
         await ExpoImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (!permission.granted) {
-        alert("Für das Hinzufügen von Fotos ist eine Berechtigung erforderlich");
+        alert(
+          "Für das Hinzufügen von Fotos ist eine Berechtigung erforderlich",
+        );
         return;
       }
     }
@@ -130,7 +134,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: premiumColors.champagne,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: premiumColors.porcelain,
@@ -168,7 +171,6 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: "rgba(16, 24, 32, 0.82)",
     alignItems: "center",
     justifyContent: "center",
   },

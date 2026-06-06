@@ -46,7 +46,8 @@ export default function ProfileScreen() {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const fullscreenCarouselRef = useRef<ScrollView | null>(null);
-  let locationText = "Füge Stadt und Land hinzu, damit Menschen in deiner Nähe dich finden können.";
+  let locationText =
+    "Füge Stadt und Land hinzu, damit Menschen in deiner Nähe dich finden können.";
   if (user?.city && user?.country) {
     locationText = `${user.city}, ${getCountryLabel(user.country)}`;
   }
@@ -259,7 +260,9 @@ export default function ProfileScreen() {
                 </View>
               ))
             ) : (
-              <Text style={styles.bodyText}>Noch keine Interessen vorhanden.</Text>
+              <Text style={styles.bodyText}>
+                Noch keine Interessen vorhanden.
+              </Text>
             )}
           </View>
         </View>
@@ -363,6 +366,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     paddingTop: Platform.OS === "web" ? 34 : 58,
     paddingBottom: Platform.OS === "web" ? 150 : 136,
+    paddingHorizontal: 16,
   },
 
   iconButton: {
@@ -467,7 +471,6 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "rgba(255, 255, 255, 0.56)",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.76)",
     paddingHorizontal: 10,
     height: 26,
     justifyContent: "center",
@@ -686,12 +689,11 @@ const styles = StyleSheet.create({
     width: 118,
     height: 146,
     borderRadius: 22,
-    backgroundColor: "#E8E2DC",
   },
 
   activePhoto: {
-    borderWidth: 3,
-    borderColor: "#111",
+    borderWidth: 2,
+    borderColor: "#ffffff",
   },
 
   fullscreen: {

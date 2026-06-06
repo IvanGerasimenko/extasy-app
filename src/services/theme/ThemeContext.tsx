@@ -105,7 +105,7 @@ type ThemeContextValue = {
 
 const lightColors: ThemePalette = {
   mode: "light",
-  background: "#F8F5EF",
+  background: "#ffffff",
   surface: "rgba(255, 255, 255, 0.78)",
   surfaceStrong: "#FFFFFF",
   text: "#101820",
@@ -125,6 +125,6 @@ const darkColors: ThemePalette = {
   mutedText: "#C8C2B8",
   surfaceText: "#101820",
   surfaceMutedText: "#69717C",
-  border: "rgba(255, 255, 255, 0.18)",
+  border: "#69717C",
   accent: "#C7A76C",
 };

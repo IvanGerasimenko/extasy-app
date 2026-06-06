@@ -317,7 +317,7 @@ export default function DiscoverScreen() {
     Animated.timing(cardTranslateX, {
       toValue:
         nextReaction === "Liked" ? screenWidth * 1.15 : -screenWidth * 1.15,
-      duration: 220,
+      duration: 320,
       useNativeDriver: true,
     }).start(() => {
       cardTranslateX.setValue(0);
