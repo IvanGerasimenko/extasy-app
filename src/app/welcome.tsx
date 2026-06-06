@@ -52,11 +52,11 @@ export default function WelcomeScreen() {
           />
           <View style={styles.heroOverlay}>
             <Text style={styles.heroTitle}>
-              Niveauvolle Dates in Deutschland.
+              Kostenlos Dates in Deutschland.
             </Text>
             <Text style={styles.subtitle}>
-              Geprüfte Profile, sichere Kontakte und Gespräche, die sich
-              schon ab der ersten Nachricht echt anfühlen.
+              Geprüfte Profile, sichere Kontakte und Gespräche, die sich schon
+              ab der ersten Nachricht echt anfühlen.
             </Text>
             <View style={styles.heroTags}>
               <PremiumTag label="Geprüfte Profile" tone="gold" />

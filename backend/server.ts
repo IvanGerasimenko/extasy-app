@@ -25,7 +25,8 @@ type User = {
   createdAt: string;
 };
 
-const users: User[] = [];
+const users: User[] = []; // This will store user data in memory. In production, use a database.
+
 const phoneCodes = new Map<
   string,
   {

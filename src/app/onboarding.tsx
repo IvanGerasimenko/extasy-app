@@ -194,7 +194,9 @@ export default function OnboardingScreen() {
     }
 
     if (!trimmedAge || Number.isNaN(ageNumber) || ageNumber < 18) {
-      setError("Gib ein gültiges Alter ein. Du musst mindestens 18 Jahre alt sein.");
+      setError(
+        "Gib ein gültiges Alter ein. Du musst mindestens 18 Jahre alt sein.",
+      );
       return;
     }
 
@@ -296,8 +298,8 @@ export default function OnboardingScreen() {
           <View style={styles.stepCard}>
             <Text style={styles.stepLabel}>Fotos hochladen</Text>
             <Text style={styles.stepText}>
-              Beginne mit einem klaren Porträt. Füge weitere Fotos für Kontext und
-              Vertrauen hinzu.
+              Beginne mit einem klaren Porträt. Füge weitere Fotos für Kontext
+              und Vertrauen hinzu.
             </Text>
           </View>
           <ProfileImagePicker photos={photos} onPhotosChange={setPhotos} />

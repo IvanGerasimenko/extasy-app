@@ -6,16 +6,16 @@ import {
 } from "@/components/PremiumUI";
 import { ThemedBackground } from "@/components/ThemedBackground";
 import {
-  premiumColors,
-  premiumShadow,
-  premiumSpacing,
-} from "@/constants/premiumDesign";
-import {
   getCountryLabel,
   getGenderLabel,
   getInterestLabel,
   getLookingForLabel,
 } from "@/constants/germanLabels";
+import {
+  premiumColors,
+  premiumShadow,
+  premiumSpacing,
+} from "@/constants/premiumDesign";
 import {
   getLocalAccountUsers,
   getSessionUser,
@@ -162,25 +162,32 @@ function getDiscoverProfiles(
   localUsers: SessionUser[],
   unavailableUserKeys: string[],
 ) {
-  return localUsers
-    .filter((localUser) => hasCompleteProfile(localUser))
-    .filter((localUser) => !localUser.isDiscoverHidden)
-    .filter((localUser) => !isSameUser(localUser, currentUser))
-    .filter((localUser) => !unavailableUserKeys.includes(getUserKey(localUser)))
-    .filter((localUser) =>
-      acceptsGender(currentUser.lookingFor, localUser.gender),
-    )
-    .map((localUser) => ({
-      localUser,
-      score:
-        (isCompatibleMatch(currentUser, localUser) ? 4 : 0) +
-        (acceptsGender(currentUser.lookingFor, localUser.gender) ? 2 : 0) +
-        (isNearbyProfile(currentUser, localUser) ? 1 : 0),
-    }))
-    .sort(
-      (firstProfile, secondProfile) => secondProfile.score - firstProfile.score,
-    )
-    .map(({ localUser }) => profileFromUser(localUser));
+  return (
+    localUsers
+      // Оставляем только доступные и подходящие профили
+      .filter(
+        (localUser) =>
+          hasCompleteProfile(localUser) &&
+          !localUser.isDiscoverHidden &&
+          !isSameUser(localUser, currentUser) &&
+          !unavailableUserKeys.includes(getUserKey(localUser)) &&
+          acceptsGender(currentUser.lookingFor, localUser.gender),
+      )
+      // Рассчитываем полезный для сортировки рейтинг
+      .map((localUser) => ({
+        localUser,
+        score:
+          (isCompatibleMatch(currentUser, localUser) ? 4 : 0) +
+          (isNearbyProfile(currentUser, localUser) ? 1 : 0),
+      }))
+      // Сначала показываем наиболее подходящие профили
+      .sort(
+        (firstProfile, secondProfile) =>
+          secondProfile.score - firstProfile.score,
+      )
+      // Преобразуем пользователя в итоговую модель профиля
+      .map(({ localUser }) => profileFromUser(localUser))
+  );
 }
 
 export default function DiscoverScreen() {
