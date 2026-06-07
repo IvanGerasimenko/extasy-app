@@ -1,5 +1,6 @@
 import { ThemeProvider } from "@/services/theme/ThemeContext";
 import { clearLegacyStorage } from "@/services/clearLegacyStorage";
+import { PresenceTracker } from "@/components/PresenceTracker";
 import { Stack } from "expo-router";
 import React from "react";
 import { Platform, Text, TextInput } from "react-native";
@@ -45,6 +46,7 @@ if (__DEV__ && Platform.OS === "ios") {
 export default function RootLayout() {
   return (
     <ThemeProvider>
+      <PresenceTracker />
       <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="Splash" options={{ headerShown: false }} />

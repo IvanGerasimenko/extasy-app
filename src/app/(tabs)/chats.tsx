@@ -1,10 +1,10 @@
 import {
   PremiumEmptyState,
-  PremiumHeader,
   PremiumLoadingState,
-  PremiumSearchBar,
 } from "@/components/PremiumUI";
+import { FadeIn, ScalePressable } from "@/components/Motion";
 import { ThemedBackground } from "@/components/ThemedBackground";
+import { datingColors, datingShadow } from "@/constants/datingDesign";
 import {
   premiumColors,
   premiumShadow,
@@ -25,6 +25,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -92,12 +93,23 @@ export default function ChatsScreen() {
   return (
     <ThemedBackground style={styles.background}>
       <ScrollView contentContainerStyle={styles.container}>
-        <PremiumHeader
-          eyebrow="Posteingang"
-          title="Gespräche"
-          subtitle="Ein ruhiger Ort für aufmerksame Nachrichten nach gegenseitiger Sympathie."
-        />
-        <PremiumSearchBar value={query} onChangeText={setQuery} />
+        <FadeIn>
+          <Text style={styles.eyebrow}>POSTEINGANG</Text>
+          <Text style={styles.pageTitle}>Gespräche</Text>
+          <Text style={styles.pageSubtitle}>
+            Eure Matches, Nachrichten und neuen Verbindungen.
+          </Text>
+          <View style={styles.search}>
+            <Text style={styles.searchIcon}>⌕</Text>
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Matches suchen"
+              placeholderTextColor={datingColors.textMuted}
+              style={styles.searchInput}
+            />
+          </View>
+        </FadeIn>
 
         {visibleMatches.length ? (
           visibleMatches.map((match, index) => {
@@ -105,11 +117,11 @@ export default function ChatsScreen() {
             const photo = otherUser?.photos?.[0] ?? otherUser?.picture;
 
             return (
-              <TouchableOpacity
-                key={match.id}
-                style={styles.chatRow}
-                onPress={() => router.push(`/chat?matchId=${match.id}`)}
-              >
+              <FadeIn key={match.id} delay={80 + index * 55}>
+                <ScalePressable
+                  style={styles.chatRow}
+                  onPress={() => router.push(`/chat?matchId=${match.id}`)}
+                >
                 {photo ? (
                   <TouchableOpacity
                     onPress={() =>
@@ -159,7 +171,8 @@ export default function ChatsScreen() {
                 </View>
 
                 {!index ? <View style={styles.unreadBadge} /> : null}
-              </TouchableOpacity>
+                </ScalePressable>
+              </FadeIn>
             );
           })
         ) : (
@@ -177,17 +190,67 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
     width: "100%",
+    backgroundColor: datingColors.background,
   },
 
   container: {
     width: "100%",
-    maxWidth: isWeb ? 980 : undefined,
+    maxWidth: isWeb ? 920 : undefined,
     alignSelf: "center",
     paddingHorizontal: isWeb ? 34 : premiumSpacing.screenX,
     paddingTop: isWeb ? 34 : premiumSpacing.screenTop,
     paddingBottom: isWeb ? 150 : premiumSpacing.screenBottom,
     gap: 14,
   },
+
+  eyebrow: {
+    color: datingColors.accent,
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 1.4,
+  },
+
+  pageTitle: {
+    color: datingColors.text,
+    fontSize: isWeb ? 38 : 34,
+    lineHeight: isWeb ? 44 : 40,
+    fontWeight: "900",
+    marginTop: 7,
+  },
+
+  pageSubtitle: {
+    color: datingColors.textMuted,
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: 7,
+  },
+
+  search: {
+    height: 54,
+    borderRadius: 20,
+    backgroundColor: datingColors.surface,
+    borderWidth: 1,
+    borderColor: datingColors.border,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    marginTop: 22,
+    marginBottom: 10,
+  },
+
+  searchIcon: {
+    color: datingColors.accent,
+    fontSize: 25,
+    marginRight: 10,
+  },
+
+  searchInput: {
+    flex: 1,
+    minWidth: 0,
+    color: datingColors.text,
+    fontSize: 15,
+    outlineStyle: "none",
+  } as never,
 
   navButton: {
     width: 44,
@@ -214,28 +277,30 @@ const styles = StyleSheet.create({
 
   chatRow: {
     minHeight: isWeb ? 92 : 86,
-    borderRadius: 22,
-    backgroundColor: premiumColors.white,
+    borderRadius: 24,
+    backgroundColor: datingColors.surface,
     borderWidth: 1,
-    borderColor: premiumColors.hairline,
+    borderColor: datingColors.border,
     flexDirection: "row",
     alignItems: "center",
     padding: isWeb ? 16 : 14,
-    ...premiumShadow,
+    ...datingShadow,
   },
 
   avatar: {
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: premiumColors.champagneSoft,
+    backgroundColor: datingColors.surfaceSoft,
+    borderWidth: 2,
+    borderColor: "rgba(232, 62, 124, 0.28)",
   },
 
   avatarPlaceholder: {
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: premiumColors.navy,
+    backgroundColor: datingColors.accentDark,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -259,25 +324,25 @@ const styles = StyleSheet.create({
 
   chatName: {
     flex: 1,
-    color: premiumColors.ink,
+    color: datingColors.text,
     fontSize: 18,
     fontWeight: "800",
   },
 
   timeText: {
-    color: premiumColors.muted,
+    color: datingColors.textMuted,
     fontSize: 11,
     fontWeight: "700",
   },
 
   chatPreview: {
-    color: premiumColors.muted,
+    color: datingColors.textMuted,
     fontSize: 14,
     marginTop: 4,
   },
 
   chatLocation: {
-    color: premiumColors.navy,
+    color: datingColors.accent,
     fontSize: 12,
     fontWeight: "800",
     marginTop: 4,
@@ -287,7 +352,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: premiumColors.emerald,
+    backgroundColor: datingColors.accent,
     marginLeft: 10,
   },
 });

@@ -1,4 +1,5 @@
 import { ScalePressable } from "@/components/Motion";
+import { datingColors } from "@/constants/datingDesign";
 import { getUnreadNotificationCountForCurrentUser } from "@/services/auth/session";
 import { router, usePathname } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -178,8 +179,8 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 320,
     minHeight: 68,
-    backgroundColor: "rgba(255, 255, 255, 0.91)",
-    borderColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: "rgba(11, 21, 29, 0.94)",
+    borderColor: "rgba(255, 255, 255, 0.09)",
     borderWidth: 1,
     borderRadius: 28,
     padding: 6,
@@ -187,7 +188,7 @@ const styles = StyleSheet.create({
     gap: 20,
     alignItems: "center",
     justifyContent: "space-between",
-    shadowColor: "#1E1306",
+    shadowColor: "#000000",
     shadowOffset: {
       width: 0,
       height: 10,
@@ -213,15 +214,15 @@ const styles = StyleSheet.create({
   },
 
   activeButton: {
-    backgroundColor: "rgba(255, 255, 255, 0.50)",
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
   },
 
   activeGlow: {
     ...StyleSheet.absoluteFill,
     borderRadius: 50,
-    backgroundColor: "rgba(199, 167, 108, 0.16)",
+    backgroundColor: datingColors.accentSoft,
     borderWidth: 1,
-    borderColor: "rgba(199, 167, 108, 0.03)",
+    borderColor: "rgba(232, 62, 124, 0.24)",
     paddingVertical: 10,
   },
 
@@ -229,7 +230,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "rgba(255, 255, 255, 0.34)",
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -239,13 +240,13 @@ const styles = StyleSheet.create({
   },
 
   label: {
-    color: "rgba(16, 24, 32, 0.64)",
+    color: "rgba(255, 255, 255, 0.56)",
     fontSize: 9,
     fontWeight: "800",
   },
 
   activeLabel: {
-    color: "#101820",
+    color: datingColors.text,
   },
 
   badge: {
@@ -255,7 +256,7 @@ const styles = StyleSheet.create({
     minWidth: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "rgba(29, 123, 98, 0.92)",
+    backgroundColor: datingColors.accent,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 5,

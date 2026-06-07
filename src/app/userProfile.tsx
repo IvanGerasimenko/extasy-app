@@ -1,8 +1,8 @@
 import BottomMenu from "@/components/BottomMenu";
+import { datingColors, datingShadow } from "@/constants/datingDesign";
 import {
   PremiumEmptyState,
   PremiumLoadingState,
-  PremiumTag,
 } from "@/components/PremiumUI";
 import { ThemedBackground } from "@/components/ThemedBackground";
 import {
@@ -226,11 +226,11 @@ export default function UserProfileScreen() {
               <Text style={styles.sectionTitle}>Interessen</Text>
               <View style={styles.tags}>
                 {user.interests?.map((interest) => (
-                  <PremiumTag
-                    key={interest}
-                    label={getInterestLabel(interest)}
-                    tone="emerald"
-                  />
+                  <View key={interest} style={styles.interestTag}>
+                    <Text style={styles.interestTagText}>
+                      {getInterestLabel(interest)}
+                    </Text>
+                  </View>
                 ))}
               </View>
             </View>
@@ -327,13 +327,14 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
     width: "100%",
+    backgroundColor: datingColors.background,
   },
 
   container: {
     width: "100%",
     marginBottom: Platform.OS === "web" ? 30 : 20,
     minWidth: 0,
-    maxWidth: Platform.OS === "web" ? 860 : 560,
+    maxWidth: Platform.OS === "web" ? 760 : 560,
     alignSelf: "center",
     paddingHorizontal: Platform.OS === "web" ? 34 : 20,
     paddingTop: Platform.OS === "web" ? 34 : 64,
@@ -345,14 +346,14 @@ const styles = StyleSheet.create({
     height: 44,
     alignSelf: "flex-start",
     borderRadius: 18,
-    backgroundColor: premiumColors.white,
+    backgroundColor: datingColors.surface,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 18,
   },
 
   navText: {
-    color: premiumColors.ink,
+    color: datingColors.text,
     fontSize: 34,
     lineHeight: 36,
     fontFamily: systemFontBold,
@@ -361,12 +362,12 @@ const styles = StyleSheet.create({
   heroCard: {
     width: "100%",
     minWidth: 0,
-    height: Platform.OS === "web" ? 420 : 340,
+    height: Platform.OS === "web" ? 590 : 470,
     maxWidth: Platform.OS === "web" ? 760 : undefined,
     borderRadius: 30,
     overflow: "hidden",
-    backgroundColor: premiumColors.navy,
-    ...premiumShadow,
+    backgroundColor: datingColors.surface,
+    ...datingShadow,
   },
 
   heroImage: {
@@ -381,7 +382,7 @@ const styles = StyleSheet.create({
 
   heroShade: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(16, 24, 32, 0.10)",
+    backgroundColor: "rgba(3, 8, 12, 0.18)",
   },
 
   heroCopy: {
@@ -392,9 +393,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    backgroundColor: "rgba(255, 252, 247)",
-    padding: 18,
-    marginTop: 30,
+    backgroundColor: "rgba(7, 16, 23, 0.88)",
+    borderWidth: 1,
+    borderColor: datingColors.border,
+    padding: 20,
+    marginTop: -132,
+    marginHorizontal: 14,
+    zIndex: 4,
+    ...datingShadow,
   },
 
   heroCopyContent: {
@@ -404,7 +410,7 @@ const styles = StyleSheet.create({
   },
 
   name: {
-    color: premiumColors.ink,
+    color: datingColors.text,
     fontSize: Platform.OS === "web" ? 30 : 28,
     lineHeight: Platform.OS === "web" ? 36 : 34,
     fontFamily: systemFontBold,
@@ -414,14 +420,14 @@ const styles = StyleSheet.create({
   },
 
   meta: {
-    color: premiumColors.charcoal,
+    color: datingColors.textMuted,
     fontSize: 15,
     fontFamily: systemFont,
     marginTop: 8,
   },
 
   locationText: {
-    color: premiumColors.ink,
+    color: datingColors.text,
     fontSize: 14,
     fontFamily: systemFont,
     marginTop: 8,
@@ -433,7 +439,8 @@ const styles = StyleSheet.create({
     right: 16,
     minWidth: 54,
     height: 32,
-    backgroundColor: "rgba(16, 24, 32, 0.58)",
+    backgroundColor: "rgba(7, 16, 23, 0.72)",
+    borderRadius: 999,
     paddingHorizontal: 12,
     alignItems: "center",
     justifyContent: "center",
@@ -452,15 +459,15 @@ const styles = StyleSheet.create({
     marginTop: 22,
     maxWidth: Platform.OS === "web" ? 860 : undefined,
     borderRadius: 24,
-    backgroundColor: "rgba(255, 252, 247, 0.9)",
+    backgroundColor: datingColors.surface,
     borderWidth: 1,
-    borderColor: premiumColors.hairline,
+    borderColor: datingColors.border,
     padding: 16,
-    ...premiumShadow,
+    ...datingShadow,
   },
 
   sectionTitle: {
-    color: premiumColors.ink,
+    color: datingColors.text,
     fontSize: 18,
     fontFamily: systemFontBold,
     fontWeight: "700",
@@ -468,7 +475,7 @@ const styles = StyleSheet.create({
   },
 
   bodyText: {
-    color: premiumColors.muted,
+    color: datingColors.textMuted,
     fontSize: 15,
     lineHeight: 22,
     fontFamily: systemFont,
@@ -478,6 +485,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
+  },
+
+  interestTag: {
+    minHeight: 40,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    backgroundColor: datingColors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: datingColors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  interestTagText: {
+    color: datingColors.text,
+    fontSize: 13,
+    fontWeight: "800",
   },
 
   photosGrid: {
@@ -497,20 +521,20 @@ const styles = StyleSheet.create({
   gridPhoto: {
     width: "100%",
     height: "100%",
-    borderRadius: 10,
-    backgroundColor: premiumColors.champagneSoft,
+    borderRadius: 14,
+    backgroundColor: datingColors.surfaceSoft,
   },
 
   activePhoto: {
     borderWidth: 3,
-    borderColor: premiumColors.champagne,
+    borderColor: datingColors.accent,
   },
 
   compatibilityBlock: {
     marginTop: 18,
     maxWidth: Platform.OS === "web" ? 860 : undefined,
     borderRadius: 26,
-    backgroundColor: premiumColors.navy,
+    backgroundColor: datingColors.surface,
     padding: 18,
     ...premiumShadow,
   },
@@ -540,20 +564,20 @@ const styles = StyleSheet.create({
     width: "86%",
     height: "100%",
     borderRadius: 4,
-    backgroundColor: premiumColors.champagne,
+    backgroundColor: datingColors.accent,
   },
 
   starterCard: {
     borderRadius: 18,
-    backgroundColor: premiumColors.navySoft,
+    backgroundColor: datingColors.surfaceSoft,
     borderWidth: 1,
-    borderColor: "#CEDAE5",
+    borderColor: datingColors.border,
     padding: 14,
     marginTop: 10,
   },
 
   starterText: {
-    color: premiumColors.navy,
+    color: datingColors.text,
     fontSize: 14,
     fontFamily: systemFontBold,
   },

@@ -1,4 +1,5 @@
 import { ThemedBackground } from "@/components/ThemedBackground";
+import { datingColors, datingShadow } from "@/constants/datingDesign";
 import {
   getCountryLabel,
   getGenderLabel,
@@ -175,7 +176,10 @@ export default function ProfileScreen() {
         <View style={styles.hero}>
           {photos[0] ? (
             <View style={styles.avatarWrap} {...swipeResponder.panHandlers}>
-              <TouchableOpacity onPress={() => setFullscreenOpen(true)}>
+              <TouchableOpacity
+                style={styles.avatarTapArea}
+                onPress={() => setFullscreenOpen(true)}
+              >
                 <Image
                   source={{ uri: photos[photoIndex] ?? photos[0] }}
                   style={styles.avatar}
@@ -354,6 +358,7 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
     width: "100%",
+    backgroundColor: datingColors.background,
   },
 
   screen: {
@@ -362,7 +367,7 @@ const styles = StyleSheet.create({
 
   container: {
     width: "100%",
-    maxWidth: Platform.OS === "web" ? 600 : 560,
+    maxWidth: Platform.OS === "web" ? 760 : 560,
     alignSelf: "center",
     paddingTop: Platform.OS === "web" ? 34 : 58,
     paddingBottom: Platform.OS === "web" ? 150 : 136,
@@ -373,12 +378,12 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: "rgba(255, 255, 255, 0.48)",
+    backgroundColor: datingColors.surface,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.78)",
+    borderColor: datingColors.border,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#101820",
+    shadowColor: "#000000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.12,
     shadowRadius: 18,
@@ -394,7 +399,7 @@ const styles = StyleSheet.create({
   },
 
   editEmoji: {
-    color: "#101820",
+    color: datingColors.text,
     fontSize: 25,
     fontFamily: systemFontBold,
     lineHeight: 28,
@@ -427,34 +432,39 @@ const styles = StyleSheet.create({
   },
 
   hero: {
+    position: "relative",
     alignItems: "center",
+    height: Platform.OS === "web" ? 620 : 510,
     marginTop: 4,
     marginBottom: 24,
-    borderRadius: 38,
-    backgroundColor: "rgba(255, 255, 255, 0.34)",
+    borderRadius: 32,
+    backgroundColor: datingColors.surface,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.72)",
-    padding: Platform.OS === "web" ? 24 : 16,
+    borderColor: datingColors.border,
+    padding: 0,
     overflow: "hidden",
-    elevation: 14,
+    ...datingShadow,
   },
 
   avatar: {
-    width: Platform.OS === "web" ? 236 : 184,
-    height: Platform.OS === "web" ? 236 : 184,
-    borderRadius: Platform.OS === "web" ? 40 : 900,
-    borderWidth: 2,
-    borderColor: "rgba(228, 205, 255, 0.8)",
+    width: "100%",
+    height: "100%",
+    borderRadius: 0,
+  },
+
+  avatarTapArea: {
+    width: "100%",
+    height: "100%",
   },
 
   avatarWrap: {
-    width: Platform.OS === "web" ? 262 : 214,
-    height: Platform.OS === "web" ? 262 : 214,
+    position: "absolute",
+    width: "100%",
+    height: "100%",
     alignItems: "center",
     justifyContent: "center",
-    minWidth: Platform.OS === "web" ? undefined : "100%",
-    position: "relative",
-    top: Platform.OS === "web" ? -12 : 50,
+    top: 0,
+    left: 0,
     zIndex: 1,
   },
 
@@ -463,7 +473,7 @@ const styles = StyleSheet.create({
     top: 8,
     right: 8,
     borderRadius: 999,
-    backgroundColor: "rgba(255, 255, 255, 0.56)",
+    backgroundColor: "rgba(7, 16, 23, 0.72)",
     borderWidth: 1,
     paddingHorizontal: 10,
     height: 26,
@@ -471,7 +481,7 @@ const styles = StyleSheet.create({
   },
 
   photoCounterText: {
-    color: "#101820",
+    color: datingColors.text,
     fontSize: 11,
     fontFamily: systemFontBold,
   },
@@ -480,7 +490,7 @@ const styles = StyleSheet.create({
     width: 128,
     height: 128,
     borderRadius: 64,
-    backgroundColor: "#111",
+    backgroundColor: datingColors.surfaceSoft,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -524,15 +534,19 @@ const styles = StyleSheet.create({
   },
 
   summaryCard: {
-    width: "100%",
-    maxWidth: Platform.OS === "web" ? 680 : undefined,
-    borderRadius: 30,
-    backgroundColor: "rgba(255, 255, 255, 0.5)",
+    position: "absolute",
+    left: 14,
+    right: 14,
+    bottom: 14,
+    width: undefined,
+    maxWidth: undefined,
+    borderRadius: 26,
+    backgroundColor: "rgba(7, 16, 23, 0.88)",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.76)",
+    borderColor: datingColors.border,
     padding: 20,
-    marginTop: 18,
-    shadowColor: "#101820",
+    marginTop: 0,
+    shadowColor: "#000000",
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.09,
     shadowRadius: 24,
@@ -540,33 +554,33 @@ const styles = StyleSheet.create({
   },
 
   name: {
-    color: "#111",
+    color: datingColors.text,
     fontSize: 31,
     fontFamily: systemFontBold,
     fontWeight: "700",
-    textAlign: "center",
+    textAlign: "left",
   },
 
   meta: {
     marginTop: 6,
-    color: "#6E6E73",
+    color: datingColors.textMuted,
     fontSize: 15,
     fontFamily: systemFont,
-    textAlign: "center",
+    textAlign: "left",
   },
 
   summaryLocation: {
     marginTop: 12,
-    color: "#111",
+    color: datingColors.text,
     fontSize: 14,
     lineHeight: 20,
     fontFamily: systemFont,
-    textAlign: "center",
+    textAlign: "left",
   },
 
   moodRow: {
     flexDirection: "row",
-    justifyContent: "center",
+    justifyContent: "flex-start",
     gap: 10,
     marginTop: 16,
   },
@@ -578,9 +592,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 40,
     fontSize: 21,
-    backgroundColor: "rgba(255, 255, 255, 0.58)",
+    backgroundColor: datingColors.surfaceSoft,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.82)",
+    borderColor: datingColors.border,
     overflow: "hidden",
   },
 
@@ -597,9 +611,9 @@ const styles = StyleSheet.create({
     minWidth: 0,
     minHeight: 88,
     borderRadius: 26,
-    backgroundColor: "rgba(255, 255, 255, 0.46)",
+    backgroundColor: datingColors.surface,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.76)",
+    borderColor: datingColors.border,
     alignItems: "center",
     justifyContent: "center",
     shadowOffset: { width: 0, height: 10 },
@@ -609,7 +623,7 @@ const styles = StyleSheet.create({
   },
 
   statNumber: {
-    color: "#111",
+    color: datingColors.text,
     fontSize: 24,
     fontFamily: systemFontBold,
     fontWeight: "700",
@@ -617,7 +631,7 @@ const styles = StyleSheet.create({
 
   statLabel: {
     marginTop: 4,
-    color: "#6E6E73",
+    color: datingColors.textMuted,
     fontSize: 13,
     fontFamily: systemFont,
   },
@@ -628,11 +642,11 @@ const styles = StyleSheet.create({
     marginTop: 16,
     maxWidth: Platform.OS === "web" ? 860 : undefined,
     borderRadius: 30,
-    backgroundColor: "rgba(255, 255, 255, 0.46)",
+    backgroundColor: datingColors.surface,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.76)",
+    borderColor: datingColors.border,
     padding: 18,
-    shadowColor: "#101820",
+    shadowColor: "#000000",
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.08,
     shadowRadius: 22,
@@ -640,7 +654,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: "#111",
+    color: datingColors.text,
     fontSize: 18,
     fontFamily: systemFontBold,
     fontWeight: "700",
@@ -648,7 +662,7 @@ const styles = StyleSheet.create({
   },
 
   bodyText: {
-    color: "#111",
+    color: datingColors.textMuted,
     fontSize: 15,
     lineHeight: 22,
     fontFamily: systemFont,
@@ -665,9 +679,9 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     justifyContent: "center",
-    backgroundColor: "rgba(16, 24, 32, 0.78)",
+    backgroundColor: datingColors.surfaceSoft,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.3)",
+    borderColor: datingColors.border,
   },
 
   tagText: {
@@ -694,12 +708,12 @@ const styles = StyleSheet.create({
   gridPhoto: {
     width: "100%",
     height: "100%",
-    borderRadius: 10,
+    borderRadius: 14,
   },
 
   activePhoto: {
     borderWidth: 2,
-    borderColor: "#ffffff",
+    borderColor: datingColors.accent,
   },
 
   fullscreen: {

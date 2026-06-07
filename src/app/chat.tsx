@@ -2,6 +2,7 @@ import BottomMenu from "@/components/BottomMenu";
 import { PremiumEmptyState, PremiumLoadingState } from "@/components/PremiumUI";
 import { ThemedBackground } from "@/components/ThemedBackground";
 import { getCountryLabel, getInterestLabel } from "@/constants/germanLabels";
+import { datingColors, datingShadow } from "@/constants/datingDesign";
 import { premiumColors, premiumShadow } from "@/constants/premiumDesign";
 import {
   getChatMessages,
@@ -13,6 +14,11 @@ import {
   type ChatMessage,
   type MatchRecord,
 } from "@/services/auth/session";
+import {
+  getUserLastSeen,
+  isUserOnline,
+  subscribeToPresence,
+} from "@/services/presence";
 import { supabase } from "@/services/supabase";
 import * as ExpoImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
@@ -70,6 +76,35 @@ function getOtherUser(match: MatchRecord, currentUserKey: string) {
   return otherUserKey ? match.users[otherUserKey] : null;
 }
 
+function formatLastSeen(lastSeenAt: string | null) {
+  if (!lastSeenAt) return "Offline";
+
+  const lastSeen = new Date(lastSeenAt);
+  const elapsedMs = Math.max(0, Date.now() - lastSeen.getTime());
+  const elapsedMinutes = Math.floor(elapsedMs / 60_000);
+
+  if (elapsedMinutes < 1) return "Gerade eben online";
+  if (elapsedMinutes < 60)
+    return `Zuletzt online vor ${elapsedMinutes} Min.`;
+
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24)
+    return `Zuletzt online vor ${elapsedHours} Std.`;
+
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  if (elapsedDays === 1) return "Zuletzt online gestern";
+  if (elapsedDays < 7) return `Zuletzt online vor ${elapsedDays} Tagen`;
+
+  return `Zuletzt online am ${new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year:
+      lastSeen.getFullYear() === new Date().getFullYear()
+        ? undefined
+        : "numeric",
+  }).format(lastSeen)}`;
+}
+
 export default function ChatScreen() {
   const { matchId } = useLocalSearchParams<{ matchId?: string }>();
   const { width: viewportWidth } = useWindowDimensions();
@@ -86,7 +121,14 @@ export default function ChatScreen() {
   const [fullscreenImageUri, setFullscreenImageUri] = useState("");
   const [reactionMessageId, setReactionMessageId] = useState("");
   const [profileDrawerVisible, setProfileDrawerVisible] = useState(false);
+  const [otherUserOnline, setOtherUserOnline] = useState(false);
+  const [otherUserLastSeen, setOtherUserLastSeen] = useState<string | null>(
+    null,
+  );
+  const [, setPresenceClock] = useState(0);
   const profileDrawerProgress = React.useRef(new Animated.Value(1)).current;
+  const otherUser = match ? getOtherUser(match, currentUserKey) : null;
+  const otherUserId = otherUser?.id ?? "";
 
   useEffect(() => {
     let isMounted = true;
@@ -144,6 +186,39 @@ export default function ChatScreen() {
       void supabase.removeChannel(channel);
     };
   }, [matchId]);
+
+  useEffect(() => {
+    if (!otherUserId) return;
+
+    let mounted = true;
+
+    async function refreshPresence() {
+      const online = isUserOnline(otherUserId);
+      if (!mounted) return;
+      setOtherUserOnline(online);
+
+      if (!online) {
+        const lastSeen = await getUserLastSeen(otherUserId);
+        if (mounted) setOtherUserLastSeen(lastSeen);
+      }
+    }
+
+    const unsubscribe = subscribeToPresence(() => {
+      void refreshPresence();
+    });
+    const refreshInterval = setInterval(() => {
+      void refreshPresence();
+      setPresenceClock((value) => value + 1);
+    }, 30_000);
+
+    void refreshPresence();
+
+    return () => {
+      mounted = false;
+      unsubscribe();
+      clearInterval(refreshInterval);
+    };
+  }, [otherUserId]);
 
   useEffect(() => {
     if (!profileDrawerVisible) {
@@ -294,7 +369,6 @@ export default function ChatScreen() {
     );
   }
 
-  const otherUser = match ? getOtherUser(match, currentUserKey) : null;
   const photo = otherUser?.photos?.[0] ?? otherUser?.picture;
   const isNarrowWeb = isWeb && viewportWidth < 1120;
   const isCompactWeb = isWeb && viewportWidth < 760;
@@ -375,6 +449,60 @@ export default function ChatScreen() {
           />
         )}
       </ScrollView>
+    );
+  }
+
+  function renderChatHeader() {
+    return (
+      <View style={styles.conversationHeader}>
+        <TouchableOpacity
+          activeOpacity={0.78}
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.backButtonText}>‹</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          activeOpacity={0.82}
+          style={styles.conversationPerson}
+          onPress={openProfileDrawer}
+        >
+          {photo ? (
+            <Image source={{ uri: photo }} style={styles.conversationAvatar} />
+          ) : (
+            <View style={styles.conversationAvatarPlaceholder}>
+              <Text style={styles.conversationAvatarInitial}>
+                {otherUser?.name?.slice(0, 1).toUpperCase() ?? "E"}
+              </Text>
+            </View>
+          )}
+          <View style={styles.conversationCopy}>
+            <Text style={styles.conversationName} numberOfLines={1}>
+              {otherUser?.name ?? "Match"}
+            </Text>
+            <View style={styles.onlineRow}>
+              <View
+                style={[
+                  styles.onlineDot,
+                  !otherUserOnline && styles.offlineDot,
+                ]}
+              />
+              <Text style={styles.onlineText} numberOfLines={1}>
+                {otherUserOnline
+                  ? "Online"
+                  : formatLastSeen(otherUserLastSeen)}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          activeOpacity={0.78}
+          style={styles.profileMenuButton}
+          onPress={openProfileDrawer}
+        >
+          <Text style={styles.profileMenuText}>•••</Text>
+        </TouchableOpacity>
+      </View>
     );
   }
 
@@ -659,21 +787,7 @@ export default function ChatScreen() {
         >
           <View style={styles.webMainContent}>
             <View style={styles.webChatSurface}>
-              {isNarrowWeb ? (
-                <TouchableOpacity
-                  style={styles.mobileProfileTrigger}
-                  onPress={openProfileDrawer}
-                >
-                  {photo ? (
-                    <Image
-                      source={{ uri: photo }}
-                      style={styles.mobileTriggerImage}
-                    />
-                  ) : (
-                    <Text style={styles.mobileTriggerText}>Profil</Text>
-                  )}
-                </TouchableOpacity>
-              ) : null}
+              {renderChatHeader()}
               {renderMessages()}
               {renderComposer()}
             </View>
@@ -694,19 +808,7 @@ export default function ChatScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View style={styles.chatSurface}>
-          <TouchableOpacity
-            style={styles.mobileProfileTrigger}
-            onPress={openProfileDrawer}
-          >
-            {photo ? (
-              <Image
-                source={{ uri: photo }}
-                style={styles.mobileTriggerImage}
-              />
-            ) : (
-              <Text style={styles.mobileTriggerText}>Profil</Text>
-            )}
-          </TouchableOpacity>
+          {renderChatHeader()}
           <ScrollView
             style={styles.messages}
             contentContainerStyle={styles.messagesContent}
@@ -1003,13 +1105,14 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
     width: "100%",
+    backgroundColor: datingColors.background,
   },
 
   webContainer: {
     flex: 1,
     width: "100%",
     flexDirection: "row",
-    padding: 22,
+    padding: 18,
     paddingBottom: 80,
     gap: 22,
   },
@@ -1034,26 +1137,26 @@ const styles = StyleSheet.create({
     width: "100%",
     minWidth: 0,
     borderRadius: 30,
-    backgroundColor: "rgba(255, 252, 247, 0.9)",
+    backgroundColor: datingColors.backgroundSoft,
     borderWidth: 1,
-    borderColor: premiumColors.hairline,
+    borderColor: datingColors.border,
     overflow: "hidden",
-    ...premiumShadow,
+    ...datingShadow,
   },
 
   webRightPanel: {
     width: 320,
     flexShrink: 0,
     borderRadius: 30,
-    backgroundColor: "rgba(255, 252, 247, 0.92)",
+    backgroundColor: datingColors.surface,
     borderWidth: 1,
-    borderColor: premiumColors.hairline,
+    borderColor: datingColors.border,
     padding: 20,
-    ...premiumShadow,
+    ...datingShadow,
   },
 
   webPanelEyebrow: {
-    color: premiumColors.champagne,
+    color: datingColors.accent,
     fontSize: 12,
     fontWeight: "900",
     textTransform: "uppercase",
@@ -1064,11 +1167,11 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 260,
     borderRadius: 24,
-    backgroundColor: premiumColors.champagneSoft,
+    backgroundColor: datingColors.surfaceSoft,
   },
 
   webProfileName: {
-    color: premiumColors.ink,
+    color: datingColors.text,
     fontSize: 25,
     lineHeight: 30,
     fontWeight: "900",
@@ -1076,14 +1179,14 @@ const styles = StyleSheet.create({
   },
 
   webProfileMeta: {
-    color: premiumColors.navy,
+    color: datingColors.accent,
     fontSize: 14,
     fontWeight: "800",
     marginTop: 6,
   },
 
   webProfileAbout: {
-    color: premiumColors.muted,
+    color: datingColors.textMuted,
     fontSize: 14,
     lineHeight: 21,
     marginTop: 14,
@@ -1099,16 +1202,16 @@ const styles = StyleSheet.create({
   webProfileTag: {
     minHeight: 34,
     borderRadius: 14,
-    backgroundColor: premiumColors.navySoft,
+    backgroundColor: datingColors.surfaceSoft,
     borderWidth: 1,
-    borderColor: "#CEDAE5",
+    borderColor: datingColors.border,
     paddingHorizontal: 12,
     alignItems: "center",
     justifyContent: "center",
   },
 
   webProfileTagText: {
-    color: premiumColors.navy,
+    color: datingColors.text,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -1116,7 +1219,7 @@ const styles = StyleSheet.create({
   webProfileButton: {
     height: 52,
     borderRadius: 18,
-    backgroundColor: premiumColors.ink,
+    backgroundColor: datingColors.accent,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 20,
@@ -1134,6 +1237,114 @@ const styles = StyleSheet.create({
     maxWidth: isWeb ? 760 : undefined,
     alignSelf: "center",
     paddingTop: isWeb ? 32 : 34,
+  },
+
+  conversationHeader: {
+    minHeight: 82,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    borderBottomWidth: 1,
+    borderBottomColor: datingColors.border,
+    backgroundColor: "rgba(7, 16, 23, 0.92)",
+    gap: 12,
+    zIndex: 9,
+  },
+
+  backButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.04)",
+  },
+
+  backButtonText: {
+    color: datingColors.text,
+    fontSize: 36,
+    lineHeight: 38,
+    marginTop: -3,
+  },
+
+  conversationPerson: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 11,
+  },
+
+  conversationAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: "rgba(232, 62, 124, 0.38)",
+  },
+
+  conversationAvatarPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: datingColors.accentDark,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  conversationAvatarInitial: {
+    color: datingColors.text,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+
+  conversationCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+  conversationName: {
+    color: datingColors.text,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+
+  onlineRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 3,
+  },
+
+  onlineDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: datingColors.online,
+  },
+
+  offlineDot: {
+    backgroundColor: datingColors.textMuted,
+  },
+
+  onlineText: {
+    color: datingColors.textMuted,
+    fontSize: 12,
+  },
+
+  profileMenuButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  profileMenuText: {
+    color: datingColors.textMuted,
+    fontSize: 17,
+    letterSpacing: 1,
   },
 
   header: {
@@ -1208,24 +1419,24 @@ const styles = StyleSheet.create({
     marginHorizontal: isWeb ? 20 : 14,
     marginBottom: isWeb ? 80 : 100,
     borderRadius: isWeb ? 30 : 28,
-    backgroundColor: "rgba(255, 252, 247, 0.74)",
+    backgroundColor: datingColors.backgroundSoft,
     borderWidth: 1,
-    borderColor: premiumColors.hairline,
+    borderColor: datingColors.border,
     overflow: "hidden",
-    ...premiumShadow,
+    ...datingShadow,
   },
 
   mobileProfileTrigger: {
     position: "absolute",
-    top: 12,
+    top: 94,
     right: 12,
     zIndex: 8,
     minWidth: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: "rgba(255, 252, 247, 0.92)",
+    backgroundColor: datingColors.surface,
     borderWidth: 1,
-    borderColor: premiumColors.hairline,
+    borderColor: datingColors.border,
     alignItems: "center",
     justifyContent: "center",
     ...premiumShadow,
@@ -1250,7 +1461,7 @@ const styles = StyleSheet.create({
 
   messagesContent: {
     paddingHorizontal: isWeb ? 20 : 18,
-    paddingTop: isWeb ? 22 : 75,
+    paddingTop: isWeb ? 22 : 22,
     paddingBottom: isWeb ? 20 : 18,
   },
 
@@ -1280,13 +1491,13 @@ const styles = StyleSheet.create({
 
   myMessage: {
     alignSelf: "flex-end",
-    backgroundColor: premiumColors.navy,
+    backgroundColor: datingColors.accent,
     borderBottomRightRadius: 8,
   },
 
   theirMessage: {
     alignSelf: "flex-start",
-    backgroundColor: premiumColors.white,
+    backgroundColor: datingColors.surfaceRaised,
     borderBottomLeftRadius: 8,
   },
 
@@ -1296,11 +1507,11 @@ const styles = StyleSheet.create({
   },
 
   myMessageText: {
-    color: premiumColors.white,
+    color: datingColors.text,
   },
 
   theirMessageText: {
-    color: premiumColors.ink,
+    color: datingColors.text,
   },
 
   messageImage: {
@@ -1348,9 +1559,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: isWeb ? 20 : 14,
     paddingTop: isWeb ? 14 : 14,
     paddingBottom: isWeb ? 18 : 16,
-    backgroundColor: premiumColors.white,
+    backgroundColor: datingColors.backgroundSoft,
     borderTopWidth: 1,
-    borderTopColor: premiumColors.hairline,
+    borderTopColor: datingColors.border,
   },
 
   compactComposer: {
@@ -1365,7 +1576,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     height: 50,
     borderRadius: 18,
-    backgroundColor: premiumColors.ivory,
+    backgroundColor: datingColors.accent,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1377,7 +1588,7 @@ const styles = StyleSheet.create({
   },
 
   attachText: {
-    color: premiumColors.champagne,
+    color: datingColors.text,
     fontSize: 22,
   },
 
@@ -1386,9 +1597,9 @@ const styles = StyleSheet.create({
     minWidth: 0,
     minHeight: 50,
     borderRadius: 18,
-    backgroundColor: premiumColors.ivory,
+    backgroundColor: datingColors.surface,
     paddingHorizontal: 16,
-    color: premiumColors.ink,
+    color: datingColors.text,
     fontSize: 15,
   },
 
@@ -1397,10 +1608,10 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     height: 50,
     borderRadius: 18,
-    backgroundColor: premiumColors.ink,
+    backgroundColor: datingColors.accent,
     alignItems: "center",
     justifyContent: "center",
-    ...premiumShadow,
+    ...datingShadow,
   },
 
   compactSendButton: {
@@ -1665,13 +1876,13 @@ const styles = StyleSheet.create({
     width: "86%",
     maxWidth: 340,
     height: "100%",
-    backgroundColor: premiumColors.porcelain,
+    backgroundColor: datingColors.backgroundSoft,
     borderTopLeftRadius: 30,
     borderBottomLeftRadius: 30,
     padding: 18,
     paddingTop: 52,
     borderLeftWidth: 1,
-    borderColor: premiumColors.hairline,
+    borderColor: datingColors.border,
     ...premiumShadow,
   },
 
@@ -1687,14 +1898,14 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: premiumColors.white,
+    backgroundColor: datingColors.surface,
     alignItems: "center",
     justifyContent: "center",
     ...premiumShadow,
   },
 
   drawerCloseText: {
-    color: premiumColors.ink,
+    color: datingColors.text,
     fontSize: 26,
     lineHeight: 28,
     fontWeight: "700",
