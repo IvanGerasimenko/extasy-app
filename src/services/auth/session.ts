@@ -119,6 +119,48 @@ const SUSPICIOUS_EMAIL_PARTS = [
   "trash",
 ];
 
+export const PASSWORD_RULES = [
+  {
+    key: "length",
+    label: "Mindestens 10 Zeichen",
+    test: (password: string) => password.length >= 10,
+  },
+  {
+    key: "lowercase",
+    label: "Ein Kleinbuchstabe",
+    test: (password: string) => /[a-z]/.test(password),
+  },
+  {
+    key: "uppercase",
+    label: "Ein Großbuchstabe",
+    test: (password: string) => /[A-Z]/.test(password),
+  },
+  {
+    key: "number",
+    label: "Eine Zahl",
+    test: (password: string) => /\d/.test(password),
+  },
+  {
+    key: "symbol",
+    label: "Ein Sonderzeichen",
+    test: (password: string) => /[^A-Za-z0-9\s]/.test(password),
+  },
+] as const;
+
+export function getPasswordStrength(password: string) {
+  const checks = PASSWORD_RULES.map((rule) => ({
+    key: rule.key,
+    label: rule.label,
+    passed: rule.test(password),
+  }));
+
+  return {
+    checks,
+    score: checks.filter((check) => check.passed).length,
+    isValid: checks.every((check) => check.passed),
+  };
+}
+
 function requireData<T>(data: T | null, error: { message: string } | null): T {
   if (error) {
     throw new Error(error.message);
@@ -410,6 +452,14 @@ export async function getSessionUser() {
     return null;
   }
 
+  if (
+    authUser.app_metadata?.provider === "email" &&
+    !authUser.email_confirmed_at
+  ) {
+    await supabase.auth.signOut();
+    return null;
+  }
+
   if (__DEV__) {
     console.log("AUTH USER", {
       id: authUser.id,
@@ -420,32 +470,28 @@ export async function getSessionUser() {
 
   // The auth user id is the profile's stable key on every browser and device.
   // Read it directly so a stale database RPC cannot replace onboarding data.
-  const result = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", authUser.id)
-    .maybeSingle();
-  let profile = requireData(result.data as ProfileRow | null, result.error);
+  let profile: ProfileRow | null = null;
+
+  for (let attempt = 0; attempt < 3 && !profile; attempt += 1) {
+    const result = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", authUser.id)
+      .maybeSingle();
+    profile = requireData(result.data as ProfileRow | null, result.error);
+
+    if (!profile && attempt < 2) {
+      await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+    }
+  }
 
   if (!profile) {
-    const inserted = await supabase
-      .from("profiles")
-      .insert({
-        id: authUser.id,
-        email: authUser.email ?? null,
-        phone_number: authUser.phone ?? null,
-        name:
-          authUser.user_metadata?.name ??
-          authUser.user_metadata?.full_name ??
-          null,
-        picture: null,
-        photos: [],
-        onboarding_completed: false,
-      })
-      .select("*")
-      .single();
+    const synced = await supabase.rpc("sync_current_profile");
+    profile = requireData(synced.data as ProfileRow | null, synced.error);
+  }
 
-    profile = requireData(inserted.data as ProfileRow | null, inserted.error);
+  if (!profile) {
+    throw new Error("Das Supabase-Profil konnte nicht geladen werden.");
   }
 
   profile = await restoreProfileForVerifiedEmail(
@@ -539,6 +585,11 @@ export async function registerLocalAccount(
   if (!user.email) {
     throw new Error("E-Mail ist erforderlich.");
   }
+  if (!getPasswordStrength(password).isValid) {
+    throw new Error(
+      "Das Passwort muss alle Sicherheitsanforderungen erfüllen.",
+    );
+  }
   const result = await supabase.auth.signUp({
     email: user.email,
     password,
@@ -551,18 +602,14 @@ export async function registerLocalAccount(
     throw new Error("Das Konto konnte nicht erstellt werden.");
   }
 
-  if (!result.data.session) {
-    return null;
+  if (result.data.session) {
+    await supabase.auth.signOut();
+    throw new Error(
+      "Die E-Mail-Bestätigung ist derzeit nicht korrekt konfiguriert. Das Konto wurde nicht angemeldet.",
+    );
   }
 
-  const profile: SessionUser = {
-    ...user,
-    id: result.data.user.id,
-    email: result.data.user.email ?? user.email,
-    onboardingCompleted: false,
-    createdAt: result.data.user.created_at,
-  };
-  return saveSessionUser(profile);
+  return null;
 }
 
 export async function verifySignupEmail(email: string, token: string) {
@@ -605,6 +652,14 @@ export async function signInLocalAccount(email: string, password: string) {
   if (result.error) {
     return null;
   }
+
+  if (!result.data.user.email_confirmed_at) {
+    await supabase.auth.signOut();
+    throw new Error(
+      "Bestätige zuerst deine E-Mail mit dem sechsstelligen Code.",
+    );
+  }
+
   return getSessionUser();
 }
 

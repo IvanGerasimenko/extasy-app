@@ -77,7 +77,7 @@ export default function SettingsScreen() {
       title: "Suchpräferenzen",
       text: "Geschlecht, Land, Interessen und Profil.",
       status: "Ändern",
-      onPress: () => router.push("/onboarding"),
+      onPress: () => router.push("/onboarding?edit=1"),
     },
     {
       emoji: "🛡️",
@@ -306,7 +306,7 @@ export default function SettingsScreen() {
 
         <TouchableOpacity
           style={[styles.secondaryButton, surfaceStyle]}
-          onPress={() => router.push("/onboarding")}
+          onPress={() => router.push("/onboarding?edit=1")}
         >
           <Text style={[styles.secondaryText, { color: colors.surfaceText }]}>
             Profil bearbeiten

@@ -22,7 +22,7 @@ import {
   completeSessionOnboarding,
   getSessionUser,
 } from "@/services/auth/session";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Platform,
@@ -44,7 +44,6 @@ const countryOptions = [
   "Italien",
   "Niederlande",
   "Belgien",
-  "Schweiz",
   "Polen",
   "Tschechien",
   "Ungarn",
@@ -84,15 +83,14 @@ const interestsList = [
   "Fotografie",
   "Mode",
   "Sport",
-  "Tanzen",
-  "Yoga",
-  "Club",
-  "Bloggen",
 ];
 const FULL_HD_MAX_SIZE = 1920;
 const FULL_HD_JPEG_QUALITY = 0.92;
 
 export default function OnboardingScreen() {
+  const params = useLocalSearchParams<{ edit?: string | string[] }>();
+  const editParam = Array.isArray(params.edit) ? params.edit[0] : params.edit;
+  const isEditMode = editParam === "1";
   const [photos, setPhotos] = useState<string[]>([]);
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
@@ -163,6 +161,16 @@ export default function OnboardingScreen() {
         : user.picture
           ? [user.picture]
           : [];
+
+      if (
+        user.onboardingCompleted &&
+        savedPhotos.length > 0 &&
+        !isEditMode
+      ) {
+        router.replace("/discover");
+        return;
+      }
+
       setPhotos(savedPhotos);
     }
 
@@ -171,7 +179,7 @@ export default function OnboardingScreen() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isEditMode]);
 
   function toggleInterest(item: string) {
     const setInterest = (prev: string[]) => {

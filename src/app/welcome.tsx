@@ -82,27 +82,31 @@ export default function WelcomeScreen() {
               },
             ]}
           >
-          <Image
-            source={require("../../assets/logolight.png")}
-            style={styles.logo}
-          />
-          <Image
-            source={require("../../assets/people.png")}
-            style={styles.people}
-          />
-          <View style={styles.heroOverlay}>
-            <Text style={styles.heroTitle}>
-              Kostenlos Dates in Deutschland.
-            </Text>
-            <Text style={styles.subtitle}>
-              Geprüfte Profile, sichere Kontakte und Gespräche, die sich schon
-              ab der ersten Nachricht echt anfühlen.
-            </Text>
-            <View style={styles.heroTags}>
-              <PremiumTag label="Geprüfte Profile" tone="gold" />
-              <PremiumTag label="Sichere Kontakte" tone="emerald" />
+            <Image
+              source={require("../../assets/logolight.png")}
+              style={styles.logo}
+            />
+            <View style={styles.peopleWrapper}>
+              <Image
+                source={require("../../assets/people.png")}
+                style={styles.people}
+                resizeMethod="resize"
+                resizeMode="cover"
+              />
             </View>
-          </View>
+            <View style={styles.heroOverlay}>
+              <Text style={styles.heroTitle}>
+                Kostenlos Dates in Deutschland.
+              </Text>
+              <Text style={styles.subtitle}>
+                Geprüfte Profile, sichere Kontakte und Gespräche, die sich schon
+                ab der ersten Nachricht echt anfühlen.
+              </Text>
+              <View style={styles.heroTags}>
+                <PremiumTag label="Geprüfte Profile" tone="gold" />
+                <PremiumTag label="Sichere Kontakte" tone="emerald" />
+              </View>
+            </View>
           </Animated.View>
         </FadeIn>
 
@@ -118,7 +122,7 @@ export default function WelcomeScreen() {
             <Text style={styles.authError}>{errorMessage}</Text>
           ) : null}
           <AuthButton
-            title="Mit E-Mail oder Telefon einloggen"
+            title="Einloggen"
             icon={require("../../assets/email.png")}
             onPress={() => router.push("/login")}
           />
@@ -129,7 +133,7 @@ export default function WelcomeScreen() {
             Noch kein Konto?
           </Text>
           <Text
-            style={[styles.signupText, { color: colors.text }]}
+            style={[styles.signupText]}
             onPress={() => router.push("/registration")}
           >
             Registrieren
@@ -147,17 +151,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: "100%",
     minHeight: "100%",
+    backgroundColor: premiumColors.navy,
   },
 
   container: {
     marginBottom: Platform.OS === "web" ? 30 : 20,
-    width: "100%",
-    maxWidth: Platform.OS === "web" ? 550 : 380,
-    paddingHorizontal: Platform.OS === "web" ? 36 : 10,
+    maxWidth: "100%",
+    paddingHorizontal: Platform.OS === "web" ? 10 : 16,
     marginTop: Platform.OS === "web" ? 54 : 30,
   },
   authActions: {
-    width: "100%",
+    width: "80%",
+    justifyContent: "center",
+    alignSelf: "center",
   },
 
   authError: {
@@ -176,12 +182,19 @@ const styles = StyleSheet.create({
     zIndex: 5,
   },
 
+  peopleWrapper: {
+    width: "100%",
+    maxWidth: Platform.OS === "web" ? 900 : "100%",
+    minHeight: Platform.OS === "web" ? 500 : 400,
+    aspectRatio: 16 / 9,
+    alignSelf: "center",
+    borderRadius: 34,
+    overflow: "hidden",
+  },
+
   people: {
     width: "100%",
-    height: Platform.OS === "web" ? 200 : 430,
-    padding: Platform.OS === "web" ? 500 : 10,
-    borderRadius: 34,
-    opacity: Platform.OS === "web" ? 0.74 : 0.94,
+    height: "100%",
   },
 
   logo: {
@@ -200,8 +213,6 @@ const styles = StyleSheet.create({
     borderRadius: 34,
     overflow: "hidden",
     backgroundColor: premiumColors.navy,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.16)",
     ...premiumShadow,
     padding: Platform.OS === "web" ? 23 : 8,
   },
@@ -210,7 +221,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     justifyContent: "flex-end",
     padding: 22,
-    backgroundColor: "rgba(8, 18, 30, 0.52)",
+    backgroundColor: "rgba(0, 0, 0, 0.32)",
   },
 
   heroTitle: {
@@ -218,17 +229,31 @@ const styles = StyleSheet.create({
     fontSize: 31,
     lineHeight: 36,
     fontWeight: "900",
+    backgroundColor: "rgba(0, 0, 0, 0.48)",
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
 
   heroTags: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
     marginTop: 16,
   },
 
   subtitle: {
     marginTop: 10,
+    backgroundColor: "rgba(0, 0, 0, 0.48)",
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
     fontSize: 15,
     lineHeight: 24,
     color: "rgba(255, 255, 255, 0.84)",
@@ -241,13 +266,13 @@ const styles = StyleSheet.create({
   },
 
   accountText: {
-    color: "#6E6E73",
+    color: "#ffffff",
     fontSize: 15,
     lineHeight: 22,
   },
 
   signupText: {
-    color: "#111",
+    color: "#ffffffd0",
     fontSize: 16,
     textDecorationLine: "underline",
     marginTop: 4,

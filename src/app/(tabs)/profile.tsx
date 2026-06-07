@@ -163,7 +163,7 @@ export default function ProfileScreen() {
         <View style={styles.topbar}>
           <TouchableOpacity
             style={styles.iconButton}
-            onPress={() => router.push("/onboarding")}
+            onPress={() => router.push("/onboarding?edit=1")}
           >
             <Text style={styles.editEmoji}>✎</Text>
             <Image

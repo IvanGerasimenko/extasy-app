@@ -79,8 +79,7 @@ function isSameUser(firstUser: SessionUser, secondUser: SessionUser) {
     (firstUser.email &&
       secondUser.email &&
       firstUser.email.toLowerCase() === secondUser.email.toLowerCase()) ||
-    (firstUser.googleId && firstUser.googleId === secondUser.googleId) ||
-    (firstUser.phoneNumber && firstUser.phoneNumber === secondUser.phoneNumber),
+    (firstUser.googleId && firstUser.googleId === secondUser.googleId),
   );
 }
 
@@ -626,7 +625,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     paddingHorizontal: 10,
     paddingTop: 10,
-    paddingBottom: 132,
+    paddingBottom: 200,
   },
 
   desktopContainer: {
@@ -662,8 +661,10 @@ const styles = StyleSheet.create({
     minHeight: isWeb ? 560 : isCompactViewport ? 580 : 360,
     maxWidth: isWeb ? 540 : undefined,
     width: "100%",
+    marginTop: 20,
+
     alignSelf: "center",
-    marginBottom: isCompactViewport ? 42 : 48,
+    marginBottom: isCompactViewport ? 50 : 48,
     borderRadius: premiumSpacing.cardRadius,
     overflow: "visible",
     backgroundColor: premiumColors.ink,

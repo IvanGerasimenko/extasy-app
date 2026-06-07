@@ -2,6 +2,7 @@ import { BackButton } from "@/components/BackButton";
 import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   getEmailValidationError,
+  getPasswordStrength,
   registerLocalAccount,
 } from "@/services/auth/session";
 import { router } from "expo-router";
@@ -22,8 +23,20 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const passwordStrength = getPasswordStrength(password);
+  const passwordStrengthLabel =
+    passwordStrength.score <= 1
+      ? "Sehr schwach"
+      : passwordStrength.score <= 3
+        ? "Mittel"
+        : passwordStrength.score === 4
+          ? "Stark"
+          : "Sehr stark";
 
   async function handleCreateAccount() {
+    if (isLoading) return;
+
     const trimmedName = name.trim();
     const trimmedEmail = email.trim().toLowerCase();
 
@@ -39,13 +52,16 @@ export default function RegisterScreen() {
       return;
     }
 
-    if (password.length < 6) {
-      setError("Das Passwort muss mindestens 6 Zeichen lang sein.");
+    if (!passwordStrength.isValid) {
+      setError("Erfülle alle Passwort-Anforderungen.");
       return;
     }
 
+    setIsLoading(true);
+    setError("");
+
     try {
-      const registeredUser = await registerLocalAccount(
+      await registerLocalAccount(
         {
           email: trimmedEmail,
           name: trimmedName,
@@ -54,21 +70,17 @@ export default function RegisterScreen() {
         password,
       );
 
-      if (registeredUser) {
-        router.replace("/onboarding");
-        return;
-      }
+      router.replace({
+        pathname: "/emailVerification",
+        params: { email: trimmedEmail },
+      });
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "Das Konto konnte nicht erstellt werden.",
       );
-      return;
+    } finally {
+      setIsLoading(false);
     }
-
-    router.replace({
-      pathname: "/emailVerification",
-      params: { email: trimmedEmail },
-    });
   }
 
   return (
@@ -116,22 +128,96 @@ export default function RegisterScreen() {
             <View>
               <Text style={styles.label}>Passwort</Text>
               <TextInput
-                style={styles.input}
+                style={[
+                  styles.input,
+                  password.length > 0 &&
+                    (passwordStrength.isValid
+                      ? styles.validPasswordInput
+                      : styles.invalidPasswordInput),
+                ]}
                 placeholder="Passwort erstellen"
                 placeholderTextColor="#999"
                 secureTextEntry
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(value) => {
+                  setPassword(value);
+                  if (error === "Erfülle alle Passwort-Anforderungen.") {
+                    setError("");
+                  }
+                }}
               />
+
+              <View style={styles.passwordStrength}>
+                <View style={styles.strengthHeader}>
+                  <Text style={styles.strengthTitle}>Passwortstärke</Text>
+                  <Text
+                    style={[
+                      styles.strengthValue,
+                      passwordStrength.isValid && styles.strengthValueValid,
+                    ]}
+                  >
+                    {password ? passwordStrengthLabel : "Noch leer"}
+                  </Text>
+                </View>
+
+                <View style={styles.strengthBar}>
+                  {passwordStrength.checks.map((check) => (
+                    <View
+                      key={`bar-${check.key}`}
+                      style={[
+                        styles.strengthSegment,
+                        check.passed && styles.strengthSegmentPassed,
+                      ]}
+                    />
+                  ))}
+                </View>
+
+                <View style={styles.passwordRules}>
+                  {passwordStrength.checks.map((check) => (
+                    <View key={check.key} style={styles.passwordRule}>
+                      <View
+                        style={[
+                          styles.ruleIcon,
+                          check.passed && styles.ruleIconPassed,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.ruleIconText,
+                            check.passed && styles.ruleIconTextPassed,
+                          ]}
+                        >
+                          {check.passed ? "✓" : "•"}
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.ruleText,
+                          check.passed && styles.ruleTextPassed,
+                        ]}
+                      >
+                        {check.label}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
             </View>
 
             {error ? <Text style={styles.error}>{error}</Text> : null}
 
             <TouchableOpacity
-              style={styles.button}
+              style={[
+                styles.button,
+                (isLoading || !passwordStrength.isValid) &&
+                  styles.buttonDisabled,
+              ]}
               onPress={handleCreateAccount}
+              disabled={isLoading || !passwordStrength.isValid}
             >
-              <Text style={styles.buttonText}>Konto erstellen</Text>
+              <Text style={styles.buttonText}>
+                {isLoading ? "Code wird gesendet..." : "Konto erstellen"}
+              </Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -198,6 +284,114 @@ const styles = StyleSheet.create({
     borderColor: "#E5DED7",
   },
 
+  invalidPasswordInput: {
+    borderColor: "#E6A3AD",
+  },
+
+  validPasswordInput: {
+    borderColor: "#2D9D72",
+  },
+
+  passwordStrength: {
+    marginTop: 14,
+    padding: 15,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    borderWidth: 1,
+    borderColor: "#E5DED7",
+  },
+
+  strengthHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+
+  strengthTitle: {
+    color: "#222",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
+  strengthValue: {
+    color: "#A24B58",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+
+  strengthValueValid: {
+    color: "#237A59",
+  },
+
+  strengthBar: {
+    flexDirection: "row",
+    gap: 6,
+    marginTop: 11,
+  },
+
+  strengthSegment: {
+    flex: 1,
+    height: 5,
+    borderRadius: 4,
+    backgroundColor: "#E7E1DC",
+  },
+
+  strengthSegmentPassed: {
+    backgroundColor: "#2D9D72",
+  },
+
+  passwordRules: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 9,
+    marginTop: 14,
+  },
+
+  passwordRule: {
+    minWidth: Platform.OS === "web" ? 180 : "47%",
+    flexGrow: 1,
+    flexBasis: Platform.OS === "web" ? 180 : "45%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  ruleIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#EEE8E3",
+  },
+
+  ruleIconPassed: {
+    backgroundColor: "#DDF3E9",
+  },
+
+  ruleIconText: {
+    color: "#9C9189",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+
+  ruleIconTextPassed: {
+    color: "#237A59",
+  },
+
+  ruleText: {
+    flexShrink: 1,
+    color: "#776E68",
+    fontSize: 12,
+    lineHeight: 17,
+  },
+
+  ruleTextPassed: {
+    color: "#237A59",
+    fontWeight: "700",
+  },
+
   error: {
     color: "#7A1F1F",
     fontSize: 13,
@@ -217,5 +411,9 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#FFF",
     fontSize: 17,
+  },
+
+  buttonDisabled: {
+    opacity: 0.65,
   },
 });

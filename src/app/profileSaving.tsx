@@ -81,7 +81,7 @@ export default function ProfileSavingScreen() {
       const profile = consumePendingOnboardingProfile();
 
       if (!profile) {
-        router.replace("/onboarding");
+        router.replace("/onboarding?edit=1");
         return;
       }
 
@@ -183,7 +183,7 @@ export default function ProfileSavingScreen() {
             <Text style={styles.error}>{error}</Text>
             <TouchableOpacity
               style={styles.retryButton}
-              onPress={() => router.replace("/onboarding")}
+              onPress={() => router.replace("/onboarding?edit=1")}
             >
               <Text style={styles.retryText}>Zurück zum Profil</Text>
             </TouchableOpacity>
