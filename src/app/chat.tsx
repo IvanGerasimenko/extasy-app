@@ -1,8 +1,8 @@
 import BottomMenu from "@/components/BottomMenu";
 import { PremiumEmptyState, PremiumLoadingState } from "@/components/PremiumUI";
 import { ThemedBackground } from "@/components/ThemedBackground";
-import { premiumColors, premiumShadow } from "@/constants/premiumDesign";
 import { getCountryLabel, getInterestLabel } from "@/constants/germanLabels";
+import { premiumColors, premiumShadow } from "@/constants/premiumDesign";
 import {
   getChatMessages,
   getMatchById,
@@ -398,15 +398,10 @@ export default function ChatScreen() {
           onChangeText={setDraft}
         />
         <TouchableOpacity
-          style={[
-            styles.sendButton,
-            isCompactWeb && styles.compactSendButton,
-          ]}
+          style={[styles.sendButton, isCompactWeb && styles.compactSendButton]}
           onPress={handleSendText}
         >
-          <Text style={styles.sendText}>
-            {isCompactWeb ? "➤" : "Senden"}
-          </Text>
+          <Text style={styles.sendText}>{isCompactWeb ? "➤" : "Senden"}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -611,7 +606,8 @@ export default function ChatScreen() {
           <View style={styles.reactionSheet}>
             <Text style={styles.sheetTitle}>Reaktion auf Foto</Text>
             <Text style={styles.reactionHint}>
-              Halte ein Foto gedrückt und wähle danach ein Emoji, um es oben anzuheften.
+              Halte ein Foto gedrückt und wähle danach ein Emoji, um es oben
+              anzuheften.
             </Text>
             <View style={styles.reactionEmojiRow}>
               {emojiOptions.slice(0, 12).map((emoji) => (
@@ -926,7 +922,8 @@ export default function ChatScreen() {
           <View style={styles.reactionSheet}>
             <Text style={styles.sheetTitle}>Reaktion auf Foto</Text>
             <Text style={styles.reactionHint}>
-              Halte ein Foto gedrückt und wähle danach ein Emoji, um es oben anzuheften.
+              Halte ein Foto gedrückt und wähle danach ein Emoji, um es oben
+              anzuheften.
             </Text>
             <View style={styles.reactionEmojiRow}>
               {emojiOptions.slice(0, 12).map((emoji) => (
@@ -1013,7 +1010,7 @@ const styles = StyleSheet.create({
     width: "100%",
     flexDirection: "row",
     padding: 22,
-    paddingBottom: 132,
+    paddingBottom: 80,
     gap: 22,
   },
 
@@ -1023,7 +1020,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
     paddingHorizontal: 8,
     paddingTop: 8,
-    paddingBottom: 132,
+    paddingBottom: 80,
     gap: 8,
   },
 
@@ -1209,7 +1206,7 @@ const styles = StyleSheet.create({
   chatSurface: {
     flex: 1,
     marginHorizontal: isWeb ? 20 : 14,
-    marginBottom: isWeb ? 132 : 100,
+    marginBottom: isWeb ? 80 : 100,
     borderRadius: isWeb ? 30 : 28,
     backgroundColor: "rgba(255, 252, 247, 0.74)",
     borderWidth: 1,

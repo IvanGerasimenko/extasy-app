@@ -5,13 +5,13 @@ import {
   PremiumTag,
 } from "@/components/PremiumUI";
 import { ThemedBackground } from "@/components/ThemedBackground";
-import { premiumColors, premiumShadow } from "@/constants/premiumDesign";
 import {
   getCountryLabel,
   getGenderLabel,
   getInterestLabel,
   getLookingForLabel,
 } from "@/constants/germanLabels";
+import { premiumColors, premiumShadow } from "@/constants/premiumDesign";
 import {
   getLocalAccountUsers,
   getUserKey,
@@ -331,6 +331,7 @@ const styles = StyleSheet.create({
 
   container: {
     width: "100%",
+    marginBottom: Platform.OS === "web" ? 30 : 20,
     minWidth: 0,
     maxWidth: Platform.OS === "web" ? 860 : 560,
     alignSelf: "center",
