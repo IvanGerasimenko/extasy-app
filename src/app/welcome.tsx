@@ -1,5 +1,8 @@
+import { FadeIn } from "@/components/Motion";
 import React from "react";
 import {
+  Animated,
+  Easing,
   Image,
   Platform,
   ScrollView,
@@ -20,6 +23,28 @@ import { useAppTheme } from "../services/theme/ThemeContext";
 export default function WelcomeScreen() {
   const { signInWithGoogle, isLoading, errorMessage } = useGoogleAuth();
   const { colors } = useAppTheme();
+  const heroFloat = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(heroFloat, {
+          toValue: 1,
+          duration: 4200,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(heroFloat, {
+          toValue: 0,
+          duration: 4200,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [heroFloat]);
 
   const handleGoogleLogin = async () => {
     const result = await signInWithGoogle();
@@ -41,7 +66,22 @@ export default function WelcomeScreen() {
         <ThemeToggle />
       </View>
       <ScrollView style={styles.container}>
-        <View style={styles.hero}>
+        <FadeIn delay={60}>
+          <Animated.View
+            style={[
+              styles.hero,
+              {
+                transform: [
+                  {
+                    translateY: heroFloat.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, -7],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
           <Image
             source={require("../../assets/logolight.png")}
             style={styles.logo}
@@ -63,9 +103,10 @@ export default function WelcomeScreen() {
               <PremiumTag label="Sichere Kontakte" tone="emerald" />
             </View>
           </View>
-        </View>
+          </Animated.View>
+        </FadeIn>
 
-        <View style={{ width: "100%" }}>
+        <FadeIn delay={180} style={styles.authActions}>
           <AuthButton
             title={
               isLoading ? "Google wird geöffnet..." : "Mit Google fortfahren"
@@ -81,9 +122,9 @@ export default function WelcomeScreen() {
             icon={require("../../assets/email.png")}
             onPress={() => router.push("/login")}
           />
-        </View>
+        </FadeIn>
 
-        <View style={styles.signupWrap}>
+        <FadeIn delay={300} style={styles.signupWrap}>
           <Text style={[styles.accountText, { color: colors.mutedText }]}>
             Noch kein Konto?
           </Text>
@@ -93,7 +134,7 @@ export default function WelcomeScreen() {
           >
             Registrieren
           </Text>
-        </View>
+        </FadeIn>
       </ScrollView>
     </ThemedBackground>
   );
@@ -114,6 +155,9 @@ const styles = StyleSheet.create({
     maxWidth: Platform.OS === "web" ? 550 : 380,
     paddingHorizontal: Platform.OS === "web" ? 36 : 10,
     marginTop: Platform.OS === "web" ? 54 : 30,
+  },
+  authActions: {
+    width: "100%",
   },
 
   authError: {
@@ -136,8 +180,8 @@ const styles = StyleSheet.create({
     width: "100%",
     height: Platform.OS === "web" ? 200 : 430,
     padding: Platform.OS === "web" ? 500 : 10,
-    borderRadius: Platform.OS === "web" ? 100 : 34,
-    opacity: Platform.OS === "web" ? 0.3 : 0.94,
+    borderRadius: 34,
+    opacity: Platform.OS === "web" ? 0.74 : 0.94,
   },
 
   logo: {
@@ -156,6 +200,8 @@ const styles = StyleSheet.create({
     borderRadius: 34,
     overflow: "hidden",
     backgroundColor: premiumColors.navy,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.16)",
     ...premiumShadow,
     padding: Platform.OS === "web" ? 23 : 8,
   },
@@ -164,7 +210,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     justifyContent: "flex-end",
     padding: 22,
-    backgroundColor: "rgba(16, 24, 32, 0.46)",
+    backgroundColor: "rgba(8, 18, 30, 0.52)",
   },
 
   heroTitle: {

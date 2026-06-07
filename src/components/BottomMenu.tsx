@@ -1,13 +1,8 @@
+import { ScalePressable } from "@/components/Motion";
 import { getUnreadNotificationCountForCurrentUser } from "@/services/auth/session";
 import { router, usePathname } from "expo-router";
-import React, { useEffect, useState } from "react";
-import {
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { Animated, Easing, StyleSheet, Text, View } from "react-native";
 
 const menuItems = [
   {
@@ -31,13 +26,13 @@ const menuItems = [
   },
   {
     route: "/profile",
-    label: "Profil",
+    label: "Profile",
     emoji: "👤",
     icon: require("../../assets/profile.png"),
   },
   {
     route: "/settings",
-    label: "Einst.",
+    label: "Settings",
     emoji: "⚙️",
     icon: require("../../assets/logout.png"),
   },
@@ -74,37 +69,98 @@ export default function BottomMenu() {
           const isActive = pathname === item.route;
 
           return (
-            <TouchableOpacity
+            <MenuButton
               key={item.route}
-              style={[styles.button, isActive && styles.activeButton]}
+              isActive={isActive}
+              item={item}
+              notificationCount={notificationCount}
               onPress={() => {
                 if (!isActive) {
                   router.replace(item.route);
                 }
               }}
-            >
-              <View
-                style={[styles.iconBubble, isActive && styles.activeIconBubble]}
-              >
-                <Text style={styles.emojiIcon}>{item.emoji}</Text>
-                <Image
-                  source={item.icon}
-                  style={[styles.icon, isActive && styles.activeIcon]}
-                />
-              </View>
-              <Text style={[styles.label, isActive && styles.activeLabel]}>
-                {item.label}
-              </Text>
-              {"showsBadge" in item && notificationCount ? (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{notificationCount}</Text>
-                </View>
-              ) : null}
-            </TouchableOpacity>
+            />
           );
         })}
       </View>
     </View>
+  );
+}
+
+function MenuButton({
+  item,
+  isActive,
+  notificationCount,
+  onPress,
+}: {
+  item: (typeof menuItems)[number];
+  isActive: boolean;
+  notificationCount: number;
+  onPress: () => void;
+}) {
+  const activeProgress = useRef(new Animated.Value(isActive ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(activeProgress, {
+      toValue: isActive ? 1 : 0,
+      duration: 280,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [activeProgress, isActive]);
+
+  return (
+    <ScalePressable style={styles.buttonPressable} onPress={onPress}>
+      <View style={[styles.button, isActive && styles.activeButton]}>
+        <Animated.View
+          style={[
+            styles.activeGlow,
+            {
+              opacity: activeProgress,
+              transform: [
+                {
+                  scale: activeProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.72, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
+        />
+        <Animated.View
+          style={[
+            styles.iconBubble,
+            {
+              transform: [
+                {
+                  translateY: activeProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, -2],
+                  }),
+                },
+                {
+                  scale: activeProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1, 1.08],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <Text style={styles.emojiIcon}>{item.emoji}</Text>
+        </Animated.View>
+        <Text style={[styles.label, isActive && styles.activeLabel]}>
+          {item.label}
+        </Text>
+        {"showsBadge" in item && notificationCount ? (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{notificationCount}</Text>
+          </View>
+        ) : null}
+      </View>
+    </ScalePressable>
   );
 }
 
@@ -113,22 +169,22 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 12,
     right: 12,
-    bottom: 14,
+    bottom: 12,
     zIndex: 100,
     alignItems: "center",
   },
 
   menu: {
     width: "100%",
-    maxWidth: 520,
+    maxWidth: 320,
     minHeight: 68,
-    backgroundColor: "rgba(255, 255, 255, 0.96)",
+    backgroundColor: "rgba(255, 255, 255, 0.91)",
     borderColor: "rgba(255, 255, 255, 0.9)",
     borderWidth: 1,
     borderRadius: 28,
     padding: 6,
     flexDirection: "row",
-    gap: 4,
+    gap: 20,
     alignItems: "center",
     justifyContent: "space-between",
     shadowColor: "#1E1306",
@@ -136,14 +192,18 @@ const styles = StyleSheet.create({
       width: 0,
       height: 10,
     },
-    shadowOpacity: 0.18,
-    shadowRadius: 26,
+    shadowOpacity: 0.16,
+    shadowRadius: 30,
     elevation: 16,
   },
 
-  button: {
+  buttonPressable: {
     flex: 1,
     minWidth: 0,
+  },
+
+  button: {
+    width: "100%",
     height: 56,
     borderRadius: 22,
     backgroundColor: "transparent",
@@ -153,14 +213,16 @@ const styles = StyleSheet.create({
   },
 
   activeButton: {
-    backgroundColor: "rgba(255, 255, 255, 0.72)",
+    backgroundColor: "rgba(255, 255, 255, 0.50)",
+  },
+
+  activeGlow: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 50,
+    backgroundColor: "rgba(199, 167, 108, 0.16)",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.86)",
-    shadowColor: "#101820",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.14,
-    shadowRadius: 18,
-    elevation: 8,
+    borderColor: "rgba(199, 167, 108, 0.03)",
+    paddingVertical: 10,
   },
 
   iconBubble: {
@@ -172,25 +234,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  activeIconBubble: {
-    backgroundColor: "rgba(17, 38, 61, 0.09)",
-    transform: [{ scale: 1.04 }],
-  },
-
   emojiIcon: {
-    position: "absolute",
     fontSize: 17,
-  },
-
-  icon: {
-    width: 18,
-    height: 18,
-    resizeMode: "contain",
-    opacity: 0,
-  },
-
-  activeIcon: {
-    opacity: 0,
   },
 
   label: {

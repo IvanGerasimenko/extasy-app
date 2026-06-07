@@ -130,7 +130,15 @@ function profileToUser(profile: ProfileRow): SessionUser {
   const storedPhotos = (profile.photos ?? []).filter(
     (photo) => !isGoogleAvatarUrl(photo),
   );
-  const profilePhotos = storedPhotos.length ? storedPhotos : undefined;
+  const fallbackPicture =
+    profile.picture && !isGoogleAvatarUrl(profile.picture)
+      ? profile.picture
+      : undefined;
+  const profilePhotos = storedPhotos.length
+    ? storedPhotos
+    : fallbackPicture
+      ? [fallbackPicture]
+      : undefined;
 
   return {
     id: profile.id,
@@ -318,9 +326,17 @@ async function restoreProfileForVerifiedEmail(
   profile: ProfileRow,
   verifiedEmail?: string,
 ) {
+  const currentPhotos = (
+    profile.photos?.length
+      ? profile.photos
+      : profile.picture
+        ? [profile.picture]
+        : []
+  ).filter((photo) => !isGoogleAvatarUrl(photo));
+
   if (
     !verifiedEmail ||
-    (profile.onboarding_completed && profile.photos?.length)
+    (profile.onboarding_completed && currentPhotos.length)
   ) {
     return profile;
   }
@@ -336,17 +352,27 @@ async function restoreProfileForVerifiedEmail(
     legacyResult.data as ProfileRow[] | null,
     legacyResult.error,
   );
-  const legacyProfile = legacyProfiles.find((candidate) =>
-    candidate.photos?.some((photo) => !isGoogleAvatarUrl(photo)),
-  );
+  const legacyProfile = legacyProfiles.find((candidate) => {
+    const hasStoredPhoto = candidate.photos?.some(
+      (photo) => !isGoogleAvatarUrl(photo),
+    );
+    const hasPicture =
+      candidate.picture && !isGoogleAvatarUrl(candidate.picture);
 
-  if (!legacyProfile?.photos?.length) {
+    return hasStoredPhoto || hasPicture;
+  });
+
+  if (!legacyProfile) {
     return profile;
   }
 
-  const restoredPhotos = legacyProfile.photos.filter(
-    (photo) => !isGoogleAvatarUrl(photo),
-  );
+  const restoredPhotos = (
+    legacyProfile.photos?.length
+      ? legacyProfile.photos
+      : legacyProfile.picture
+        ? [legacyProfile.picture]
+        : []
+  ).filter((photo) => !isGoogleAvatarUrl(photo));
 
   if (!restoredPhotos.length) {
     return profile;
@@ -375,24 +401,6 @@ async function restoreProfileForVerifiedEmail(
   return requireData(restored.data as ProfileRow | null, restored.error);
 }
 
-async function syncCurrentProfile() {
-  const result = await supabase.rpc("sync_current_profile");
-
-  if (!result.error && result.data) {
-    return result.data as ProfileRow;
-  }
-
-  // Keep older deployments usable until the database migration is applied.
-  if (
-    result.error &&
-    !result.error.message.toLowerCase().includes("sync_current_profile")
-  ) {
-    throw new Error(result.error.message);
-  }
-
-  return null;
-}
-
 export async function getSessionUser() {
   await clearLegacyStorage();
   const authResult = await supabase.auth.getUser();
@@ -402,12 +410,16 @@ export async function getSessionUser() {
     return null;
   }
 
-  const syncedProfile = await syncCurrentProfile();
-
-  if (syncedProfile) {
-    return profileToUser(syncedProfile);
+  if (__DEV__) {
+    console.log("AUTH USER", {
+      id: authUser.id,
+      email: authUser.email,
+      provider: authUser.app_metadata?.provider,
+    });
   }
 
+  // The auth user id is the profile's stable key on every browser and device.
+  // Read it directly so a stale database RPC cannot replace onboarding data.
   const result = await supabase
     .from("profiles")
     .select("*")
@@ -418,7 +430,7 @@ export async function getSessionUser() {
   if (!profile) {
     const inserted = await supabase
       .from("profiles")
-      .upsert({
+      .insert({
         id: authUser.id,
         email: authUser.email ?? null,
         phone_number: authUser.phone ?? null,
@@ -438,8 +450,22 @@ export async function getSessionUser() {
 
   profile = await restoreProfileForVerifiedEmail(
     profile,
-    authUser.email ?? undefined,
+    authUser.email_confirmed_at ||
+      authUser.app_metadata?.provider === "google" ||
+      authUser.app_metadata?.providers?.includes("google")
+      ? authUser.email
+      : undefined,
   );
+
+  if (__DEV__) {
+    console.log("DATABASE PROFILE", {
+      id: profile.id,
+      name: profile.name,
+      picture: profile.picture,
+      photos: profile.photos,
+      onboardingCompleted: profile.onboarding_completed,
+    });
+  }
 
   return profileToUser(profile);
 }

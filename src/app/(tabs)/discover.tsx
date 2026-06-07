@@ -248,7 +248,7 @@ export default function DiscoverScreen() {
         return;
       }
 
-      if (!sessionUser || !hasCompleteProfile(sessionUser)) {
+      if (!sessionUser || !sessionUser.onboardingCompleted) {
         router.replace("/onboarding");
         return;
       }

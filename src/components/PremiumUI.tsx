@@ -3,6 +3,7 @@ import {
   premiumShadow,
   premiumType,
 } from "@/constants/premiumDesign";
+import { FadeIn, ScalePressable } from "@/components/Motion";
 import React from "react";
 import {
   ActivityIndicator,
@@ -29,14 +30,14 @@ export function PremiumHeader({
   right?: React.ReactNode;
 }) {
   return (
-    <View style={styles.header}>
+    <FadeIn style={styles.header}>
       <View style={styles.headerCopy}>
         {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
         <Text style={styles.title}>{title}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
       {right}
-    </View>
+    </FadeIn>
   );
 }
 
@@ -54,21 +55,23 @@ export function PremiumButton({
   const isPrimary = variant === "primary";
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.82}
-      style={[
-        styles.button,
-        isPrimary ? styles.primaryButton : styles.secondaryButton,
-        variant === "ghost" && styles.ghostButton,
-        disabled && styles.disabled,
-      ]}
+    <ScalePressable
+      style={styles.buttonPressable}
       onPress={onPress}
       disabled={disabled}
     >
-      <Text style={isPrimary ? styles.primaryButtonText : styles.buttonText}>
-        {title}
-      </Text>
-    </TouchableOpacity>
+      <View
+        style={[
+          styles.button,
+          isPrimary ? styles.primaryButton : styles.secondaryButton,
+          variant === "ghost" && styles.ghostButton,
+        ]}
+      >
+        <Text style={isPrimary ? styles.primaryButtonText : styles.buttonText}>
+          {title}
+        </Text>
+      </View>
+    </ScalePressable>
   );
 }
 
@@ -240,6 +243,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 18,
+  },
+  buttonPressable: {
+    width: "100%",
   },
 
   primaryButton: {

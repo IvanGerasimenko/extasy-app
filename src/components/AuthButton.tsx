@@ -1,5 +1,6 @@
+import { ScalePressable } from "@/components/Motion";
 import React from "react";
-import { Image, StyleSheet, Text, TouchableOpacity } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
 
 type AuthButtonProps = {
   title: string;
@@ -17,39 +18,46 @@ export default function AuthButton({
   const isDark = variant === "Dark";
 
   return (
-    <TouchableOpacity
-      style={[styles.button, isDark ? styles.darkButton : styles.lightButton]}
+    <ScalePressable
+      style={styles.pressable}
       onPress={onPress}
-      activeOpacity={0.8}
     >
-      <Image source={icon} style={styles.icon} resizeMode="contain" />
-
-      <Text style={[styles.text, isDark ? styles.darkText : styles.lightText]}>
-        {title}
-      </Text>
-    </TouchableOpacity>
+      <View
+        style={[styles.button, isDark ? styles.darkButton : styles.lightButton]}
+      >
+        <Image source={icon} style={styles.icon} resizeMode="contain" />
+        <Text style={[styles.text, isDark ? styles.darkText : styles.lightText]}>
+          {title}
+        </Text>
+      </View>
+    </ScalePressable>
   );
 }
 
 const styles = StyleSheet.create({
+  pressable: {
+    width: "100%",
+    marginBottom: 14,
+  },
   button: {
     width: "100%",
-    height: 56,
-    borderRadius: 37,
+    height: 60,
+    borderRadius: 22,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
     padding: 16,
-    marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.72)",
   },
 
   lightButton: {
@@ -67,6 +75,7 @@ const styles = StyleSheet.create({
 
   text: {
     fontSize: 16,
+    fontWeight: "800",
   },
 
   lightText: {

@@ -436,9 +436,6 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255, 255, 255, 0.72)",
     padding: Platform.OS === "web" ? 24 : 16,
     overflow: "hidden",
-    shadowColor: "#101820",
-    shadowOffset: { width: 0, height: 26 },
-    shadowRadius: 38,
     elevation: 14,
   },
 
@@ -605,7 +602,6 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255, 255, 255, 0.76)",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#101820",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08,
     shadowRadius: 18,
