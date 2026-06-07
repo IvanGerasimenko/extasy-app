@@ -1,7 +1,13 @@
 import { getUnreadNotificationCountForCurrentUser } from "@/services/auth/session";
 import { router, usePathname } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 const menuItems = [
   {
@@ -62,7 +68,7 @@ export default function BottomMenu() {
   }, [pathname]);
 
   return (
-    <View style={styles.menuShell}>
+    <View pointerEvents="box-none" style={styles.menuShell}>
       <View style={styles.menu}>
         {menuItems.map((item) => {
           const isActive = pathname === item.route;
@@ -71,7 +77,11 @@ export default function BottomMenu() {
             <TouchableOpacity
               key={item.route}
               style={[styles.button, isActive && styles.activeButton]}
-              onPress={() => router.push(item.route)}
+              onPress={() => {
+                if (!isActive) {
+                  router.replace(item.route);
+                }
+              }}
             >
               <View
                 style={[styles.iconBubble, isActive && styles.activeIconBubble]}
@@ -101,23 +111,24 @@ export default function BottomMenu() {
 const styles = StyleSheet.create({
   menuShell: {
     position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 18,
-    zIndex: 20,
+    left: 12,
+    right: 12,
+    bottom: 14,
+    zIndex: 100,
     alignItems: "center",
   },
 
   menu: {
-    width: "91%",
-    maxWidth: 540,
-    backgroundColor: "rgba(255, 255, 255, 0.72)",
-    borderColor: "rgba(255, 255, 255, 0.76)",
+    width: "100%",
+    maxWidth: 520,
+    minHeight: 68,
+    backgroundColor: "rgba(255, 255, 255, 0.96)",
+    borderColor: "rgba(255, 255, 255, 0.9)",
     borderWidth: 1,
-    borderRadius: 32,
-    padding: 7,
+    borderRadius: 28,
+    padding: 6,
     flexDirection: "row",
-    gap: 6,
+    gap: 4,
     alignItems: "center",
     justifyContent: "space-between",
     shadowColor: "#1E1306",
@@ -132,12 +143,13 @@ const styles = StyleSheet.create({
 
   button: {
     flex: 1,
-    height: 62,
-    borderRadius: 25,
+    minWidth: 0,
+    height: 56,
+    borderRadius: 22,
     backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
+    gap: 2,
   },
 
   activeButton: {
@@ -152,9 +164,9 @@ const styles = StyleSheet.create({
   },
 
   iconBubble: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: "rgba(255, 255, 255, 0.34)",
     alignItems: "center",
     justifyContent: "center",
@@ -167,7 +179,7 @@ const styles = StyleSheet.create({
 
   emojiIcon: {
     position: "absolute",
-    fontSize: 18,
+    fontSize: 17,
   },
 
   icon: {
@@ -183,7 +195,7 @@ const styles = StyleSheet.create({
 
   label: {
     color: "rgba(16, 24, 32, 0.64)",
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "800",
   },
 
@@ -193,8 +205,8 @@ const styles = StyleSheet.create({
 
   badge: {
     position: "absolute",
-    top: -3,
-    right: -3,
+    top: 2,
+    right: 4,
     minWidth: 20,
     height: 20,
     borderRadius: 10,

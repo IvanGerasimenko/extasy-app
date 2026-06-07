@@ -99,9 +99,13 @@ export default function ProfileSavingScreen() {
 
           router.replace(updatedUser ? "/discover" : "/welcome");
         }, remainingDelay);
-      } catch {
+      } catch (error) {
         if (isMounted) {
-          setError("Das Profil konnte nicht gespeichert werden. Bitte versuche es erneut.");
+          setError(
+            error instanceof Error
+              ? `Das Profil konnte nicht gespeichert werden: ${error.message}`
+              : "Das Profil konnte nicht gespeichert werden. Bitte versuche es erneut.",
+          );
         }
       }
     }

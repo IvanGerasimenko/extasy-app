@@ -36,12 +36,13 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
   type ImageSourcePropType,
 } from "react-native";
 
-const screenWidth = Dimensions.get("window").width;
-const isCompactViewport = screenWidth < 500;
+const initialScreenWidth = Dimensions.get("window").width;
+const isCompactViewport = initialScreenWidth < 500;
 const isWeb = Platform.OS === "web";
 
 type DiscoverProfile = {
@@ -191,6 +192,7 @@ function getDiscoverProfiles(
 }
 
 export default function DiscoverScreen() {
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [deck, setDeck] = useState<DiscoverProfile[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -208,6 +210,9 @@ export default function DiscoverScreen() {
     [activeIndex, deck],
   );
   const remainingProfiles = Math.max(0, deck.length - activeIndex);
+  const isDesktopWeb = isWeb && screenWidth >= 768;
+  const desktopCardHeight = Math.max(400, Math.min(620, screenHeight - 190));
+  const desktopCardWidth = Math.min(540, desktopCardHeight * 0.78);
 
   const cardRotate = cardTranslateX.interpolate({
     inputRange: [-screenWidth, 0, screenWidth],
@@ -375,13 +380,30 @@ export default function DiscoverScreen() {
     <ThemedBackground style={styles.background}>
       <ScrollView
         style={styles.screen}
-        contentContainerStyle={styles.container}
+        contentContainerStyle={[
+          styles.container,
+          isDesktopWeb && styles.desktopContainer,
+        ]}
         showsVerticalScrollIndicator={false}
       >
-        <View>
+        <View
+          style={
+            isDesktopWeb
+              ? { width: desktopCardWidth, alignSelf: "center" }
+              : undefined
+          }
+        >
           <Text style={styles.extasytitle}>Extasy</Text>
         </View>
-        <View style={styles.headerPill}>
+        <View
+          style={[
+            styles.headerPill,
+            isDesktopWeb && {
+              width: desktopCardWidth,
+              alignSelf: "center",
+            },
+          ]}
+        >
           <Text style={styles.headerPillText}>
             {remainingProfiles} verfügbar
           </Text>
@@ -392,6 +414,12 @@ export default function DiscoverScreen() {
             key={`${activeMatch.id}-${activeIndex}`}
             style={[
               styles.matchCard,
+              isDesktopWeb && {
+                width: desktopCardWidth,
+                height: desktopCardHeight,
+                minHeight: desktopCardHeight,
+                alignSelf: "center",
+              },
               {
                 transform: [
                   { translateX: cardTranslateX },
@@ -557,11 +585,11 @@ export default function DiscoverScreen() {
               {activeMatch.photos.map((photo, index) => (
                 <View
                   key={`${activeMatch.id}-fullscreen-${index}`}
-                  style={styles.fullscreenSlide}
+                  style={[styles.fullscreenSlide, { width: screenWidth }]}
                 >
                   <Image
                     source={photo}
-                    style={styles.fullscreenImage}
+                    style={[styles.fullscreenImage, { width: screenWidth }]}
                     resizeMode="contain"
                   />
                 </View>
@@ -598,6 +626,12 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     paddingHorizontal: 10,
     paddingTop: 10,
+    paddingBottom: 132,
+  },
+
+  desktopContainer: {
+    justifyContent: "center",
+    paddingTop: 0,
   },
 
   headerPill: {
@@ -627,6 +661,8 @@ const styles = StyleSheet.create({
   matchCard: {
     minHeight: isWeb ? 560 : isCompactViewport ? 580 : 360,
     maxWidth: isWeb ? 540 : undefined,
+    width: "100%",
+    alignSelf: "center",
     marginBottom: isCompactViewport ? 42 : 48,
     borderRadius: premiumSpacing.cardRadius,
     overflow: "visible",
@@ -853,7 +889,7 @@ const styles = StyleSheet.create({
   },
 
   fullscreenImage: {
-    width: screenWidth,
+    width: initialScreenWidth,
     height: "100%",
   },
 
@@ -863,7 +899,7 @@ const styles = StyleSheet.create({
   },
 
   fullscreenSlide: {
-    width: screenWidth,
+    width: initialScreenWidth,
     height: "100%",
     alignItems: "center",
     justifyContent: "center",

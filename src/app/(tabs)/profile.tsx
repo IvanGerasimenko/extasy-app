@@ -16,7 +16,6 @@ import React, {
 } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   Image,
   Modal,
   PanResponder,
@@ -25,10 +24,9 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
-
-const screenWidth = Dimensions.get("window").width;
 
 const systemFont = Platform.select({
   ios: "System",
@@ -41,6 +39,7 @@ const systemFontBold = Platform.select({
 });
 
 export default function ProfileScreen() {
+  const { width: screenWidth } = useWindowDimensions();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [photoIndex, setPhotoIndex] = useState(0);
@@ -270,14 +269,11 @@ export default function ProfileScreen() {
         {photos.length ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>📸 Fotos</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.photosRow}
-            >
+            <View style={styles.photosGrid}>
               {photos.map((photo, index) => (
                 <TouchableOpacity
                   key={`${photo}-${index}`}
+                  style={styles.photoTile}
                   onPress={() => {
                     setPhotoIndex(index);
                     setFullscreenOpen(true);
@@ -286,13 +282,13 @@ export default function ProfileScreen() {
                   <Image
                     source={{ uri: photo }}
                     style={[
-                      styles.photo,
+                      styles.gridPhoto,
                       photoIndex === index && styles.activePhoto,
                     ]}
                   />
                 </TouchableOpacity>
               ))}
-            </ScrollView>
+            </View>
           </View>
         ) : null}
       </ScrollView>
@@ -327,10 +323,13 @@ export default function ProfileScreen() {
               }}
             >
               {photos.map((photo, index) => (
-                <View key={`${photo}-${index}`} style={styles.fullscreenSlide}>
+                <View
+                  key={`${photo}-${index}`}
+                  style={[styles.fullscreenSlide, { width: screenWidth }]}
+                >
                   <Image
                     source={{ uri: photo }}
-                    style={styles.fullscreenImage}
+                    style={[styles.fullscreenImage, { width: screenWidth }]}
                     resizeMode="contain"
                   />
                 </View>
@@ -362,11 +361,12 @@ const styles = StyleSheet.create({
   },
 
   container: {
-    maxWidth: Platform.OS === "web" ? 900 : 560,
+    width: "100%",
+    maxWidth: Platform.OS === "web" ? 600 : 560,
     alignSelf: "center",
     paddingTop: Platform.OS === "web" ? 34 : 58,
     paddingBottom: Platform.OS === "web" ? 150 : 136,
-    paddingHorizontal: 16,
+    paddingHorizontal: 26,
   },
 
   iconButton: {
@@ -456,11 +456,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     minWidth: Platform.OS === "web" ? undefined : "100%",
-    shadowColor: "#101820",
-    shadowOffset: { width: 0, height: 18 },
     position: "relative",
     top: Platform.OS === "web" ? -12 : 50,
-    elevation: 10,
     zIndex: 1,
   },
 
@@ -595,10 +592,12 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 20,
     maxWidth: Platform.OS === "web" ? 760 : undefined,
+    minWidth: 0,
   },
 
   statBox: {
     flex: 1,
+    minWidth: 0,
     minHeight: 88,
     borderRadius: 26,
     backgroundColor: "rgba(255, 255, 255, 0.46)",
@@ -628,6 +627,8 @@ const styles = StyleSheet.create({
   },
 
   section: {
+    width: "100%",
+    minWidth: 0,
     marginTop: 16,
     maxWidth: Platform.OS === "web" ? 860 : undefined,
     borderRadius: 30,
@@ -680,15 +681,24 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  photosRow: {
-    gap: 12,
-    paddingRight: 4,
+  photosGrid: {
+    width: "100%",
+    minWidth: 0,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
   },
 
-  photo: {
-    width: 118,
-    height: 146,
-    borderRadius: 22,
+  photoTile: {
+    width: "32%",
+    minWidth: 0,
+    aspectRatio: 1,
+  },
+
+  gridPhoto: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 10,
   },
 
   activePhoto: {
@@ -709,14 +719,12 @@ const styles = StyleSheet.create({
   },
 
   fullscreenSlide: {
-    width: screenWidth,
     height: "100%",
     alignItems: "center",
     justifyContent: "center",
   },
 
   fullscreenImage: {
-    width: screenWidth,
     height: "100%",
   },
 

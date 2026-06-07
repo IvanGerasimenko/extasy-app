@@ -12,6 +12,7 @@ import {
   getCurrentUserMatches,
   getSessionUser,
   getUserKey,
+  submitReport,
   updateSessionDiscoverVisibility,
   type MatchRecord,
   type SessionUser,
@@ -47,6 +48,7 @@ export default function SettingsScreen() {
     string | null
   >(null);
   const [customProblemText, setCustomProblemText] = useState("");
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   const reportReasons = [
     "Fehler in der App",
@@ -165,22 +167,35 @@ export default function SettingsScreen() {
     );
   }
 
-  function handleReportReason(reason: string) {
+  async function handleReportReason(reason: string) {
     setSelectedReportReason(reason);
 
     if (reason === "Anderes Problem") {
       return;
     }
 
-    setCustomProblemText("");
-    setReportReasonOpen(false);
-    setSafetyMessage(
-      `Support: Anfrage erhalten. Thema: ${reason}. Wir prüfen die App und melden uns mit dem nächsten Schritt.`,
-    );
-    setTimeout(() => setSafetyOpen(true), 180);
+    setIsSubmittingReport(true);
+
+    try {
+      await submitReport({ category: reason });
+      setCustomProblemText("");
+      setReportReasonOpen(false);
+      setSafetyMessage(
+        `Support: Anfrage gespeichert. Thema: ${reason}. Wir prüfen die Meldung.`,
+      );
+      setTimeout(() => setSafetyOpen(true), 180);
+    } catch (error) {
+      setSafetyMessage(
+        error instanceof Error
+          ? `Support: ${error.message}`
+          : "Support: Die Meldung konnte nicht gesendet werden.",
+      );
+    } finally {
+      setIsSubmittingReport(false);
+    }
   }
 
-  function handleCustomProblemSubmit() {
+  async function handleCustomProblemSubmit() {
     const problemText = customProblemText.trim();
 
     if (!problemText) {
@@ -188,12 +203,26 @@ export default function SettingsScreen() {
       return;
     }
 
-    setReportReasonOpen(false);
-    setSafetyMessage(
-      `Support: Anfrage erhalten. Thema: Anderes Problem. Beschreibung: ${problemText}`,
-    );
-    setCustomProblemText("");
-    setTimeout(() => setSafetyOpen(true), 180);
+    setIsSubmittingReport(true);
+
+    try {
+      await submitReport({
+        category: "Anderes Problem",
+        description: problemText,
+      });
+      setReportReasonOpen(false);
+      setSafetyMessage("Support: Deine Meldung wurde gespeichert.");
+      setCustomProblemText("");
+      setTimeout(() => setSafetyOpen(true), 180);
+    } catch (error) {
+      setSafetyMessage(
+        error instanceof Error
+          ? `Support: ${error.message}`
+          : "Support: Die Meldung konnte nicht gesendet werden.",
+      );
+    } finally {
+      setIsSubmittingReport(false);
+    }
   }
 
   function openReportReasonModal() {
@@ -517,6 +546,7 @@ export default function SettingsScreen() {
                       styles.reportReasonSelected,
                   ]}
                   onPress={() => handleReportReason(reason)}
+                  disabled={isSubmittingReport}
                 >
                   <Text style={styles.reportReasonText}>{reason}</Text>
                 </TouchableOpacity>
@@ -538,9 +568,12 @@ export default function SettingsScreen() {
                   activeOpacity={0.82}
                   style={styles.sendProblemButton}
                   onPress={handleCustomProblemSubmit}
+                  disabled={isSubmittingReport}
                 >
                   <Text style={styles.sendProblemButtonText}>
-                    Problem senden
+                    {isSubmittingReport
+                      ? "Wird gesendet..."
+                      : "Problem senden"}
                   </Text>
                 </TouchableOpacity>
               </View>

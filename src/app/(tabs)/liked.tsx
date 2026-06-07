@@ -25,15 +25,18 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 
 const isWeb = Platform.OS === "web";
 
 export default function LikedScreen() {
+  const { width } = useWindowDimensions();
   const [likedProfiles, setLikedProfiles] = useState<LikedProfileRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const pathname = usePathname();
+  const isCompactWeb = isWeb && width < 620;
 
   useEffect(() => {
     let isMounted = true;
@@ -102,69 +105,77 @@ export default function LikedScreen() {
             return (
               <TouchableOpacity
                 key={record.user.id}
-                style={styles.likedCard}
+                style={[
+                  styles.likedCard,
+                  isCompactWeb && styles.compactLikedCard,
+                ]}
                 onPress={() => handleOpenRecord(record)}
               >
-                <TouchableOpacity
-                  onPress={() =>
-                    router.push(
-                      `/userProfile?userKey=${getUserKey(record.user)}`,
-                    )
-                  }
-                >
-                  {photo ? (
-                    <Image source={{ uri: photo }} style={styles.avatar} />
-                  ) : (
-                    <View style={styles.avatarPlaceholder}>
-                      <Text style={styles.avatarInitial}>
-                        {record.user.name?.slice(0, 1).toUpperCase() ?? "E"}
-                      </Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
+                <View style={styles.cardMain}>
+                  <TouchableOpacity
+                    onPress={() =>
+                      router.push(
+                        `/userProfile?userKey=${getUserKey(record.user)}`,
+                      )
+                    }
+                  >
+                    {photo ? (
+                      <Image source={{ uri: photo }} style={styles.avatar} />
+                    ) : (
+                      <View style={styles.avatarPlaceholder}>
+                        <Text style={styles.avatarInitial}>
+                          {record.user.name?.slice(0, 1).toUpperCase() ?? "E"}
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
 
-                <View style={styles.copy}>
-                  <Text style={styles.name}>
-                    {record.user.name}, {record.user.age}
-                  </Text>
-                  {record.user.city && record.user.country ? (
-                    <Text style={styles.location} numberOfLines={1}>
-                      {record.user.city}, {getCountryLabel(record.user.country)}
+                  <View style={styles.copy}>
+                    <Text style={styles.name} numberOfLines={2}>
+                      {record.user.name}, {record.user.age}
                     </Text>
-                  ) : null}
-                  <Text style={styles.about} numberOfLines={2}>
-                    {record.user.about}
-                  </Text>
+                    {record.user.city && record.user.country ? (
+                      <Text style={styles.location} numberOfLines={1}>
+                        {record.user.city},{" "}
+                        {getCountryLabel(record.user.country)}
+                      </Text>
+                    ) : null}
+                    <Text style={styles.about} numberOfLines={2}>
+                      {record.user.about}
+                    </Text>
+                  </View>
                 </View>
 
-                <View
-                  style={[
-                    styles.statusBadge,
-                    record.status === "accepted" && styles.mutualBadge,
-                    record.status === "pending" && styles.waitingBadge,
-                    record.status === "skipped" && styles.skippedBadge,
-                  ]}
-                >
-                  <Text
+                <View style={styles.cardActions}>
+                  <View
                     style={[
-                      styles.statusText,
-                      record.status === "accepted" && styles.mutualText,
-                      record.status === "pending" && styles.waitingText,
-                      record.status === "skipped" && styles.skippedText,
+                      styles.statusBadge,
+                      record.status === "accepted" && styles.mutualBadge,
+                      record.status === "pending" && styles.waitingBadge,
+                      record.status === "skipped" && styles.skippedBadge,
                     ]}
                   >
-                    {statusLabel}
-                  </Text>
-                </View>
+                    <Text
+                      style={[
+                        styles.statusText,
+                        record.status === "accepted" && styles.mutualText,
+                        record.status === "pending" && styles.waitingText,
+                        record.status === "skipped" && styles.skippedText,
+                      ]}
+                    >
+                      {statusLabel}
+                    </Text>
+                  </View>
 
-                {record.status === "accepted" ? (
-                  <TouchableOpacity
-                    style={styles.chatButton}
-                    onPress={() => handleOpenRecord(record)}
-                  >
-                    <Text style={styles.chatText}>Chat</Text>
-                  </TouchableOpacity>
-                ) : null}
+                  {record.status === "accepted" ? (
+                    <TouchableOpacity
+                      style={styles.chatButton}
+                      onPress={() => handleOpenRecord(record)}
+                    >
+                      <Text style={styles.chatText}>Chat</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
               </TouchableOpacity>
             );
           })
@@ -235,6 +246,28 @@ const styles = StyleSheet.create({
     ...premiumShadow,
   },
 
+  compactLikedCard: {
+    alignItems: "stretch",
+    flexDirection: "column",
+    gap: 12,
+  },
+
+  cardMain: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  cardActions: {
+    flexShrink: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+
   avatar: {
     width: 64,
     height: 64,
@@ -258,11 +291,14 @@ const styles = StyleSheet.create({
 
   copy: {
     flex: 1,
+    minWidth: 0,
   },
 
   name: {
     color: premiumColors.ink,
     fontSize: 17,
+    fontWeight: "800",
+    flexShrink: 1,
   },
 
   about: {

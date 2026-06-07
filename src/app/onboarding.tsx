@@ -18,8 +18,10 @@ import {
   premiumSpacing,
   premiumType,
 } from "@/constants/premiumDesign";
-import { getSessionUser } from "@/services/auth/session";
-import { setPendingOnboardingProfile } from "@/services/onboarding/pendingProfile";
+import {
+  completeSessionOnboarding,
+  getSessionUser,
+} from "@/services/auth/session";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -230,7 +232,7 @@ export default function OnboardingScreen() {
 
     try {
       const storagePhotos = await preparePhotosForStorage(photos);
-      setPendingOnboardingProfile({
+      const savedUser = await completeSessionOnboarding({
         name: name.trim() || undefined,
         age: age.trim() || undefined,
         city: city.trim() || undefined,
@@ -242,15 +244,34 @@ export default function OnboardingScreen() {
         lookingFor: lookingFor || undefined,
         interests,
       });
+
+      if (
+        !savedUser?.photos?.length ||
+        savedUser.photos.length !== storagePhotos.length
+      ) {
+        throw new Error("Die Fotos wurden nicht vollständig gespeichert.");
+      }
+
+      const verifiedUser = await getSessionUser();
+
+      if (
+        !verifiedUser?.photos?.length ||
+        verifiedUser.photos.length !== storagePhotos.length
+      ) {
+        throw new Error(
+          "Supabase hat die gespeicherten Fotos nicht bestätigt.",
+        );
+      }
+
+      router.replace("/discover");
     } catch (error) {
       setIsSaving(false);
       setError(
-        "Das Profilfoto ist zu groß für den Safari-Speicher. Entferne es und füge es erneut hinzu.",
+        error instanceof Error
+          ? `Das Profil konnte nicht gespeichert werden: ${error.message}`
+          : "Das Profil konnte nicht gespeichert werden.",
       );
-      return;
     }
-
-    router.replace("/profileSaving");
   }
 
   function Tag({

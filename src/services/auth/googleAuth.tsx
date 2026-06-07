@@ -1,169 +1,142 @@
-import { ResponseType } from "expo-auth-session";
-import * as Google from "expo-auth-session/providers/google";
+import { supabase } from "@/services/supabase";
+import { makeRedirectUri } from "expo-auth-session";
+import * as QueryParams from "expo-auth-session/build/QueryParams";
 import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
 import { Platform } from "react-native";
-import { getSessionUser, saveSessionUser, type SessionUser } from "./session";
+import { getSessionUser, type SessionUser } from "./session";
 
 WebBrowser.maybeCompleteAuthSession();
 
-const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
-const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-const androidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
-const webRedirectUri = process.env.EXPO_PUBLIC_GOOGLE_WEB_REDIRECT_URI;
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+function getRedirectTo() {
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    return `${window.location.origin}/auth/callback`;
+  }
 
-type GoogleUser = {
-  sub: string;
-  email: string;
-  name?: string;
-  picture?: string;
-};
-
-type DbUserResponse = {
-  user: SessionUser & {
-    googleId: string;
-    email: string;
-  };
-  isNewUser: boolean;
-};
-
-function getLocalGoogleUserId(googleId: string) {
-  return Array.from(googleId).reduce(
-    (hash, character) => (hash * 31 + character.charCodeAt(0)) % 1_000_000_000,
-    7,
-  );
+  return makeRedirectUri({
+    scheme: "extasy",
+    path: "auth/callback",
+  });
 }
 
-function createLocalGoogleUser(
-  user: GoogleUser,
-  existingUser?: SessionUser | null,
-): DbUserResponse {
-  const matchingExistingUser =
-    existingUser?.googleId === user.sub ||
-    existingUser?.email?.toLowerCase() === user.email.toLowerCase()
-      ? existingUser
-      : null;
+export async function createGoogleSessionFromUrl(url: string) {
+  const { params, errorCode } = QueryParams.getQueryParams(url);
 
-  return {
-    user: {
-      ...matchingExistingUser,
-      id: getLocalGoogleUserId(user.sub),
-      googleId: user.sub,
-      email: user.email,
-      name: user.name,
-      picture: user.picture,
-      photos:
-        matchingExistingUser?.photos ?? (user.picture ? [user.picture] : undefined),
-      onboardingCompleted: matchingExistingUser?.onboardingCompleted ?? false,
-      createdAt: matchingExistingUser?.createdAt ?? new Date().toISOString(),
-    },
-    isNewUser: true,
-  };
+  const rawCallbackError = params.error_description ?? params.error;
+  const callbackError = rawCallbackError
+    ? decodeURIComponent(rawCallbackError)
+    : undefined;
+
+  if (callbackError || errorCode) {
+    throw new Error(callbackError ?? errorCode ?? "Google OAuth failed.");
+  }
+
+  const accessToken = params.access_token;
+  const refreshToken = params.refresh_token;
+  const authCode = params.code;
+
+  if (authCode) {
+    const result = await supabase.auth.exchangeCodeForSession(authCode);
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+
+    return result.data.session;
+  }
+
+  if (accessToken && refreshToken) {
+    const result = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+
+    return result.data.session;
+  }
+
+  throw new Error(
+    "Supabase hat keinen OAuth-Code zurückgegeben. Prüfe die Redirect URL.",
+  );
 }
 
 export function useGoogleAuth() {
   const [isLoading, setIsLoading] = useState(false);
-  const [googleUser, setGoogleUser] = useState<GoogleUser | null>(null);
-  const [dbUser, setDbUser] = useState<DbUserResponse | null>(null);
-
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    iosClientId,
-    webClientId,
-    androidClientId,
-    scopes: ["openid", "profile", "email"],
-
-    ...(Platform.OS === "web"  ?  {redirectUri: webRedirectUri ??  (typeof window !== "undefined" ? window.location.origin : undefined),
-          responseType: ResponseType.Token,
-        }
-      : {}),
-  });
-
-  async function getUserInfo(token: string): Promise<GoogleUser> {
-    const response = await fetch(
-      "https://www.googleapis.com/oauth2/v3/userinfo",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data?.error_description || "Failed to fetch Google user");
-    }
-
-    return data;
-  }
-
-  async function saveUserToDatabase(user: GoogleUser): Promise<DbUserResponse> {
-    if (!API_URL) {
-      return createLocalGoogleUser(user, await getSessionUser());
-    }
-
-    try {
-      const response = await fetch(`${API_URL}/auth/google`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          googleId: user.sub,
-          email: user.email,
-          name: user.name,
-          picture: user.picture,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.message || "Failed to save user");
-      }
-
-      return data;
-    } catch (error) {
-      console.log("[Google Auth] API fallback:", error);
-      return createLocalGoogleUser(user, await getSessionUser());
-    }
-  }
+  const [errorMessage, setErrorMessage] = useState("");
+  const [dbUser, setDbUser] = useState<{
+    user: SessionUser;
+    isNewUser: boolean;
+  } | null>(null);
 
   async function signInWithGoogle() {
-    if (!request || isLoading) {
+    if (isLoading) {
       return null;
     }
 
     setIsLoading(true);
+    setErrorMessage("");
 
     try {
-      const result = await promptAsync();
+      const oauthResult = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: getRedirectTo(),
+          skipBrowserRedirect: Platform.OS !== "web",
+        },
+      });
 
-      if (result.type !== "success") {
+      if (oauthResult.error) {
+        throw new Error(oauthResult.error.message);
+      }
+
+      if (!oauthResult.data.url) {
+        throw new Error("Google-Anmeldung konnte nicht geöffnet werden.");
+      }
+
+      if (Platform.OS === "web") {
         return null;
       }
 
-      const token = result.authentication?.accessToken;
+      const redirectTo = getRedirectTo();
+      const browserResult = await WebBrowser.openAuthSessionAsync(
+        oauthResult.data.url,
+        redirectTo,
+      );
 
-      if (!token) {
-        throw new Error("Access token not found");
+      if (browserResult.type !== "success") {
+        if (browserResult.type !== "cancel") {
+          setErrorMessage("Google-Anmeldung wurde nicht abgeschlossen.");
+        }
+        return null;
       }
 
-      const googleUserData = await getUserInfo(token);
-      const savedUser = await saveUserToDatabase(googleUserData);
+      await createGoogleSessionFromUrl(browserResult.url);
 
-      await saveSessionUser(savedUser.user);
+      const user = await getSessionUser();
+      if (!user) {
+        throw new Error("Das Supabase-Profil wurde nicht erstellt.");
+      }
 
-      setGoogleUser(googleUserData);
+      const savedUser = {
+        user,
+        isNewUser: !user.onboardingCompleted,
+      };
+
       setDbUser(savedUser);
 
       return {
-        googleUser: googleUserData,
         dbUser: savedUser,
       };
     } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Google-Anmeldung ist fehlgeschlagen.";
       console.log("[Google Auth] Error:", error);
+      setErrorMessage(message);
       return null;
     } finally {
       setIsLoading(false);
@@ -172,10 +145,8 @@ export function useGoogleAuth() {
 
   return {
     signInWithGoogle,
-    request,
-    response,
     isLoading,
-    googleUser,
+    errorMessage,
     dbUser,
   };
 }

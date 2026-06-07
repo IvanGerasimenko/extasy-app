@@ -4,7 +4,6 @@ import React from "react";
 import {
   Image,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -66,11 +65,7 @@ export default function ImagePicker({
   }
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.photosRow}
-    >
+    <View style={styles.photosGrid}>
       <TouchableOpacity style={styles.addPhoto} onPress={pickImage}>
         <Text style={styles.plus}>+</Text>
         <Text style={styles.addPhotoText}>Foto hinzufügen</Text>
@@ -87,7 +82,7 @@ export default function ImagePicker({
           </TouchableOpacity>
         </View>
       ))}
-    </ScrollView>
+    </View>
   );
 }
 
@@ -121,17 +116,20 @@ async function resizeWebImage(uri: string) {
 }
 
 const styles = StyleSheet.create({
-  photosRow: {
+  photosGrid: {
+    width: "100%",
+    minWidth: 0,
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
     marginBottom: 28,
-    paddingRight: 4,
   },
 
   addPhoto: {
-    width: 104,
-    height: 128,
-    borderRadius: 24,
+    width: "31%",
+    minWidth: 0,
+    aspectRatio: 0.82,
+    borderRadius: 18,
     borderWidth: 1,
     borderStyle: "dashed",
     justifyContent: "center",
@@ -152,16 +150,17 @@ const styles = StyleSheet.create({
   },
 
   photoBox: {
-    width: 104,
-    height: 128,
-    borderRadius: 24,
+    width: "100%",
+    height: "100%",
+    borderRadius: 18,
     backgroundColor: premiumColors.champagneSoft,
     ...premiumShadow,
   },
 
   photoWrap: {
-    width: 104,
-    height: 128,
+    width: "31%",
+    minWidth: 0,
+    aspectRatio: 0.82,
   },
 
   removeButton: {

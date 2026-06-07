@@ -1,18 +1,9 @@
-import * as SecureStore from "expo-secure-store";
+import { supabase } from "@/services/supabase";
+import { clearLegacyStorage } from "@/services/clearLegacyStorage";
 import { Platform } from "react-native";
 
-const SESSION_USER_KEY = "extasy.session.user";
-const LOCAL_ACCOUNTS_KEY = "extasy.local.accounts";
-const LIKES_KEY = "extasy.likes";
-const LIKE_REQUESTS_KEY = "extasy.like.requests";
-const VIEWED_NOTIFICATIONS_KEY = "extasy.viewed.notifications";
-const MATCHES_KEY = "extasy.matches";
-const MESSAGES_KEY = "extasy.messages";
-const BLOCKED_USERS_KEY = "extasy.blocked.users";
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
-
 export type SessionUser = {
-  id: number;
+  id: string;
   googleId?: string;
   phoneNumber?: string;
   email?: string;
@@ -31,11 +22,6 @@ export type SessionUser = {
   isDiscoverHidden?: boolean;
   onboardingCompleted: boolean;
   createdAt: string;
-};
-
-export type LocalAccount = {
-  user: SessionUser;
-  password: string;
 };
 
 export type MatchRecord = {
@@ -62,13 +48,6 @@ export type ChatMessagePayload = {
   emoji?: string;
 };
 
-export type LikedProfileRecord = {
-  user: SessionUser;
-  status: LikeRequestStatus;
-  isMutual: boolean;
-  matchId?: string;
-};
-
 export type LikeRequestStatus = "pending" | "accepted" | "skipped";
 
 export type LikeRequestRecord = {
@@ -83,8 +62,53 @@ export type LikeRequestRecord = {
   matchId?: string;
 };
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+export type LikedProfileRecord = {
+  user: SessionUser;
+  status: LikeRequestStatus;
+  isMutual: boolean;
+  matchId?: string;
+};
 
+type ProfileRow = {
+  id: string;
+  email: string | null;
+  phone_number: string | null;
+  google_id: string | null;
+  name: string | null;
+  picture: string | null;
+  photos: string[] | null;
+  about: string | null;
+  age: number | null;
+  city: string | null;
+  country: string | null;
+  gender: string | null;
+  looking_for: string | null;
+  interests: string[] | null;
+  likes_count: number;
+  matches_count: number;
+  is_discover_hidden: boolean;
+  onboarding_completed: boolean;
+  created_at: string;
+};
+
+type LikeRow = {
+  id: string;
+  from_user_id: string;
+  to_user_id: string;
+  status: LikeRequestStatus;
+  match_id: string | null;
+  created_at: string;
+  responded_at: string | null;
+};
+
+type MatchRow = {
+  id: string;
+  user_one_id: string;
+  user_two_id: string;
+  created_at: string;
+};
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const SUSPICIOUS_EMAIL_PARTS = [
   "fake",
   "noemail",
@@ -94,232 +118,268 @@ const SUSPICIOUS_EMAIL_PARTS = [
   "trash",
 ];
 
-async function getItem(key: string) {
-  if (Platform.OS === "web") {
-    return window.localStorage.getItem(key);
+function requireData<T>(
+  data: T | null,
+  error: { message: string } | null,
+): T {
+  if (error) {
+    throw new Error(error.message);
   }
-
-  return SecureStore.getItemAsync(key);
+  return data as T;
 }
 
-async function setItem(key: string, value: string) {
-  if (Platform.OS === "web") {
-    window.localStorage.setItem(key, value);
-    return;
-  }
+function profileToUser(profile: ProfileRow): SessionUser {
+  const storedPhotos = (profile.photos ?? []).filter(isProfileStorageUrl);
+  const profilePhotos = storedPhotos.length ? storedPhotos : undefined;
 
-  await SecureStore.setItemAsync(key, value);
+  return {
+    id: profile.id,
+    googleId: profile.google_id ?? undefined,
+    phoneNumber: profile.phone_number ?? undefined,
+    email: profile.email ?? undefined,
+    name: profile.name ?? undefined,
+    picture: profilePhotos?.[0],
+    photos: profilePhotos,
+    about: profile.about ?? undefined,
+    age: profile.age == null ? undefined : String(profile.age),
+    city: profile.city ?? undefined,
+    country: profile.country ?? undefined,
+    gender: profile.gender ?? undefined,
+    lookingFor: profile.looking_for ?? undefined,
+    interests: profile.interests?.length ? profile.interests : undefined,
+    likesCount: profile.likes_count,
+    matchesCount: profile.matches_count,
+    isDiscoverHidden: profile.is_discover_hidden,
+    onboardingCompleted: profile.onboarding_completed,
+    createdAt: profile.created_at,
+  };
 }
 
-async function deleteItem(key: string) {
-  if (Platform.OS === "web") {
-    window.localStorage.removeItem(key);
-    return;
+function userToProfile(user: SessionUser) {
+  return {
+    id: user.id,
+    email: user.email ?? null,
+    phone_number: user.phoneNumber ?? null,
+    google_id: user.googleId ?? null,
+    name: user.name ?? null,
+    picture: user.photos?.[0] ?? user.picture ?? null,
+    photos: user.photos ?? [],
+    about: user.about ?? null,
+    age: user.age ? Number(user.age) : null,
+    city: user.city ?? null,
+    country: user.country ?? null,
+    gender: user.gender ?? null,
+    looking_for: user.lookingFor ?? null,
+    interests: user.interests ?? [],
+    is_discover_hidden: user.isDiscoverHidden ?? false,
+    onboarding_completed: user.onboardingCompleted,
+  };
+}
+
+async function getAuthUserId() {
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) {
+    return null;
+  }
+  return data.user.id;
+}
+
+async function getProfilesByIds(ids: string[]) {
+  const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
+  if (!uniqueIds.length) {
+    return new Map<string, SessionUser>();
+  }
+  const result = await supabase.from("profiles").select("*").in("id", uniqueIds);
+  const rows = requireData(result.data as ProfileRow[] | null, result.error);
+  return new Map(rows.map((row) => [row.id, profileToUser(row)]));
+}
+
+async function getBlockPairs() {
+  const result = await supabase
+    .from("blocks")
+    .select("blocker_id, blocked_id");
+  return requireData(
+    result.data as { blocker_id: string; blocked_id: string }[] | null,
+    result.error,
+  );
+}
+
+function blockedBetween(
+  firstId: string,
+  secondId: string,
+  blocks: { blocker_id: string; blocked_id: string }[],
+) {
+  return blocks.some(
+    (block) =>
+      (block.blocker_id === firstId && block.blocked_id === secondId) ||
+      (block.blocker_id === secondId && block.blocked_id === firstId),
+  );
+}
+
+async function uploadUri(
+  bucket: "profile-photos" | "chat-media",
+  ownerId: string,
+  uri: string,
+  index = 0,
+) {
+  if (uri.startsWith("http://") || uri.startsWith("https://")) {
+    return uri;
   }
 
-  await SecureStore.deleteItemAsync(key);
+  let arrayBuffer: ArrayBuffer;
+  let contentType = "image/jpeg";
+
+  if (uri.startsWith("data:")) {
+    const parsedDataUri = dataUriToArrayBuffer(uri);
+    arrayBuffer = parsedDataUri.arrayBuffer;
+    contentType = parsedDataUri.contentType;
+  } else {
+    const response = await fetch(uri);
+
+    if (!response.ok) {
+      throw new Error("Das Bild konnte nicht gelesen werden.");
+    }
+
+    arrayBuffer = await response.arrayBuffer();
+    contentType = response.headers.get("content-type") ?? contentType;
+  }
+
+  if (!arrayBuffer.byteLength) {
+    throw new Error("Das ausgewählte Bild ist leer.");
+  }
+
+  const extension = getImageExtension(contentType);
+  const path = `${ownerId}/${Date.now()}-${index}-${Math.random()
+    .toString(16)
+    .slice(2)}.${extension}`;
+  const upload = await supabase.storage
+    .from(bucket)
+    .upload(path, arrayBuffer, { contentType, upsert: false });
+  requireData(upload.data, upload.error);
+
+  if (bucket === "profile-photos") {
+    return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+  }
+
+  const signed = await supabase.storage.from(bucket).createSignedUrl(path, 60 * 60 * 24 * 30);
+  return requireData(signed.data, signed.error).signedUrl;
+}
+
+function dataUriToArrayBuffer(uri: string) {
+  const match = uri.match(/^data:([^;,]+)?(;base64)?,(.*)$/);
+
+  if (!match) {
+    throw new Error("Das Bildformat wird nicht unterstützt.");
+  }
+
+  const contentType = match[1] || "image/jpeg";
+  const isBase64 = Boolean(match[2]);
+  const payload = match[3];
+  const binary =
+    isBase64
+      ? globalThis.atob(payload)
+      : decodeURIComponent(payload);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return {
+    arrayBuffer: bytes.buffer,
+    contentType,
+  };
+}
+
+function getImageExtension(contentType: string) {
+  if (contentType.includes("png")) return "png";
+  if (contentType.includes("webp")) return "webp";
+  if (contentType.includes("heic") || contentType.includes("heif")) return "heic";
+  return "jpg";
+}
+
+function isProfileStorageUrl(url: string) {
+  return url.includes("/storage/v1/object/public/profile-photos/");
 }
 
 export async function getSessionUser() {
-  const rawUser = await getItem(SESSION_USER_KEY);
+  await clearLegacyStorage();
+  const authResult = await supabase.auth.getUser();
+  const authUser = authResult.data.user;
 
-  if (!rawUser) {
+  if (authResult.error || !authUser) {
     return null;
   }
 
-  try {
-    return JSON.parse(rawUser) as SessionUser;
-  } catch {
-    await deleteItem(SESSION_USER_KEY);
-    return null;
+  const result = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", authUser.id)
+    .maybeSingle();
+  let profile = requireData(result.data as ProfileRow | null, result.error);
+
+  if (!profile) {
+    const inserted = await supabase
+      .from("profiles")
+      .upsert({
+        id: authUser.id,
+        email: authUser.email ?? null,
+        phone_number: authUser.phone ?? null,
+        name:
+          authUser.user_metadata?.name ??
+          authUser.user_metadata?.full_name ??
+          null,
+        picture: null,
+        photos: [],
+        onboarding_completed: false,
+      })
+      .select("*")
+      .single();
+
+    profile = requireData(
+      inserted.data as ProfileRow | null,
+      inserted.error,
+    );
   }
+
+  return profileToUser(profile);
 }
 
 export async function saveSessionUser(user: SessionUser) {
-  await setItem(SESSION_USER_KEY, JSON.stringify(user));
+  const result = await supabase
+    .from("profiles")
+    .upsert(userToProfile(user))
+    .select("*")
+    .single();
+  return profileToUser(
+    requireData(result.data as ProfileRow | null, result.error),
+  );
 }
 
 export async function getLocalAccountUsers() {
-  const accounts = await getLocalAccounts();
-  return accounts.map((account) => account.user);
-}
-
-export async function getLikedUserKeysForCurrentUser() {
-  const user = await getSessionUser();
-
-  if (!user) {
-    return [] as string[];
-  }
-
-  const currentUserKey = getUserKey(user);
-  const likes = await getLikes();
-  const blockedUsers = await getBlockedUsers();
-
-  return (likes[currentUserKey] ?? []).filter(
-    (likedUserKey) =>
-      !areUsersBlocked(currentUserKey, likedUserKey, blockedUsers),
+  const result = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("onboarding_completed", true)
+    .eq("is_discover_hidden", false);
+  return requireData(result.data as ProfileRow[] | null, result.error).map(
+    profileToUser,
   );
-}
-
-export async function getUnavailableDiscoverUserKeysForCurrentUser() {
-  const user = await getSessionUser();
-
-  if (!user) {
-    return [] as string[];
-  }
-
-  const currentUserKey = getUserKey(user);
-  const likedUserKeys = await getLikedUserKeysForCurrentUser();
-  const matches = await getCurrentUserMatches();
-  const blockedUsers = await getBlockedUsers();
-  const blockedUserKeys = blockedUsers[currentUserKey] ?? [];
-  const blockedByUserKeys = Object.entries(blockedUsers)
-    .filter(([, blockedKeys]) => blockedKeys.includes(currentUserKey))
-    .map(([blockedByUserKey]) => blockedByUserKey);
-  const matchedUserKeys = matches.flatMap((match) =>
-    match.userKeys.filter((userKey) => userKey !== currentUserKey),
-  );
-
-  return Array.from(
-    new Set([
-      ...likedUserKeys,
-      ...matchedUserKeys,
-      ...blockedUserKeys,
-      ...blockedByUserKeys,
-    ]),
-  );
-}
-
-export async function getLikedProfilesForCurrentUser() {
-  const user = await getSessionUser();
-
-  if (!user) {
-    return [] as LikedProfileRecord[];
-  }
-
-  const currentUserKey = getUserKey(user);
-  const likedUserKeys = await getLikedUserKeysForCurrentUser();
-  const users = await getLocalAccountUsers();
-  const matches = await getCurrentUserMatches();
-  const likeRequests = await getLikeRequests();
-  const blockedUsers = await getBlockedUsers();
-  const likedProfiles: LikedProfileRecord[] = [];
-
-  likedUserKeys.forEach((likedUserKey) => {
-    if (areUsersBlocked(currentUserKey, likedUserKey, blockedUsers)) {
-      return;
-    }
-
-    const likedUser = users.find(
-      (localUser) => getUserKey(localUser) === likedUserKey,
-    );
-    const match = matches.find((item) => item.userKeys.includes(likedUserKey));
-    const request = likeRequests.find(
-      (item) =>
-        item.fromUserKey === currentUserKey && item.toUserKey === likedUserKey,
-    );
-
-    if (!likedUser) {
-      return;
-    }
-
-    likedProfiles.push({
-      user: likedUser,
-      status: request?.status ?? (match ? "accepted" : "pending"),
-      isMutual: Boolean(match?.userKeys.includes(currentUserKey)),
-      matchId: match?.id ?? request?.matchId,
-    });
-  });
-
-  return likedProfiles;
-}
-
-export async function openAcceptedLikedProfileChat(targetUserKey: string) {
-  const currentUser = await getSessionUser();
-
-  if (!currentUser) {
-    return null;
-  }
-
-  const currentUserKey = getUserKey(currentUser);
-  const users = await getLocalAccountUsers();
-  const targetUser = users.find(
-    (localUser) => getUserKey(localUser) === targetUserKey,
-  );
-
-  if (!targetUser || targetUserKey === currentUserKey) {
-    return null;
-  }
-
-  const blockedUsers = await getBlockedUsers();
-
-  if (areUsersBlocked(currentUserKey, targetUserKey, blockedUsers)) {
-    return null;
-  }
-
-  const matches = await getCurrentUserMatches();
-  const existingMatch = matches.find((match) =>
-    match.userKeys.includes(targetUserKey),
-  );
-
-  if (existingMatch) {
-    return existingMatch;
-  }
-
-  const likeRequests = await getLikeRequests();
-  const acceptedRequest = likeRequests.find(
-    (request) =>
-      request.status === "accepted" &&
-      ((request.fromUserKey === currentUserKey &&
-        request.toUserKey === targetUserKey) ||
-        (request.fromUserKey === targetUserKey &&
-          request.toUserKey === currentUserKey)),
-  );
-
-  if (!acceptedRequest) {
-    return null;
-  }
-
-  const match = await createOrGetMatch(currentUser, targetUser);
-  const updatedRequests = likeRequests.map((request) =>
-    request.status === "accepted" &&
-    ((request.fromUserKey === currentUserKey &&
-      request.toUserKey === targetUserKey) ||
-      (request.fromUserKey === targetUserKey &&
-        request.toUserKey === currentUserKey))
-      ? {
-          ...request,
-          matchId: match.id,
-        }
-      : request,
-  );
-
-  await saveLikeRequests(updatedRequests);
-
-  return match;
 }
 
 export function getUserKey(user: SessionUser) {
-  return (
-    user.email?.toLowerCase() ??
-    user.googleId ??
-    user.phoneNumber ??
-    String(user.id)
-  );
+  return user.id;
 }
 
 export function getEmailValidationError(email: string) {
   const normalizedEmail = email.trim().toLowerCase();
   const [localPart, domain] = normalizedEmail.split("@");
-
   if (!EMAIL_PATTERN.test(normalizedEmail) || !localPart || !domain) {
     return "Gib eine gültige E-Mail-Adresse ein.";
   }
-
   if (localPart.length < 3 || localPart.length > 64) {
     return "Der Benutzername in der E-Mail-Adresse wirkt ungültig.";
   }
-
   if (
     localPart.startsWith(".") ||
     localPart.endsWith(".") ||
@@ -327,10 +387,8 @@ export function getEmailValidationError(email: string) {
   ) {
     return "Der Benutzername in der E-Mail-Adresse wirkt ungültig.";
   }
-
   const domainParts = domain.split(".");
   const topLevelDomain = domainParts.at(-1) ?? "";
-
   if (
     domainParts.length < 2 ||
     domainParts.some((part) => part.length < 2) ||
@@ -338,7 +396,6 @@ export function getEmailValidationError(email: string) {
   ) {
     return "Die E-Mail-Domain wirkt ungültig.";
   }
-
   if (
     SUSPICIOUS_EMAIL_PARTS.some(
       (part) => localPart === part || localPart.includes(`${part}.`),
@@ -346,77 +403,103 @@ export function getEmailValidationError(email: string) {
   ) {
     return "Diese E-Mail sieht wie eine Testadresse aus. Verwende eine echte Adresse.";
   }
-
   return null;
 }
 
-async function getLocalAccounts() {
-  const rawAccounts = await getItem(LOCAL_ACCOUNTS_KEY);
-
-  if (!rawAccounts) {
-    return [] as LocalAccount[];
-  }
-
-  try {
-    return JSON.parse(rawAccounts) as LocalAccount[];
-  } catch {
-    await deleteItem(LOCAL_ACCOUNTS_KEY);
-    return [] as LocalAccount[];
-  }
-}
-
-async function saveLocalAccounts(accounts: LocalAccount[]) {
-  await setItem(LOCAL_ACCOUNTS_KEY, JSON.stringify(accounts));
-}
-
 export async function registerLocalAccount(
-  user: SessionUser,
+  user: Omit<SessionUser, "id" | "createdAt"> &
+    Partial<Pick<SessionUser, "id" | "createdAt">>,
   password: string,
 ) {
-  const accounts = await getLocalAccounts();
-  const email = user.email?.toLowerCase();
-
-  if (!email) {
+  if (!user.email) {
     throw new Error("E-Mail ist erforderlich.");
   }
-
-  if (accounts.some((account) => account.user.email?.toLowerCase() === email)) {
-    throw new Error("Das Konto existiert bereits.");
+  const result = await supabase.auth.signUp({
+    email: user.email,
+    password,
+    options: { data: { name: user.name } },
+  });
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+  if (!result.data.user) {
+    throw new Error("Das Konto konnte nicht erstellt werden.");
   }
 
-  await saveLocalAccounts([...accounts, { user, password }]);
-  await saveSessionUser(user);
-}
-
-export async function signInLocalAccount(email: string, password: string) {
-  const accounts = await getLocalAccounts();
-  const normalizedEmail = email.toLowerCase();
-  const account = accounts.find(
-    (item) =>
-      item.user.email?.toLowerCase() === normalizedEmail &&
-      item.password === password,
-  );
-
-  if (!account) {
-    const currentUser = await getSessionUser();
-
-    if (currentUser?.email?.toLowerCase() === normalizedEmail) {
-      return currentUser;
-    }
-
+  if (!result.data.session) {
     return null;
   }
 
-  const currentUser = await getSessionUser();
-  const mergedUser =
-    currentUser &&
-    currentUser.email?.toLowerCase() === account.user.email?.toLowerCase()
-      ? mergeSessionUsers(account.user, currentUser)
-      : account.user;
+  const profile: SessionUser = {
+    ...user,
+    id: result.data.user.id,
+    email: result.data.user.email ?? user.email,
+    onboardingCompleted: false,
+    createdAt: result.data.user.created_at,
+  };
+  return saveSessionUser(profile);
+}
 
-  await saveSessionUser(mergedUser);
-  await syncLocalAccountUser(mergedUser);
-  return mergedUser;
+export async function verifySignupEmail(email: string, token: string) {
+  const result = await supabase.auth.verifyOtp({
+    email: email.trim().toLowerCase(),
+    token: token.trim(),
+    type: "signup",
+  });
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  if (!result.data.session) {
+    throw new Error("Die E-Mail konnte nicht bestätigt werden.");
+  }
+
+  const profile = await getSessionUser();
+
+  if (!profile) {
+    throw new Error("Das Profil wurde nicht erstellt.");
+  }
+
+  return profile;
+}
+
+export async function resendSignupEmail(email: string) {
+  const result = await supabase.auth.resend({
+    type: "signup",
+    email: email.trim().toLowerCase(),
+  });
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+}
+
+export async function signInLocalAccount(email: string, password: string) {
+  const result = await supabase.auth.signInWithPassword({ email, password });
+  if (result.error) {
+    return null;
+  }
+  return getSessionUser();
+}
+
+export async function requestPhoneCode(phone: string) {
+  const result = await supabase.auth.signInWithOtp({ phone });
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+}
+
+export async function verifyPhoneCode(phone: string, token: string) {
+  const result = await supabase.auth.verifyOtp({
+    phone,
+    token,
+    type: "sms",
+  });
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+  return getSessionUser();
 }
 
 export async function completeSessionOnboarding(profile: {
@@ -431,971 +514,615 @@ export async function completeSessionOnboarding(profile: {
   lookingFor?: string;
   interests?: string[];
 }) {
-  const user = await getSessionUser();
-
-  if (!user) {
+  const currentUser = await getSessionUser();
+  if (!currentUser) {
     return null;
   }
+  const photos = await Promise.all(
+    (profile.photos ?? []).map((photo, index) =>
+      uploadUri("profile-photos", currentUser.id, photo, index),
+    ),
+  );
 
-  const updatedUser: SessionUser = {
-    ...user,
-    ...profile,
-    onboardingCompleted: true,
-  };
+  if (!photos.length || !photos[0]) {
+    throw new Error("Mindestens ein Profilfoto muss hochgeladen werden.");
+  }
+  const result = await supabase
+    .from("profiles")
+    .update({
+      name: profile.name ?? currentUser.name ?? null,
+      about: profile.about ?? null,
+      picture: photos[0] ?? profile.picture ?? currentUser.picture ?? null,
+      photos,
+      age: profile.age ? Number(profile.age) : null,
+      city: profile.city ?? null,
+      country: profile.country ?? null,
+      gender: profile.gender ?? null,
+      looking_for: profile.lookingFor ?? null,
+      interests: profile.interests ?? [],
+      onboarding_completed: true,
+    })
+    .eq("id", currentUser.id)
+    .select("*")
+    .single();
+  const savedProfile = requireData(
+    result.data as ProfileRow | null,
+    result.error,
+  );
 
-  if (!API_URL) {
-    await saveSessionUser(updatedUser);
-    await syncLocalAccountUser(updatedUser);
-    return updatedUser;
+  if (
+    !savedProfile.photos?.length ||
+    savedProfile.photos.length !== photos.length
+  ) {
+    throw new Error("Die Profilfotos wurden nicht in Supabase gespeichert.");
   }
 
-  try {
-    const response = await fetch(`${API_URL}/users/${user.id}/onboarding`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(profile),
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      await saveSessionUser(data.user);
-      await syncLocalAccountUser(data.user);
-      return data.user as SessionUser;
-    }
-  } catch (error) {
-    console.log("[Session] Failed to sync onboarding:", error);
-  }
-
-  await saveSessionUser(updatedUser);
-  await syncLocalAccountUser(updatedUser);
-  return updatedUser;
+  return profileToUser(savedProfile);
 }
 
-export async function updateSessionStats(stats: {
-  likesDelta?: number;
-  matchesDelta?: number;
-}) {
-  const user = await getSessionUser();
-
-  if (!user) {
-    return null;
-  }
-
-  const updatedUser: SessionUser = {
-    ...user,
-    likesCount: Math.max(0, (user.likesCount ?? 0) + (stats.likesDelta ?? 0)),
-    matchesCount: Math.max(
-      0,
-      (user.matchesCount ?? 0) + (stats.matchesDelta ?? 0),
-    ),
-  };
-
-  await saveSessionUser(updatedUser);
-  await syncLocalAccountUser(updatedUser);
-
-  return updatedUser;
+export async function updateSessionStats() {
+  return getSessionUser();
 }
 
 export async function updateSessionDiscoverVisibility(
   isDiscoverHidden: boolean,
 ) {
-  const user = await getSessionUser();
+  const id = await getAuthUserId();
+  if (!id) return null;
+  const result = await supabase
+    .from("profiles")
+    .update({ is_discover_hidden: isDiscoverHidden })
+    .eq("id", id)
+    .select("*")
+    .single();
+  return profileToUser(
+    requireData(result.data as ProfileRow | null, result.error),
+  );
+}
 
-  if (!user) {
+export async function getLikedUserKeysForCurrentUser() {
+  const id = await getAuthUserId();
+  if (!id) return [];
+  const result = await supabase
+    .from("likes")
+    .select("to_user_id")
+    .eq("from_user_id", id);
+  return requireData(
+    result.data as { to_user_id: string }[] | null,
+    result.error,
+  ).map((item) => item.to_user_id);
+}
+
+export async function getUnavailableDiscoverUserKeysForCurrentUser() {
+  const id = await getAuthUserId();
+  if (!id) return [];
+  const [liked, matches, blocks] = await Promise.all([
+    getLikedUserKeysForCurrentUser(),
+    getCurrentUserMatches(),
+    getBlockPairs(),
+  ]);
+  return Array.from(
+    new Set([
+      ...liked,
+      ...matches.flatMap((match) =>
+        match.userKeys.filter((userId) => userId !== id),
+      ),
+      ...blocks
+        .filter((block) => id === block.blocker_id || id === block.blocked_id)
+        .map((block) =>
+          block.blocker_id === id ? block.blocked_id : block.blocker_id,
+        ),
+    ]),
+  );
+}
+
+async function getLikeRows() {
+  const result = await supabase.from("likes").select("*");
+  return requireData(result.data as LikeRow[] | null, result.error);
+}
+
+async function likeRowToRecord(
+  row: LikeRow,
+  profiles?: Map<string, SessionUser>,
+): Promise<LikeRequestRecord | null> {
+  const users =
+    profiles ?? (await getProfilesByIds([row.from_user_id, row.to_user_id]));
+  const fromUser = users.get(row.from_user_id);
+  const toUser = users.get(row.to_user_id);
+  if (!fromUser || !toUser) {
     return null;
   }
+  return {
+    id: row.id,
+    fromUserKey: row.from_user_id,
+    toUserKey: row.to_user_id,
+    fromUser,
+    toUser,
+    status: row.status,
+    createdAt: row.created_at,
+    respondedAt: row.responded_at ?? undefined,
+    matchId: row.match_id ?? undefined,
+  } satisfies LikeRequestRecord;
+}
 
-  const updatedUser: SessionUser = {
-    ...user,
-    isDiscoverHidden,
+async function createOrGetMatch(firstId: string, secondId: string) {
+  const [userOneId, userTwoId] = [firstId, secondId].sort();
+  let result = await supabase
+    .from("matches")
+    .select("*")
+    .eq("user_one_id", userOneId)
+    .eq("user_two_id", userTwoId)
+    .maybeSingle();
+  let row = requireData(result.data as MatchRow | null, result.error);
+  if (!row) {
+    const inserted = await supabase
+      .from("matches")
+      .insert({ user_one_id: userOneId, user_two_id: userTwoId })
+      .select("*")
+      .single();
+    row = requireData(inserted.data as MatchRow | null, inserted.error);
+  }
+  const users = await getProfilesByIds([userOneId, userTwoId]);
+  await supabase
+    .from("likes")
+    .update({ match_id: row.id })
+    .in("from_user_id", [userOneId, userTwoId])
+    .in("to_user_id", [userOneId, userTwoId])
+    .eq("status", "accepted");
+  return matchRowToRecord(row, users);
+}
+
+function matchRowToRecord(
+  row: MatchRow,
+  users: Map<string, SessionUser>,
+): MatchRecord {
+  const userKeys = [row.user_one_id, row.user_two_id];
+  return {
+    id: row.id,
+    userKeys,
+    users: Object.fromEntries(
+      userKeys
+        .map((id) => [id, users.get(id)] as const)
+        .filter((entry): entry is [string, SessionUser] => Boolean(entry[1])),
+    ),
+    createdAt: row.created_at,
   };
-
-  await saveSessionUser(updatedUser);
-  await syncLocalAccountUser(updatedUser);
-
-  return updatedUser;
 }
 
 export async function recordProfileLike(targetUser: SessionUser) {
   const currentUser = await getSessionUser();
+  if (!currentUser || currentUser.id === targetUser.id) return null;
+  const blocks = await getBlockPairs();
+  if (blockedBetween(currentUser.id, targetUser.id, blocks)) return null;
 
-  if (!currentUser) {
-    return null;
-  }
-
-  const currentUserKey = getUserKey(currentUser);
-  const targetUserKey = getUserKey(targetUser);
-
-  if (currentUserKey === targetUserKey) {
-    return null;
-  }
-
-  const likes = await getLikes();
-  const currentLikes = likes[currentUserKey] ?? [];
-  const likeRequests = await getLikeRequests();
-  const existingRequest = likeRequests.find(
-    (request) =>
-      request.fromUserKey === currentUserKey &&
-      request.toUserKey === targetUserKey,
+  const rows = await getLikeRows();
+  const existing = rows.find(
+    (row) =>
+      row.from_user_id === currentUser.id &&
+      row.to_user_id === targetUser.id,
   );
-  const reverseRequest = likeRequests.find(
-    (request) =>
-      request.fromUserKey === targetUserKey &&
-      request.toUserKey === currentUserKey,
+  const reverse = rows.find(
+    (row) =>
+      row.from_user_id === targetUser.id &&
+      row.to_user_id === currentUser.id,
   );
-
-  if (existingRequest) {
-    if (existingRequest.status === "accepted") {
-      const savedMatch = existingRequest.matchId
-        ? await getMatchById(existingRequest.matchId)
-        : null;
-      const match =
-        savedMatch ?? (await createOrGetMatch(currentUser, targetUser));
-
-      return {
-        isMatch: true,
-        match,
-        user: currentUser,
-        request: existingRequest.matchId
-          ? existingRequest
-          : { ...existingRequest, matchId: match.id },
-      };
-    }
-
+  if (existing) {
+    const match = existing.match_id
+      ? await getMatchById(existing.match_id)
+      : null;
     return {
-      isMatch: false,
-      match: null,
-      user: currentUser,
-      request: existingRequest,
-    };
-  }
-
-  if (reverseRequest?.status === "accepted") {
-    const match = reverseRequest.matchId
-      ? await getMatchById(reverseRequest.matchId)
-      : await createOrGetMatch(currentUser, targetUser);
-
-    return {
-      isMatch: true,
+      isMatch: existing.status === "accepted",
       match,
       user: currentUser,
-      request: reverseRequest,
+      request: await likeRowToRecord(existing),
     };
   }
 
-  if (!currentLikes.includes(targetUserKey)) {
-    likes[currentUserKey] = [...currentLikes, targetUserKey];
-
-    try {
-      await saveLikes(likes);
-    } catch {
-      throw new Error(
-        "Der Speicher ist voll. Lösche alte Safari-Daten und versuche es erneut.",
-      );
-    }
-  }
-
-  const updatedUser = await updateSessionStats({ likesDelta: 1 });
   const now = new Date().toISOString();
-
-  if (reverseRequest?.status === "pending") {
-    const match = await createOrGetMatch(
-      updatedUser ?? currentUser,
-      targetUser,
-    );
-    const acceptedReverseRequest: LikeRequestRecord = {
-      ...reverseRequest,
-      fromUser: compactUserForRelationStorage(targetUser),
-      toUser: compactUserForRelationStorage(updatedUser ?? currentUser),
-      status: "accepted",
-      respondedAt: now,
-      matchId: match.id,
-    };
-    const acceptedCurrentRequest: LikeRequestRecord = {
-      id: `${currentUserKey}__${targetUserKey}`,
-      fromUserKey: currentUserKey,
-      toUserKey: targetUserKey,
-      fromUser: compactUserForRelationStorage(updatedUser ?? currentUser),
-      toUser: compactUserForRelationStorage(targetUser),
-      status: "accepted",
-      createdAt: now,
-      respondedAt: now,
-      matchId: match.id,
-    };
-
-    await saveLikeRequests([
-      ...likeRequests.map((request) =>
-        request.id === reverseRequest.id ? acceptedReverseRequest : request,
-      ),
-      acceptedCurrentRequest,
-    ]);
-    await updateSessionStats({ matchesDelta: 1 });
-    await updateLocalUserStats(targetUserKey, { matchesDelta: 1 });
-
+  if (reverse?.status === "pending") {
+    const acceptedReverse = await supabase
+      .from("likes")
+      .update({ status: "accepted", responded_at: now })
+      .eq("id", reverse.id)
+      .select("*")
+      .single();
+    requireData(acceptedReverse.data, acceptedReverse.error);
+    const inserted = await supabase
+      .from("likes")
+      .insert({
+        from_user_id: currentUser.id,
+        to_user_id: targetUser.id,
+        status: "accepted",
+        responded_at: now,
+      })
+      .select("*")
+      .single();
+    const row = requireData(inserted.data as LikeRow | null, inserted.error);
+    const match = await createOrGetMatch(currentUser.id, targetUser.id);
     return {
       isMatch: true,
       match,
       user: await getSessionUser(),
-      request: acceptedCurrentRequest,
+      request: await likeRowToRecord({ ...row, match_id: match.id }),
     };
   }
 
-  const request: LikeRequestRecord = {
-    id: `${currentUserKey}__${targetUserKey}`,
-    fromUserKey: currentUserKey,
-    toUserKey: targetUserKey,
-    fromUser: compactUserForRelationStorage(updatedUser ?? currentUser),
-    toUser: compactUserForRelationStorage(targetUser),
-    status: "pending",
-    createdAt: now,
-  };
-
-  try {
-    await saveLikeRequests([...likeRequests, request]);
-  } catch {
-    throw new Error(
-      "Der Speicher ist voll. Lösche alte Safari-Daten und versuche es erneut.",
-    );
-  }
-
+  const inserted = await supabase
+    .from("likes")
+    .insert({
+      from_user_id: currentUser.id,
+      to_user_id: targetUser.id,
+      status: "pending",
+    })
+    .select("*")
+    .single();
+  const row = requireData(inserted.data as LikeRow | null, inserted.error);
   return {
     isMatch: false,
     match: null,
-    user: updatedUser,
-    request,
+    user: await getSessionUser(),
+    request: await likeRowToRecord(row),
   };
 }
 
+export async function getLikedProfilesForCurrentUser(): Promise<
+  LikedProfileRecord[]
+> {
+  const id = await getAuthUserId();
+  if (!id) return [];
+  const rows = (await getLikeRows()).filter((row) => row.from_user_id === id);
+  const profiles = await getProfilesByIds(rows.map((row) => row.to_user_id));
+  return rows.flatMap<LikedProfileRecord>((row) => {
+    const user = profiles.get(row.to_user_id);
+    return user
+      ? [{
+          user,
+          status: row.status,
+          isMutual: row.status === "accepted",
+          matchId: row.match_id ?? undefined,
+        }]
+      : [];
+  });
+}
+
 export async function getIncomingLikeRequestsForCurrentUser() {
-  const currentUser = await getSessionUser();
-
-  if (!currentUser) {
-    return [] as LikeRequestRecord[];
-  }
-
-  const currentUserKey = getUserKey(currentUser);
-  const likeRequests = await getLikeRequests();
-  const blockedUsers = await getBlockedUsers();
-
-  return likeRequests.filter(
-    (request) =>
-      request.toUserKey === currentUserKey &&
-      request.status === "pending" &&
-      !areUsersBlocked(currentUserKey, request.fromUserKey, blockedUsers),
+  const id = await getAuthUserId();
+  if (!id) return [];
+  const rows = (await getLikeRows()).filter(
+    (row) => row.to_user_id === id && row.status === "pending",
+  );
+  const profiles = await getProfilesByIds(
+    rows.flatMap((row) => [row.from_user_id, row.to_user_id]),
+  );
+  const records = await Promise.all(
+    rows.map((row) => likeRowToRecord(row, profiles)),
+  );
+  return records.filter(
+    (record): record is LikeRequestRecord => record !== null,
   );
 }
 
 export async function getLikeResponseNotificationsForCurrentUser() {
-  const currentUser = await getSessionUser();
-
-  if (!currentUser) {
-    return [] as LikeRequestRecord[];
-  }
-
-  const currentUserKey = getUserKey(currentUser);
-  const likeRequests = await getLikeRequests();
-  const blockedUsers = await getBlockedUsers();
-
-  return likeRequests.filter(
-    (request) =>
-      request.fromUserKey === currentUserKey &&
-      request.status !== "pending" &&
-      !areUsersBlocked(currentUserKey, request.toUserKey, blockedUsers),
+  const id = await getAuthUserId();
+  if (!id) return [];
+  const rows = (await getLikeRows()).filter(
+    (row) => row.from_user_id === id && row.status !== "pending",
+  );
+  const profiles = await getProfilesByIds(
+    rows.flatMap((row) => [row.from_user_id, row.to_user_id]),
+  );
+  const records = await Promise.all(
+    rows.map((row) => likeRowToRecord(row, profiles)),
+  );
+  return records.filter(
+    (record): record is LikeRequestRecord => record !== null,
   );
 }
 
+async function getNotificationKeys() {
+  const id = await getAuthUserId();
+  if (!id) return [];
+  const rows = await getLikeRows();
+  return rows.flatMap((row) => {
+    if (row.to_user_id === id && row.status === "pending") {
+      return [`incoming:${row.id}`];
+    }
+    if (row.from_user_id === id && row.status !== "pending") {
+      return [`response:${row.id}:${row.status}`];
+    }
+    return [];
+  });
+}
+
+async function getReadNotificationKeys() {
+  const id = await getAuthUserId();
+  if (!id) return [];
+  const result = await supabase
+    .from("notification_reads")
+    .select("notification_key")
+    .eq("user_id", id);
+  return requireData(
+    result.data as { notification_key: string }[] | null,
+    result.error,
+  ).map((row) => row.notification_key);
+}
+
 export async function getUnreadAcceptedLikeResponseForCurrentUser() {
-  const currentUser = await getSessionUser();
-
-  if (!currentUser) {
-    return null;
-  }
-
-  const currentUserKey = getUserKey(currentUser);
-  const likeRequests = await getLikeRequests();
-  const blockedUsers = await getBlockedUsers();
-  const viewedNotifications = await getViewedNotifications();
-  const viewedKeys = viewedNotifications[currentUserKey] ?? [];
-
+  const [responses, readKeys] = await Promise.all([
+    getLikeResponseNotificationsForCurrentUser(),
+    getReadNotificationKeys(),
+  ]);
   return (
-    likeRequests
+    responses
       .filter(
         (request) =>
-          request.fromUserKey === currentUserKey &&
           request.status === "accepted" &&
-          Boolean(request.matchId) &&
-          !areUsersBlocked(currentUserKey, request.toUserKey, blockedUsers) &&
-          !viewedKeys.includes(`response:${request.id}:accepted`),
+          request.matchId &&
+          !readKeys.includes(`response:${request.id}:accepted`),
       )
       .sort(
-        (firstRequest, secondRequest) =>
-          new Date(
-            secondRequest.respondedAt ?? secondRequest.createdAt,
-          ).getTime() -
-          new Date(
-            firstRequest.respondedAt ?? firstRequest.createdAt,
-          ).getTime(),
+        (a, b) =>
+          new Date(b.respondedAt ?? b.createdAt).getTime() -
+          new Date(a.respondedAt ?? a.createdAt).getTime(),
       )[0] ?? null
   );
 }
 
 export async function getUnreadNotificationCountForCurrentUser() {
-  const currentUser = await getSessionUser();
-
-  if (!currentUser) {
-    return 0;
-  }
-
-  const currentUserKey = getUserKey(currentUser);
-  const notificationKeys = await getNotificationKeysForUser(currentUserKey);
-  const viewedNotifications = await getViewedNotifications();
-  const viewedKeys = viewedNotifications[currentUserKey] ?? [];
-
-  return notificationKeys.filter((key) => !viewedKeys.includes(key)).length;
+  const [keys, readKeys] = await Promise.all([
+    getNotificationKeys(),
+    getReadNotificationKeys(),
+  ]);
+  return keys.filter((key) => !readKeys.includes(key)).length;
 }
 
 export async function markNotificationsSeenForCurrentUser() {
-  const currentUser = await getSessionUser();
-
-  if (!currentUser) {
-    return;
-  }
-
-  const currentUserKey = getUserKey(currentUser);
-  const notificationKeys = await getNotificationKeysForUser(currentUserKey);
-  const viewedNotifications = await getViewedNotifications();
-  const viewedKeys = new Set(viewedNotifications[currentUserKey] ?? []);
-
-  notificationKeys.forEach((key) => viewedKeys.add(key));
-
-  await saveViewedNotifications({
-    ...viewedNotifications,
-    [currentUserKey]: Array.from(viewedKeys),
-  });
+  const id = await getAuthUserId();
+  if (!id) return;
+  const keys = await getNotificationKeys();
+  if (!keys.length) return;
+  const result = await supabase.from("notification_reads").upsert(
+    keys.map((notificationKey) => ({
+      user_id: id,
+      notification_key: notificationKey,
+    })),
+  );
+  requireData(result.data, result.error);
 }
 
 export async function acceptIncomingLikeRequest(requestId: string) {
   const currentUser = await getSessionUser();
-
-  if (!currentUser) {
-    return null;
-  }
-
-  const currentUserKey = getUserKey(currentUser);
-  const likeRequests = await getLikeRequests();
-  const request = likeRequests.find((item) => item.id === requestId);
-
-  if (
-    !request ||
-    request.toUserKey !== currentUserKey ||
-    request.status !== "pending"
-  ) {
-    return null;
-  }
-
-  const match = await createOrGetMatch(currentUser, request.fromUser);
-  const updatedRequests = likeRequests.map((item) =>
-    item.id === requestId
-      ? {
-          ...item,
-          fromUser: compactUserForRelationStorage(item.fromUser),
-          toUser: compactUserForRelationStorage(currentUser),
-          status: "accepted" as const,
-          respondedAt: new Date().toISOString(),
-          matchId: match.id,
-        }
-      : item,
-  );
-
-  await saveLikeRequests(updatedRequests);
-  await updateSessionStats({ matchesDelta: 1 });
-  await updateLocalUserStats(request.fromUserKey, { matchesDelta: 1 });
-
-  return {
-    match,
-    user: await getSessionUser(),
-  };
+  if (!currentUser) return null;
+  const result = await supabase
+    .from("likes")
+    .update({
+      status: "accepted",
+      responded_at: new Date().toISOString(),
+    })
+    .eq("id", requestId)
+    .eq("to_user_id", currentUser.id)
+    .eq("status", "pending")
+    .select("*")
+    .maybeSingle();
+  const row = requireData(result.data as LikeRow | null, result.error);
+  if (!row) return null;
+  const match = await createOrGetMatch(row.from_user_id, row.to_user_id);
+  return { match, user: await getSessionUser() };
 }
 
 export async function skipIncomingLikeRequest(requestId: string) {
-  const currentUser = await getSessionUser();
-
-  if (!currentUser) {
-    return null;
-  }
-
-  const currentUserKey = getUserKey(currentUser);
-  const likeRequests = await getLikeRequests();
-  const request = likeRequests.find((item) => item.id === requestId);
-
-  if (
-    !request ||
-    request.toUserKey !== currentUserKey ||
-    request.status !== "pending"
-  ) {
-    return null;
-  }
-
-  const updatedRequest: LikeRequestRecord = {
-    ...request,
-    fromUser: compactUserForRelationStorage(request.fromUser),
-    toUser: compactUserForRelationStorage(currentUser),
-    status: "skipped",
-    respondedAt: new Date().toISOString(),
-  };
-
-  await saveLikeRequests(
-    likeRequests.map((item) => (item.id === requestId ? updatedRequest : item)),
-  );
-
-  return updatedRequest;
+  const id = await getAuthUserId();
+  if (!id) return null;
+  const result = await supabase
+    .from("likes")
+    .update({ status: "skipped", responded_at: new Date().toISOString() })
+    .eq("id", requestId)
+    .eq("to_user_id", id)
+    .eq("status", "pending")
+    .select("*")
+    .maybeSingle();
+  const row = requireData(result.data as LikeRow | null, result.error);
+  return row ? likeRowToRecord(row) : null;
 }
 
 export async function getCurrentUserMatches() {
-  const currentUser = await getSessionUser();
-
-  if (!currentUser) {
-    return [] as MatchRecord[];
-  }
-
-  const currentUserKey = getUserKey(currentUser);
-  const matches = await getMatches();
-  const blockedUserKeys = await getBlockedUserKeys(currentUserKey);
-
-  const visibleMatches = matches.filter(
-    (match) =>
-      match.userKeys.includes(currentUserKey) &&
-      !match.userKeys.some(
-        (userKey) =>
-          userKey !== currentUserKey && blockedUserKeys.includes(userKey),
-      ),
+  const id = await getAuthUserId();
+  if (!id) return [];
+  const result = await supabase
+    .from("matches")
+    .select("*")
+    .or(`user_one_id.eq.${id},user_two_id.eq.${id}`)
+    .order("created_at", { ascending: false });
+  const rows = requireData(result.data as MatchRow[] | null, result.error);
+  const profiles = await getProfilesByIds(
+    rows.flatMap((row) => [row.user_one_id, row.user_two_id]),
   );
-  const seenMatchedUserKeys = new Set<string>();
-
-  return visibleMatches.filter((match) => {
-    const matchedUserKey = match.userKeys.find(
-      (userKey) => userKey !== currentUserKey,
-    );
-
-    if (!matchedUserKey || seenMatchedUserKeys.has(matchedUserKey)) {
-      return false;
-    }
-
-    seenMatchedUserKeys.add(matchedUserKey);
-    return true;
-  });
+  const blocks = await getBlockPairs();
+  return rows
+    .filter(
+      (row) => !blockedBetween(row.user_one_id, row.user_two_id, blocks),
+    )
+    .map((row) => matchRowToRecord(row, profiles));
 }
 
 export async function getMatchById(matchId: string) {
-  const currentUser = await getSessionUser();
-  const matches = await getMatches();
-  const match = matches.find((item) => item.id === matchId) ?? null;
-
-  if (!currentUser || !match) {
-    return match;
-  }
-
-  const currentUserKey = getUserKey(currentUser);
-  const otherUserKey = match.userKeys.find(
-    (userKey) => userKey !== currentUserKey,
+  const id = await getAuthUserId();
+  if (!id) return null;
+  const result = await supabase
+    .from("matches")
+    .select("*")
+    .eq("id", matchId)
+    .maybeSingle();
+  const row = requireData(result.data as MatchRow | null, result.error);
+  if (!row || ![row.user_one_id, row.user_two_id].includes(id)) return null;
+  const blocks = await getBlockPairs();
+  if (blockedBetween(row.user_one_id, row.user_two_id, blocks)) return null;
+  return matchRowToRecord(
+    row,
+    await getProfilesByIds([row.user_one_id, row.user_two_id]),
   );
+}
 
-  if (!match.userKeys.includes(currentUserKey) || !otherUserKey) {
-    return null;
-  }
-
-  const blockedUsers = await getBlockedUsers();
-
-  return areUsersBlocked(currentUserKey, otherUserKey, blockedUsers)
-    ? null
-    : match;
+export async function openAcceptedLikedProfileChat(targetUserKey: string) {
+  const id = await getAuthUserId();
+  if (!id) return null;
+  const rows = await getLikeRows();
+  const accepted = rows.find(
+    (row) =>
+      row.status === "accepted" &&
+      ((row.from_user_id === id && row.to_user_id === targetUserKey) ||
+        (row.from_user_id === targetUserKey && row.to_user_id === id)),
+  );
+  if (!accepted) return null;
+  return accepted.match_id
+    ? getMatchById(accepted.match_id)
+    : createOrGetMatch(id, targetUserKey);
 }
 
 export async function getChatMessages(matchId: string) {
-  const messages = await getMessages();
-  return messages.filter((message) => message.matchId === matchId);
+  const result = await supabase
+    .from("messages")
+    .select("*")
+    .eq("match_id", matchId)
+    .order("created_at");
+  const rows = requireData(
+    result.data as {
+      id: string;
+      match_id: string;
+      sender_id: string;
+      text: string | null;
+      image_url: string | null;
+      emoji: string | null;
+      photo_reaction: string | null;
+      created_at: string;
+    }[] | null,
+    result.error,
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    matchId: row.match_id,
+    senderKey: row.sender_id,
+    text: row.text ?? undefined,
+    imageUri: row.image_url ?? undefined,
+    emoji: row.emoji ?? undefined,
+    photoReaction: row.photo_reaction ?? undefined,
+    createdAt: row.created_at,
+  }));
 }
 
 export async function sendChatMessage(
   matchId: string,
   content: string | ChatMessagePayload,
 ) {
-  const currentUser = await getSessionUser();
+  const id = await getAuthUserId();
   const payload = typeof content === "string" ? { text: content } : content;
-  const trimmedText = payload.text?.trim();
-  const imageUri = payload.imageUri?.trim();
-  const emoji = payload.emoji?.trim();
-
-  if (!currentUser || (!trimmedText && !imageUri && !emoji)) {
-    return null;
-  }
-
-  const message: ChatMessage = {
-    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    matchId,
-    senderKey: getUserKey(currentUser),
-    text: trimmedText,
-    imageUri,
-    emoji,
-    createdAt: new Date().toISOString(),
-  };
-
-  const messages = await getMessages();
-  await saveMessages([...messages, message]);
-
-  return message;
+  if (!id) return null;
+  const text = payload.text?.trim() || null;
+  const emoji = payload.emoji?.trim() || null;
+  const imageUrl = payload.imageUri
+    ? await uploadUri("chat-media", id, payload.imageUri)
+    : null;
+  if (!text && !emoji && !imageUrl) return null;
+  const result = await supabase
+    .from("messages")
+    .insert({
+      match_id: matchId,
+      sender_id: id,
+      text,
+      emoji,
+      image_url: imageUrl,
+    })
+    .select("*")
+    .single();
+  const row = requireData(result.data, result.error);
+  return {
+    id: row.id,
+    matchId: row.match_id,
+    senderKey: row.sender_id,
+    text: row.text ?? undefined,
+    imageUri: row.image_url ?? undefined,
+    emoji: row.emoji ?? undefined,
+    createdAt: row.created_at,
+  } satisfies ChatMessage;
 }
 
 export async function reactToChatMessage(messageId: string, emoji: string) {
-  const trimmedEmoji = emoji.trim();
-
-  if (!trimmedEmoji) {
-    return null;
-  }
-
-  const messages = await getMessages();
-  const updatedMessages = messages.map((message) =>
-    message.id === messageId
-      ? {
-          ...message,
-          photoReaction: trimmedEmoji,
-        }
-      : message,
-  );
-  const updatedMessage =
-    updatedMessages.find((message) => message.id === messageId) ?? null;
-
-  if (!updatedMessage) {
-    return null;
-  }
-
-  await saveMessages(updatedMessages);
-
-  return updatedMessage;
+  const result = await supabase.rpc("react_to_message", {
+    target_message_id: messageId,
+    reaction: emoji.trim(),
+  });
+  const row = requireData(result.data, result.error);
+  if (!row) return null;
+  return {
+    id: row.id,
+    matchId: row.match_id,
+    senderKey: row.sender_id,
+    text: row.text ?? undefined,
+    imageUri: row.image_url ?? undefined,
+    emoji: row.emoji ?? undefined,
+    photoReaction: row.photo_reaction ?? undefined,
+    createdAt: row.created_at,
+  } satisfies ChatMessage;
 }
 
 export async function getBlockedUserKeysForCurrentUser() {
-  const currentUser = await getSessionUser();
-
-  if (!currentUser) {
-    return [] as string[];
-  }
-
-  return getBlockedUserKeys(getUserKey(currentUser));
+  const id = await getAuthUserId();
+  if (!id) return [];
+  return (await getBlockPairs())
+    .filter((block) => block.blocker_id === id)
+    .map((block) => block.blocked_id);
 }
 
 export async function blockMatchContact(matchId: string) {
-  const currentUser = await getSessionUser();
-
-  if (!currentUser) {
-    return null;
-  }
-
-  const currentUserKey = getUserKey(currentUser);
-  const matches = await getMatches();
-  const match = matches.find(
-    (item) => item.id === matchId && item.userKeys.includes(currentUserKey),
-  );
-
-  if (!match) {
-    return null;
-  }
-
-  const blockedUserKey = match.userKeys.find(
-    (userKey) => userKey !== currentUserKey,
-  );
-
-  if (!blockedUserKey) {
-    return null;
-  }
-
-  const blockedUsers = await getBlockedUsers();
-  const currentBlockedKeys = blockedUsers[currentUserKey] ?? [];
-  const nextBlockedKeys = Array.from(
-    new Set([...currentBlockedKeys, blockedUserKey]),
-  );
-
-  await saveBlockedUsers({
-    ...blockedUsers,
-    [currentUserKey]: nextBlockedKeys,
-  });
-
-  const blockedMatchIds = new Set(
-    matches
-      .filter(
-        (item) =>
-          item.userKeys.includes(currentUserKey) &&
-          item.userKeys.includes(blockedUserKey),
-      )
-      .map((item) => item.id),
-  );
-
-  await saveMatches(matches.filter((item) => !blockedMatchIds.has(item.id)));
-
-  const messages = await getMessages();
-  await saveMessages(
-    messages.filter((message) => !blockedMatchIds.has(message.matchId)),
-  );
-
-  const likes = await getLikes();
-  const nextLikes = {
-    ...likes,
-    [currentUserKey]: (likes[currentUserKey] ?? []).filter(
-      (userKey) => userKey !== blockedUserKey,
-    ),
-    [blockedUserKey]: (likes[blockedUserKey] ?? []).filter(
-      (userKey) => userKey !== currentUserKey,
-    ),
-  };
-  await saveLikes(nextLikes);
-
-  const likeRequests = await getLikeRequests();
-  await saveLikeRequests(
-    likeRequests.filter(
-      (request) =>
-        !isUserPair(
-          request.fromUserKey,
-          request.toUserKey,
-          currentUserKey,
-          blockedUserKey,
-        ),
-    ),
-  );
-
+  const id = await getAuthUserId();
+  const match = await getMatchById(matchId);
+  if (!id || !match) return null;
+  const blockedUserKey = match.userKeys.find((key) => key !== id);
+  if (!blockedUserKey) return null;
+  const result = await supabase
+    .from("blocks")
+    .upsert({ blocker_id: id, blocked_id: blockedUserKey });
+  requireData(result.data, result.error);
   return {
     blockedUserKey,
     blockedUser: match.users[blockedUserKey] ?? null,
   };
 }
 
-async function getLikes() {
-  const rawLikes = await getItem(LIKES_KEY);
+export async function submitReport(input: {
+  category: string;
+  description?: string;
+}) {
+  const reporterId = await getAuthUserId();
 
-  if (!rawLikes) {
-    return {} as Record<string, string[]>;
+  if (!reporterId) {
+    throw new Error("Du musst angemeldet sein, um eine Meldung zu senden.");
   }
 
-  try {
-    return JSON.parse(rawLikes) as Record<string, string[]>;
-  } catch {
-    await deleteItem(LIKES_KEY);
-    return {} as Record<string, string[]>;
-  }
-}
+  const category = input.category.trim();
+  const description = input.description?.trim() || null;
 
-async function saveLikes(likes: Record<string, string[]>) {
-  await setItem(LIKES_KEY, JSON.stringify(likes));
-}
-
-async function getLikeRequests() {
-  const rawRequests = await getItem(LIKE_REQUESTS_KEY);
-
-  if (!rawRequests) {
-    return [] as LikeRequestRecord[];
+  if (!category) {
+    throw new Error("Wähle ein Thema für die Meldung aus.");
   }
 
-  try {
-    const requests = JSON.parse(rawRequests) as LikeRequestRecord[];
-    const compactRequests = requests.map((request) => ({
-      ...request,
-      fromUser: compactUserForRelationStorage(request.fromUser),
-      toUser: compactUserForRelationStorage(request.toUser),
-    }));
-
-    if (JSON.stringify(requests) !== JSON.stringify(compactRequests)) {
-      await saveLikeRequests(compactRequests);
-    }
-
-    return compactRequests;
-  } catch {
-    await deleteItem(LIKE_REQUESTS_KEY);
-    return [] as LikeRequestRecord[];
-  }
-}
-
-async function saveLikeRequests(requests: LikeRequestRecord[]) {
-  const compactRequests = requests.map((request) => ({
-    ...request,
-    fromUser: compactUserForRelationStorage(request.fromUser),
-    toUser: compactUserForRelationStorage(request.toUser),
-  }));
-
-  await setItem(LIKE_REQUESTS_KEY, JSON.stringify(compactRequests));
-}
-
-async function getNotificationKeysForUser(userKey: string) {
-  const likeRequests = await getLikeRequests();
-  const blockedUsers = await getBlockedUsers();
-
-  return likeRequests
-    .filter((request) => {
-      const otherUserKey =
-        request.toUserKey === userKey
-          ? request.fromUserKey
-          : request.fromUserKey === userKey
-            ? request.toUserKey
-            : "";
-
-      return (
-        Boolean(otherUserKey) &&
-        !areUsersBlocked(userKey, otherUserKey, blockedUsers) &&
-        ((request.toUserKey === userKey && request.status === "pending") ||
-          (request.fromUserKey === userKey && request.status !== "pending"))
-      );
+  const result = await supabase
+    .from("reports")
+    .insert({
+      reporter_id: reporterId,
+      category,
+      description,
+      platform: Platform.OS,
     })
-    .map((request) => {
-      if (request.toUserKey === userKey) {
-        return `incoming:${request.id}`;
-      }
+    .select("id, status, created_at")
+    .single();
 
-      return `response:${request.id}:${request.status}`;
-    });
-}
-
-async function getViewedNotifications() {
-  const rawViewedNotifications = await getItem(VIEWED_NOTIFICATIONS_KEY);
-
-  if (!rawViewedNotifications) {
-    return {} as Record<string, string[]>;
-  }
-
-  try {
-    return JSON.parse(rawViewedNotifications) as Record<string, string[]>;
-  } catch {
-    await deleteItem(VIEWED_NOTIFICATIONS_KEY);
-    return {} as Record<string, string[]>;
-  }
-}
-
-async function saveViewedNotifications(
-  viewedNotifications: Record<string, string[]>,
-) {
-  await setItem(VIEWED_NOTIFICATIONS_KEY, JSON.stringify(viewedNotifications));
-}
-
-async function getMatches() {
-  const rawMatches = await getItem(MATCHES_KEY);
-
-  if (!rawMatches) {
-    return [] as MatchRecord[];
-  }
-
-  try {
-    const matches = JSON.parse(rawMatches) as MatchRecord[];
-    const compactMatches = matches.map((match) => ({
-      ...match,
-      users: Object.fromEntries(
-        Object.entries(match.users).map(([userKey, user]) => [
-          userKey,
-          compactUserForRelationStorage(user),
-        ]),
-      ),
-    }));
-
-    if (JSON.stringify(matches) !== JSON.stringify(compactMatches)) {
-      await saveMatches(compactMatches);
-    }
-
-    return compactMatches;
-  } catch {
-    await deleteItem(MATCHES_KEY);
-    return [] as MatchRecord[];
-  }
-}
-
-async function saveMatches(matches: MatchRecord[]) {
-  const compactMatches = matches.map((match) => ({
-    ...match,
-    users: Object.fromEntries(
-      Object.entries(match.users).map(([userKey, user]) => [
-        userKey,
-        compactUserForRelationStorage(user),
-      ]),
-    ),
-  }));
-
-  await setItem(MATCHES_KEY, JSON.stringify(compactMatches));
-}
-
-async function getMessages() {
-  const rawMessages = await getItem(MESSAGES_KEY);
-
-  if (!rawMessages) {
-    return [] as ChatMessage[];
-  }
-
-  try {
-    return JSON.parse(rawMessages) as ChatMessage[];
-  } catch {
-    await deleteItem(MESSAGES_KEY);
-    return [] as ChatMessage[];
-  }
-}
-
-async function saveMessages(messages: ChatMessage[]) {
-  await setItem(MESSAGES_KEY, JSON.stringify(messages));
-}
-
-async function getBlockedUsers() {
-  const rawBlockedUsers = await getItem(BLOCKED_USERS_KEY);
-
-  if (!rawBlockedUsers) {
-    return {} as Record<string, string[]>;
-  }
-
-  try {
-    return JSON.parse(rawBlockedUsers) as Record<string, string[]>;
-  } catch {
-    await deleteItem(BLOCKED_USERS_KEY);
-    return {} as Record<string, string[]>;
-  }
-}
-
-async function getBlockedUserKeys(currentUserKey: string) {
-  const blockedUsers = await getBlockedUsers();
-  return blockedUsers[currentUserKey] ?? [];
-}
-
-async function saveBlockedUsers(blockedUsers: Record<string, string[]>) {
-  await setItem(BLOCKED_USERS_KEY, JSON.stringify(blockedUsers));
-}
-
-function areUsersBlocked(
-  firstUserKey: string,
-  secondUserKey: string,
-  blockedUsers: Record<string, string[]>,
-) {
-  return (
-    blockedUsers[firstUserKey]?.includes(secondUserKey) ||
-    blockedUsers[secondUserKey]?.includes(firstUserKey)
-  );
-}
-
-function isUserPair(
-  firstUserKey: string,
-  secondUserKey: string,
-  targetFirstUserKey: string,
-  targetSecondUserKey: string,
-) {
-  return (
-    (firstUserKey === targetFirstUserKey &&
-      secondUserKey === targetSecondUserKey) ||
-    (firstUserKey === targetSecondUserKey &&
-      secondUserKey === targetFirstUserKey)
-  );
-}
-
-async function createOrGetMatch(
-  firstUser: SessionUser,
-  secondUser: SessionUser,
-) {
-  const firstUserKey = getUserKey(firstUser);
-  const secondUserKey = getUserKey(secondUser);
-  const userKeys = [firstUserKey, secondUserKey].sort();
-  const matchId = userKeys.join("__");
-  const matches = await getMatches();
-  const existingMatch = matches.find((match) => match.id === matchId);
-
-  if (existingMatch) {
-    return existingMatch;
-  }
-
-  const match: MatchRecord = {
-    id: matchId,
-    userKeys,
-    users: {
-      [firstUserKey]: compactUserForRelationStorage(firstUser),
-      [secondUserKey]: compactUserForRelationStorage(secondUser),
-    },
-    createdAt: new Date().toISOString(),
-  };
-
-  await saveMatches([...matches, match]);
-
-  return match;
-}
-
-async function updateLocalUserStats(
-  userKey: string,
-  stats: { matchesDelta?: number },
-) {
-  const accounts = await getLocalAccounts();
-  const updatedAccounts = accounts.map((account) => {
-    if (getUserKey(account.user) !== userKey) {
-      return account;
-    }
-
-    return {
-      ...account,
-      user: {
-        ...account.user,
-        matchesCount: Math.max(
-          0,
-          (account.user.matchesCount ?? 0) + (stats.matchesDelta ?? 0),
-        ),
-      },
-    };
-  });
-
-  await saveLocalAccounts(updatedAccounts);
-}
-
-async function syncLocalAccountUser(user: SessionUser) {
-  if (!user.email) {
-    return;
-  }
-
-  const accounts = await getLocalAccounts();
-  const email = user.email.toLowerCase();
-  const accountExists = accounts.some(
-    (account) => account.user.email?.toLowerCase() === email,
-  );
-  const updatedAccounts = accountExists
-    ? accounts.map((account) =>
-        account.user.email?.toLowerCase() === email
-          ? { ...account, user: mergeSessionUsers(account.user, user) }
-          : account,
-      )
-    : [...accounts, { user, password: "" }];
-
-  await saveLocalAccounts(updatedAccounts);
-}
-
-function mergeSessionUsers(baseUser: SessionUser, nextUser: SessionUser) {
-  const photos = nextUser.photos?.length
-    ? nextUser.photos
-    : baseUser.photos?.length
-      ? baseUser.photos
-      : nextUser.picture
-        ? [nextUser.picture]
-        : baseUser.picture
-          ? [baseUser.picture]
-          : undefined;
-
-  return {
-    ...baseUser,
-    ...nextUser,
-    picture: nextUser.picture ?? baseUser.picture ?? photos?.[0],
-    photos,
-    interests: nextUser.interests?.length
-      ? nextUser.interests
-      : baseUser.interests,
-    likesCount: nextUser.likesCount ?? baseUser.likesCount,
-    matchesCount: nextUser.matchesCount ?? baseUser.matchesCount,
-  };
-}
-
-function compactUserForRelationStorage(user: SessionUser) {
-  return {
-    ...user,
-    picture: undefined,
-    photos: undefined,
-  };
+  return requireData(result.data, result.error);
 }
 
 export async function clearSession() {
-  await deleteItem(SESSION_USER_KEY);
+  const result = await supabase.auth.signOut();
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
 }

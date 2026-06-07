@@ -45,16 +45,19 @@ export default function RegisterScreen() {
     }
 
     try {
-      await registerLocalAccount(
+      const registeredUser = await registerLocalAccount(
         {
-          id: Date.now(),
           email: trimmedEmail,
           name: trimmedName,
           onboardingCompleted: false,
-          createdAt: new Date().toISOString(),
         },
         password,
       );
+
+      if (registeredUser) {
+        router.replace("/onboarding");
+        return;
+      }
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "Das Konto konnte nicht erstellt werden.",
@@ -62,7 +65,10 @@ export default function RegisterScreen() {
       return;
     }
 
-    router.replace("/onboarding");
+    router.replace({
+      pathname: "/emailVerification",
+      params: { email: trimmedEmail },
+    });
   }
 
   return (

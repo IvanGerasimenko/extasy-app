@@ -18,7 +18,7 @@ import { useGoogleAuth } from "../services/auth/googleAuth";
 import { useAppTheme } from "../services/theme/ThemeContext";
 
 export default function WelcomeScreen() {
-  const { signInWithGoogle } = useGoogleAuth();
+  const { signInWithGoogle, isLoading, errorMessage } = useGoogleAuth();
   const { colors } = useAppTheme();
 
   const handleGoogleLogin = async () => {
@@ -67,10 +67,15 @@ export default function WelcomeScreen() {
 
         <View style={{ width: "100%" }}>
           <AuthButton
-            title="Mit Google fortfahren"
+            title={
+              isLoading ? "Google wird geöffnet..." : "Mit Google fortfahren"
+            }
             icon={require("../../assets/google.png")}
             onPress={handleGoogleLogin}
           />
+          {errorMessage ? (
+            <Text style={styles.authError}>{errorMessage}</Text>
+          ) : null}
           <AuthButton
             title="Mit E-Mail oder Telefon einloggen"
             icon={require("../../assets/email.png")}
@@ -108,6 +113,15 @@ const styles = StyleSheet.create({
     maxWidth: Platform.OS === "web" ? 550 : 380,
     paddingHorizontal: Platform.OS === "web" ? 36 : 10,
     marginTop: Platform.OS === "web" ? 54 : 30,
+  },
+
+  authError: {
+    color: "#9E2A2B",
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 10,
+    paddingHorizontal: 8,
+    textAlign: "center",
   },
 
   themeToggleWrap: {

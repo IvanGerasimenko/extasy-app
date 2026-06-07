@@ -2,9 +2,9 @@ import { BackButton } from "@/components/BackButton";
 import { ThemedBackground } from "@/components/ThemedBackground";
 import {
   getEmailValidationError,
-  saveSessionUser,
+  requestPhoneCode,
   signInLocalAccount,
-  type SessionUser,
+  verifyPhoneCode,
 } from "@/services/auth/session";
 import { router } from "expo-router";
 import React, { useState } from "react";
@@ -19,8 +19,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const countryOptions = [
   { label: "Afghanistan", code: "+93", placeholder: "70 123 4567" },
@@ -89,11 +87,6 @@ const countryOptions = [
   { label: "Vietnam", code: "+84", placeholder: "91 234 56 78" },
 ];
 
-type PhoneAuthResponse = {
-  user: SessionUser;
-  isNewUser: boolean;
-};
-
 export default function LoginScreen() {
   const [authMode, setAuthMode] = useState<"email" | "phone">("email");
   const [email, setEmail] = useState("");
@@ -133,11 +126,6 @@ export default function LoginScreen() {
   }
 
   async function requestCode() {
-    if (!API_URL) {
-      setMessage("API-URL fehlt.");
-      return;
-    }
-
     if (!phoneNumber.trim()) {
       setMessage("Gib deine Telefonnummer ein.");
       return;
@@ -147,29 +135,10 @@ export default function LoginScreen() {
     setMessage("");
 
     try {
-      const response = await fetch(`${API_URL}/auth/phone/start`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          countryCode: selectedCountry.code,
-          phoneNumber,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.message || "Der Code konnte nicht gesendet werden.");
-      }
-
+      const normalizedPhone = `${selectedCountry.code}${phoneNumber.replace(/\D/g, "")}`;
+      await requestPhoneCode(normalizedPhone);
       setCodeSent(true);
-      setMessage(
-        data?.devCode
-          ? `Code gesendet. Testcode: ${data.devCode}`
-          : "Code gesendet.",
-      );
+      setMessage("Code gesendet.");
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Der Code konnte nicht gesendet werden.",
@@ -180,11 +149,6 @@ export default function LoginScreen() {
   }
 
   async function verifyCode() {
-    if (!API_URL) {
-      setMessage("API-URL fehlt.");
-      return;
-    }
-
     if (!verificationCode.trim()) {
       setMessage("Gib den Bestätigungscode ein.");
       return;
@@ -194,31 +158,9 @@ export default function LoginScreen() {
     setMessage("");
 
     try {
-      const response = await fetch(`${API_URL}/auth/phone/verify`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          countryCode: selectedCountry.code,
-          phoneNumber,
-          code: verificationCode,
-        }),
-      });
-
-      const data = (await response.json()) as PhoneAuthResponse & {
-        message?: string;
-      };
-
-      if (!response.ok) {
-        throw new Error(data?.message || "Der Code konnte nicht bestätigt werden.");
-      }
-
-      await saveSessionUser(data.user);
-
-      router.replace(
-        data.user.onboardingCompleted ? "/discover" : "/onboarding",
-      );
+      const normalizedPhone = `${selectedCountry.code}${phoneNumber.replace(/\D/g, "")}`;
+      const user = await verifyPhoneCode(normalizedPhone, verificationCode.trim());
+      router.replace(user?.onboardingCompleted ? "/discover" : "/onboarding");
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Der Code konnte nicht bestätigt werden.",

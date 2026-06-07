@@ -13,6 +13,7 @@ import {
   type ChatMessage,
   type MatchRecord,
 } from "@/services/auth/session";
+import { supabase } from "@/services/supabase";
 import * as ExpoImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
@@ -119,6 +120,32 @@ export default function ChatScreen() {
   }, [matchId]);
 
   useEffect(() => {
+    if (!matchId) {
+      return;
+    }
+
+    const channel = supabase
+      .channel(`messages:${matchId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "messages",
+          filter: `match_id=eq.${matchId}`,
+        },
+        async () => {
+          setMessages(await getChatMessages(matchId));
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [matchId]);
+
+  useEffect(() => {
     if (!profileDrawerVisible) {
       return;
     }
@@ -141,7 +168,11 @@ export default function ChatScreen() {
       return;
     }
 
-    setMessages((currentMessages) => [...currentMessages, message]);
+    setMessages((currentMessages) =>
+      currentMessages.some((item) => item.id === message.id)
+        ? currentMessages
+        : [...currentMessages, message],
+    );
     setDraft("");
   }
 
@@ -179,7 +210,11 @@ export default function ChatScreen() {
       return;
     }
 
-    setMessages((currentMessages) => [...currentMessages, message]);
+    setMessages((currentMessages) =>
+      currentMessages.some((item) => item.id === message.id)
+        ? currentMessages
+        : [...currentMessages, message],
+    );
     setSelectedImageUri("");
     setImagePickerOpen(false);
   }
@@ -195,7 +230,11 @@ export default function ChatScreen() {
       return;
     }
 
-    setMessages((currentMessages) => [...currentMessages, message]);
+    setMessages((currentMessages) =>
+      currentMessages.some((item) => item.id === message.id)
+        ? currentMessages
+        : [...currentMessages, message],
+    );
     setEmojiPickerOpen(false);
   }
 
@@ -341,9 +380,12 @@ export default function ChatScreen() {
 
   function renderComposer() {
     return (
-      <View style={styles.composer}>
+      <View style={[styles.composer, isCompactWeb && styles.compactComposer]}>
         <TouchableOpacity
-          style={styles.attachButton}
+          style={[
+            styles.attachButton,
+            isCompactWeb && styles.compactComposerButton,
+          ]}
           onPress={() => setAttachmentOpen(true)}
         >
           <Text style={styles.attachText}>＋</Text>
@@ -355,8 +397,16 @@ export default function ChatScreen() {
           value={draft}
           onChangeText={setDraft}
         />
-        <TouchableOpacity style={styles.sendButton} onPress={handleSendText}>
-          <Text style={styles.sendText}>Senden</Text>
+        <TouchableOpacity
+          style={[
+            styles.sendButton,
+            isCompactWeb && styles.compactSendButton,
+          ]}
+          onPress={handleSendText}
+        >
+          <Text style={styles.sendText}>
+            {isCompactWeb ? "➤" : "Senden"}
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -613,6 +663,21 @@ export default function ChatScreen() {
         >
           <View style={styles.webMainContent}>
             <View style={styles.webChatSurface}>
+              {isNarrowWeb ? (
+                <TouchableOpacity
+                  style={styles.mobileProfileTrigger}
+                  onPress={openProfileDrawer}
+                >
+                  {photo ? (
+                    <Image
+                      source={{ uri: photo }}
+                      style={styles.mobileTriggerImage}
+                    />
+                  ) : (
+                    <Text style={styles.mobileTriggerText}>Profil</Text>
+                  )}
+                </TouchableOpacity>
+              ) : null}
               {renderMessages()}
               {renderComposer()}
             </View>
@@ -620,6 +685,7 @@ export default function ChatScreen() {
           {!isNarrowWeb ? renderWebProfilePanel() : null}
         </View>
         <BottomMenu />
+        {renderMobileProfileDrawer()}
         {sharedModals}
       </ThemedBackground>
     );
@@ -953,9 +1019,12 @@ const styles = StyleSheet.create({
 
   webContainerCompact: {
     flexDirection: "column",
-    padding: 14,
+    width: "100%",
+    minWidth: 0,
+    paddingHorizontal: 8,
+    paddingTop: 8,
     paddingBottom: 132,
-    gap: 14,
+    gap: 8,
   },
 
   webMainContent: {
@@ -965,6 +1034,8 @@ const styles = StyleSheet.create({
 
   webChatSurface: {
     flex: 1,
+    width: "100%",
+    minWidth: 0,
     borderRadius: 30,
     backgroundColor: "rgba(255, 252, 247, 0.9)",
     borderWidth: 1,
@@ -1273,6 +1344,8 @@ const styles = StyleSheet.create({
   },
 
   composer: {
+    width: "100%",
+    minWidth: 0,
     flexDirection: "row",
     gap: 10,
     paddingHorizontal: isWeb ? 20 : 14,
@@ -1283,13 +1356,27 @@ const styles = StyleSheet.create({
     borderTopColor: premiumColors.hairline,
   },
 
+  compactComposer: {
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingTop: 10,
+    paddingBottom: 12,
+  },
+
   attachButton: {
     width: 50,
+    flexShrink: 0,
     height: 50,
     borderRadius: 18,
     backgroundColor: premiumColors.ivory,
     alignItems: "center",
     justifyContent: "center",
+  },
+
+  compactComposerButton: {
+    width: 44,
+    height: 46,
+    borderRadius: 16,
   },
 
   attachText: {
@@ -1299,6 +1386,7 @@ const styles = StyleSheet.create({
 
   input: {
     flex: 1,
+    minWidth: 0,
     minHeight: 50,
     borderRadius: 18,
     backgroundColor: premiumColors.ivory,
@@ -1309,12 +1397,20 @@ const styles = StyleSheet.create({
 
   sendButton: {
     minWidth: 88,
+    flexShrink: 0,
     height: 50,
     borderRadius: 18,
     backgroundColor: premiumColors.ink,
     alignItems: "center",
     justifyContent: "center",
     ...premiumShadow,
+  },
+
+  compactSendButton: {
+    minWidth: 46,
+    width: 46,
+    height: 46,
+    borderRadius: 16,
   },
 
   sendText: {

@@ -1,9 +1,9 @@
-import { useRouter } from "expo-router";
+import { type Href, useRouter } from "expo-router";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity } from "react-native";
 
 interface BackButtonProps {
-  to?: string;
+  to?: Href;
 }
 
 export const BackButton: React.FC<BackButtonProps> = ({ to = "/welcome" }) => {

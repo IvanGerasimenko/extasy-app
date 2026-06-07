@@ -1,7 +1,10 @@
 import { ThemeProvider } from "@/services/theme/ThemeContext";
+import { clearLegacyStorage } from "@/services/clearLegacyStorage";
 import { Stack } from "expo-router";
 import React from "react";
 import { Platform, Text, TextInput } from "react-native";
+
+void clearLegacyStorage();
 
 const appFont = Platform.select({
   ios: "System",
@@ -49,6 +52,14 @@ export default function RootLayout() {
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="profileSaving" options={{ headerShown: false }} />
         <Stack.Screen name="registration" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="emailVerification"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="auth/callback"
+          options={{ headerShown: false }}
+        />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="userProfile" options={{ headerShown: false }} />
         <Stack.Screen name="chat" options={{ headerShown: false }} />

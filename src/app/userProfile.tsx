@@ -26,7 +26,6 @@ import React, {
   useState,
 } from "react";
 import {
-  Dimensions,
   Image,
   Modal,
   PanResponder,
@@ -35,10 +34,9 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
-
-const screenWidth = Dimensions.get("window").width;
 
 const systemFont = Platform.select({
   ios: "System",
@@ -51,6 +49,7 @@ const systemFontBold = Platform.select({
 });
 
 export default function UserProfileScreen() {
+  const { width: screenWidth } = useWindowDimensions();
   const { userKey } = useLocalSearchParams<{ userKey?: string }>();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -192,9 +191,10 @@ export default function UserProfileScreen() {
             </View>
 
             <View style={styles.heroCopy}>
-              <View>
-                <Text style={styles.name}>
-                  {user.name}, {user.age}
+              <View style={styles.heroCopyContent}>
+                <Text style={styles.name} numberOfLines={3}>
+                  {user.name}
+                  {user.age ? `, ${user.age}` : ""}
                 </Text>
                 <Text style={styles.meta}>
                   {getGenderLabel(user.gender)} sucht{" "}
@@ -238,14 +238,11 @@ export default function UserProfileScreen() {
             {photos.length ? (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Fotos</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.photosRow}
-                >
+                <View style={styles.photosGrid}>
                   {photos.map((photo, index) => (
                     <TouchableOpacity
                       key={`${photo}-${index}`}
+                      style={styles.photoTile}
                       onPress={() => {
                         setPhotoIndex(index);
                         setFullscreenOpen(true);
@@ -254,13 +251,13 @@ export default function UserProfileScreen() {
                       <Image
                         source={{ uri: photo }}
                         style={[
-                          styles.photo,
+                          styles.gridPhoto,
                           photoIndex === index && styles.activePhoto,
                         ]}
                       />
                     </TouchableOpacity>
                   ))}
-                </ScrollView>
+                </View>
               </View>
             ) : null}
           </>
@@ -299,10 +296,13 @@ export default function UserProfileScreen() {
               }}
             >
               {photos.map((photo, index) => (
-                <View key={`${photo}-${index}`} style={styles.fullscreenSlide}>
+                <View
+                  key={`${photo}-${index}`}
+                  style={[styles.fullscreenSlide, { width: screenWidth }]}
+                >
                   <Image
                     source={{ uri: photo }}
-                    style={styles.fullscreenImage}
+                    style={[styles.fullscreenImage, { width: screenWidth }]}
                     resizeMode="contain"
                   />
                 </View>
@@ -331,6 +331,7 @@ const styles = StyleSheet.create({
 
   container: {
     width: "100%",
+    minWidth: 0,
     maxWidth: Platform.OS === "web" ? 860 : 560,
     alignSelf: "center",
     paddingHorizontal: Platform.OS === "web" ? 34 : 20,
@@ -357,6 +358,8 @@ const styles = StyleSheet.create({
   },
 
   heroCard: {
+    width: "100%",
+    minWidth: 0,
     height: Platform.OS === "web" ? 420 : 340,
     maxWidth: Platform.OS === "web" ? 760 : undefined,
     borderRadius: 30,
@@ -381,6 +384,8 @@ const styles = StyleSheet.create({
   },
 
   heroCopy: {
+    width: "100%",
+    minWidth: 0,
     borderRadius: 24,
     flexDirection: "row",
     alignItems: "center",
@@ -388,15 +393,23 @@ const styles = StyleSheet.create({
     gap: 12,
     backgroundColor: "rgba(255, 252, 247)",
     padding: 18,
-    minWidth: "100%",
     marginTop: 30,
+  },
+
+  heroCopyContent: {
+    flex: 1,
+    minWidth: 0,
+    maxWidth: "100%",
   },
 
   name: {
     color: premiumColors.ink,
-    fontSize: 34,
+    fontSize: Platform.OS === "web" ? 30 : 28,
+    lineHeight: Platform.OS === "web" ? 36 : 34,
     fontFamily: systemFontBold,
     fontWeight: "700",
+    flexShrink: 1,
+    maxWidth: "100%",
   },
 
   meta: {
@@ -433,6 +446,8 @@ const styles = StyleSheet.create({
   },
 
   section: {
+    width: "100%",
+    minWidth: 0,
     marginTop: 22,
     maxWidth: Platform.OS === "web" ? 860 : undefined,
     borderRadius: 24,
@@ -464,15 +479,24 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
-  photosRow: {
-    gap: 12,
-    paddingRight: 4,
+  photosGrid: {
+    width: "100%",
+    minWidth: 0,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
   },
 
-  photo: {
-    width: 118,
-    height: 146,
-    borderRadius: 22,
+  photoTile: {
+    width: "32%",
+    minWidth: 0,
+    aspectRatio: 1,
+  },
+
+  gridPhoto: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 10,
     backgroundColor: premiumColors.champagneSoft,
   },
 
@@ -556,14 +580,12 @@ const styles = StyleSheet.create({
   },
 
   fullscreenSlide: {
-    width: screenWidth,
     height: "100%",
     alignItems: "center",
     justifyContent: "center",
   },
 
   fullscreenImage: {
-    width: screenWidth,
     height: "100%",
   },
 
