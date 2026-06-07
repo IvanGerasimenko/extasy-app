@@ -1,10 +1,7 @@
 import BottomMenu from "@/components/BottomMenu";
-import { datingColors, datingShadow } from "@/constants/datingDesign";
-import {
-  PremiumEmptyState,
-  PremiumLoadingState,
-} from "@/components/PremiumUI";
+import { PremiumEmptyState, PremiumLoadingState } from "@/components/PremiumUI";
 import { ThemedBackground } from "@/components/ThemedBackground";
+import { datingColors, datingShadow } from "@/constants/datingDesign";
 import {
   getCountryLabel,
   getGenderLabel,
@@ -396,9 +393,8 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(7, 16, 23, 0.88)",
     borderWidth: 1,
     borderColor: datingColors.border,
-    padding: 20,
+    padding: 30,
     marginTop: -132,
-    marginHorizontal: 14,
     zIndex: 4,
     ...datingShadow,
   },
