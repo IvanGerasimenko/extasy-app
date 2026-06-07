@@ -1,5 +1,5 @@
-import { supabase } from "@/services/supabase";
 import { clearLegacyStorage } from "@/services/clearLegacyStorage";
+import { supabase } from "@/services/supabase";
 import { Platform } from "react-native";
 
 export type SessionUser = {
@@ -89,6 +89,7 @@ type ProfileRow = {
   is_discover_hidden: boolean;
   onboarding_completed: boolean;
   created_at: string;
+  updated_at: string;
 };
 
 type LikeRow = {
@@ -118,10 +119,7 @@ const SUSPICIOUS_EMAIL_PARTS = [
   "trash",
 ];
 
-function requireData<T>(
-  data: T | null,
-  error: { message: string } | null,
-): T {
+function requireData<T>(data: T | null, error: { message: string } | null): T {
   if (error) {
     throw new Error(error.message);
   }
@@ -129,7 +127,9 @@ function requireData<T>(
 }
 
 function profileToUser(profile: ProfileRow): SessionUser {
-  const storedPhotos = (profile.photos ?? []).filter(isProfileStorageUrl);
+  const storedPhotos = (profile.photos ?? []).filter(
+    (photo) => !isGoogleAvatarUrl(photo),
+  );
   const profilePhotos = storedPhotos.length ? storedPhotos : undefined;
 
   return {
@@ -189,15 +189,16 @@ async function getProfilesByIds(ids: string[]) {
   if (!uniqueIds.length) {
     return new Map<string, SessionUser>();
   }
-  const result = await supabase.from("profiles").select("*").in("id", uniqueIds);
+  const result = await supabase
+    .from("profiles")
+    .select("*")
+    .in("id", uniqueIds);
   const rows = requireData(result.data as ProfileRow[] | null, result.error);
   return new Map(rows.map((row) => [row.id, profileToUser(row)]));
 }
 
 async function getBlockPairs() {
-  const result = await supabase
-    .from("blocks")
-    .select("blocker_id, blocked_id");
+  const result = await supabase.from("blocks").select("blocker_id, blocked_id");
   return requireData(
     result.data as { blocker_id: string; blocked_id: string }[] | null,
     result.error,
@@ -252,6 +253,7 @@ async function uploadUri(
   const path = `${ownerId}/${Date.now()}-${index}-${Math.random()
     .toString(16)
     .slice(2)}.${extension}`;
+
   const upload = await supabase.storage
     .from(bucket)
     .upload(path, arrayBuffer, { contentType, upsert: false });
@@ -261,7 +263,9 @@ async function uploadUri(
     return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
   }
 
-  const signed = await supabase.storage.from(bucket).createSignedUrl(path, 60 * 60 * 24 * 30);
+  const signed = await supabase.storage
+    .from(bucket)
+    .createSignedUrl(path, 60 * 60 * 24 * 30);
   return requireData(signed.data, signed.error).signedUrl;
 }
 
@@ -275,10 +279,9 @@ function dataUriToArrayBuffer(uri: string) {
   const contentType = match[1] || "image/jpeg";
   const isBase64 = Boolean(match[2]);
   const payload = match[3];
-  const binary =
-    isBase64
-      ? globalThis.atob(payload)
-      : decodeURIComponent(payload);
+  const binary = isBase64
+    ? globalThis.atob(payload)
+    : decodeURIComponent(payload);
   const bytes = new Uint8Array(binary.length);
 
   for (let index = 0; index < binary.length; index += 1) {
@@ -294,12 +297,100 @@ function dataUriToArrayBuffer(uri: string) {
 function getImageExtension(contentType: string) {
   if (contentType.includes("png")) return "png";
   if (contentType.includes("webp")) return "webp";
-  if (contentType.includes("heic") || contentType.includes("heif")) return "heic";
+  if (contentType.includes("heic") || contentType.includes("heif"))
+    return "heic";
   return "jpg";
 }
 
-function isProfileStorageUrl(url: string) {
-  return url.includes("/storage/v1/object/public/profile-photos/");
+function isGoogleAvatarUrl(url: string) {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    return (
+      hostname === "lh3.googleusercontent.com" ||
+      hostname.endsWith(".googleusercontent.com")
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function restoreProfileForVerifiedEmail(
+  profile: ProfileRow,
+  verifiedEmail?: string,
+) {
+  if (
+    !verifiedEmail ||
+    (profile.onboarding_completed && profile.photos?.length)
+  ) {
+    return profile;
+  }
+
+  const legacyResult = await supabase
+    .from("profiles")
+    .select("*")
+    .ilike("email", verifiedEmail.trim())
+    .neq("id", profile.id)
+    .order("updated_at", { ascending: false })
+    .limit(20);
+  const legacyProfiles = requireData(
+    legacyResult.data as ProfileRow[] | null,
+    legacyResult.error,
+  );
+  const legacyProfile = legacyProfiles.find((candidate) =>
+    candidate.photos?.some((photo) => !isGoogleAvatarUrl(photo)),
+  );
+
+  if (!legacyProfile?.photos?.length) {
+    return profile;
+  }
+
+  const restoredPhotos = legacyProfile.photos.filter(
+    (photo) => !isGoogleAvatarUrl(photo),
+  );
+
+  if (!restoredPhotos.length) {
+    return profile;
+  }
+
+  const restored = await supabase
+    .from("profiles")
+    .update({
+      name: legacyProfile.name,
+      picture: restoredPhotos[0],
+      photos: restoredPhotos,
+      about: legacyProfile.about,
+      age: legacyProfile.age,
+      city: legacyProfile.city,
+      country: legacyProfile.country,
+      gender: legacyProfile.gender,
+      looking_for: legacyProfile.looking_for,
+      interests: legacyProfile.interests,
+      is_discover_hidden: legacyProfile.is_discover_hidden,
+      onboarding_completed: true,
+    })
+    .eq("id", profile.id)
+    .select("*")
+    .single();
+
+  return requireData(restored.data as ProfileRow | null, restored.error);
+}
+
+async function syncCurrentProfile() {
+  const result = await supabase.rpc("sync_current_profile");
+
+  if (!result.error && result.data) {
+    return result.data as ProfileRow;
+  }
+
+  // Keep older deployments usable until the database migration is applied.
+  if (
+    result.error &&
+    !result.error.message.toLowerCase().includes("sync_current_profile")
+  ) {
+    throw new Error(result.error.message);
+  }
+
+  return null;
 }
 
 export async function getSessionUser() {
@@ -309,6 +400,12 @@ export async function getSessionUser() {
 
   if (authResult.error || !authUser) {
     return null;
+  }
+
+  const syncedProfile = await syncCurrentProfile();
+
+  if (syncedProfile) {
+    return profileToUser(syncedProfile);
   }
 
   const result = await supabase
@@ -336,11 +433,13 @@ export async function getSessionUser() {
       .select("*")
       .single();
 
-    profile = requireData(
-      inserted.data as ProfileRow | null,
-      inserted.error,
-    );
+    profile = requireData(inserted.data as ProfileRow | null, inserted.error);
   }
+
+  profile = await restoreProfileForVerifiedEmail(
+    profile,
+    authUser.email ?? undefined,
+  );
 
   return profileToUser(profile);
 }
@@ -698,13 +797,11 @@ export async function recordProfileLike(targetUser: SessionUser) {
   const rows = await getLikeRows();
   const existing = rows.find(
     (row) =>
-      row.from_user_id === currentUser.id &&
-      row.to_user_id === targetUser.id,
+      row.from_user_id === currentUser.id && row.to_user_id === targetUser.id,
   );
   const reverse = rows.find(
     (row) =>
-      row.from_user_id === targetUser.id &&
-      row.to_user_id === currentUser.id,
+      row.from_user_id === targetUser.id && row.to_user_id === currentUser.id,
   );
   if (existing) {
     const match = existing.match_id
@@ -775,12 +872,14 @@ export async function getLikedProfilesForCurrentUser(): Promise<
   return rows.flatMap<LikedProfileRecord>((row) => {
     const user = profiles.get(row.to_user_id);
     return user
-      ? [{
-          user,
-          status: row.status,
-          isMutual: row.status === "accepted",
-          matchId: row.match_id ?? undefined,
-        }]
+      ? [
+          {
+            user,
+            status: row.status,
+            isMutual: row.status === "accepted",
+            matchId: row.match_id ?? undefined,
+          },
+        ]
       : [];
   });
 }
@@ -939,9 +1038,7 @@ export async function getCurrentUserMatches() {
   );
   const blocks = await getBlockPairs();
   return rows
-    .filter(
-      (row) => !blockedBetween(row.user_one_id, row.user_two_id, blocks),
-    )
+    .filter((row) => !blockedBetween(row.user_one_id, row.user_two_id, blocks))
     .map((row) => matchRowToRecord(row, profiles));
 }
 
@@ -986,16 +1083,18 @@ export async function getChatMessages(matchId: string) {
     .eq("match_id", matchId)
     .order("created_at");
   const rows = requireData(
-    result.data as {
-      id: string;
-      match_id: string;
-      sender_id: string;
-      text: string | null;
-      image_url: string | null;
-      emoji: string | null;
-      photo_reaction: string | null;
-      created_at: string;
-    }[] | null,
+    result.data as
+      | {
+          id: string;
+          match_id: string;
+          sender_id: string;
+          text: string | null;
+          image_url: string | null;
+          emoji: string | null;
+          photo_reaction: string | null;
+          created_at: string;
+        }[]
+      | null,
     result.error,
   );
   return rows.map((row) => ({
