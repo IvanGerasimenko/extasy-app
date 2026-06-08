@@ -1066,6 +1066,10 @@ export async function markNotificationsSeenForCurrentUser() {
       user_id: id,
       notification_key: notificationKey,
     })),
+    {
+      onConflict: "user_id,notification_key",
+      ignoreDuplicates: true,
+    },
   );
   requireData(result.data, result.error);
 }

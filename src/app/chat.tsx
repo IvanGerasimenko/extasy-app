@@ -1,8 +1,8 @@
 import BottomMenu from "@/components/BottomMenu";
 import { PremiumEmptyState, PremiumLoadingState } from "@/components/PremiumUI";
 import { ThemedBackground } from "@/components/ThemedBackground";
-import { getCountryLabel, getInterestLabel } from "@/constants/germanLabels";
 import { datingColors, datingShadow } from "@/constants/datingDesign";
+import { getCountryLabel, getInterestLabel } from "@/constants/germanLabels";
 import { premiumColors, premiumShadow } from "@/constants/premiumDesign";
 import {
   getChatMessages,
@@ -30,6 +30,7 @@ import {
   Modal,
   PanResponder,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -84,12 +85,10 @@ function formatLastSeen(lastSeenAt: string | null) {
   const elapsedMinutes = Math.floor(elapsedMs / 60_000);
 
   if (elapsedMinutes < 1) return "Gerade eben online";
-  if (elapsedMinutes < 60)
-    return `Zuletzt online vor ${elapsedMinutes} Min.`;
+  if (elapsedMinutes < 60) return `Zuletzt online vor ${elapsedMinutes} Min.`;
 
   const elapsedHours = Math.floor(elapsedMinutes / 60);
-  if (elapsedHours < 24)
-    return `Zuletzt online vor ${elapsedHours} Std.`;
+  if (elapsedHours < 24) return `Zuletzt online vor ${elapsedHours} Std.`;
 
   const elapsedDays = Math.floor(elapsedHours / 24);
   if (elapsedDays === 1) return "Zuletzt online gestern";
@@ -458,7 +457,7 @@ export default function ChatScreen() {
         <TouchableOpacity
           activeOpacity={0.78}
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={() => router.replace("/chats")}
         >
           <Text style={styles.backButtonText}>‹</Text>
         </TouchableOpacity>
@@ -488,9 +487,7 @@ export default function ChatScreen() {
                 ]}
               />
               <Text style={styles.onlineText} numberOfLines={1}>
-                {otherUserOnline
-                  ? "Online"
-                  : formatLastSeen(otherUserLastSeen)}
+                {otherUserOnline ? "Online" : formatLastSeen(otherUserLastSeen)}
               </Text>
             </View>
           </View>
@@ -538,7 +535,6 @@ export default function ChatScreen() {
   function renderProfilePanelContent() {
     return (
       <>
-        <Text style={styles.webPanelEyebrow}>Profil</Text>
         {photo ? (
           <Image source={{ uri: photo }} style={styles.webProfilePhoto} />
         ) : null}
@@ -621,6 +617,70 @@ export default function ChatScreen() {
     );
   }
 
+  function EmojiButton({
+    emoji,
+    onPress,
+  }: {
+    emoji: string;
+    onPress: () => void;
+  }) {
+    const scale = React.useRef(new Animated.Value(1)).current;
+    const hoverProgress = React.useRef(new Animated.Value(0)).current;
+
+    const animateTo = (value: number) => {
+      Animated.spring(scale, {
+        toValue: value,
+        friction: 4,
+        tension: 180,
+        useNativeDriver: true,
+      }).start();
+    };
+
+    const animateHover = (value: number) => {
+      Animated.spring(hoverProgress, {
+        toValue: value,
+        friction: 5,
+        tension: 50,
+        useNativeDriver: true,
+      }).start();
+    };
+
+    const hoverRotate = hoverProgress.interpolate({
+      inputRange: [0, 1],
+      outputRange: ["0deg", "360deg"],
+    });
+    const hoverScale = hoverProgress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [1, 1.16],
+    });
+
+    return (
+      <Pressable
+        onHoverIn={() => animateHover(1)}
+        onHoverOut={() => animateHover(0)}
+      >
+        <Animated.View
+          style={{
+            transform: [
+              { scale },
+              { scale: hoverScale },
+              { rotate: hoverRotate },
+            ],
+          }}
+        >
+          <TouchableOpacity
+            style={styles.emojiOption}
+            onPress={onPress}
+            onPressIn={() => animateTo(0.88)}
+            onPressOut={() => animateTo(1)}
+          >
+            <Text style={styles.emojiOptionText}>{emoji}</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </Pressable>
+    );
+  }
+
   const sharedModals = (
     <>
       <Modal visible={attachmentOpen} transparent animationType="fade">
@@ -698,7 +758,7 @@ export default function ChatScreen() {
         </View>
       </Modal>
 
-      <Modal visible={emojiPickerOpen} transparent animationType="slide">
+      <Modal visible={emojiPickerOpen} transparent animationType="fade">
         <View style={styles.modalBackdrop}>
           <View style={styles.pickerWindow}>
             <View style={styles.windowHeader}>
@@ -709,13 +769,11 @@ export default function ChatScreen() {
             </View>
             <View style={styles.emojiGrid}>
               {emojiOptions.map((emoji) => (
-                <TouchableOpacity
+                <EmojiButton
                   key={emoji}
-                  style={styles.emojiOption}
+                  emoji={emoji}
                   onPress={() => handleSendEmoji(emoji)}
-                >
-                  <Text style={styles.emojiOptionText}>{emoji}</Text>
-                </TouchableOpacity>
+                />
               ))}
             </View>
           </View>
@@ -794,7 +852,6 @@ export default function ChatScreen() {
           </View>
           {!isNarrowWeb ? renderWebProfilePanel() : null}
         </View>
-        <BottomMenu />
         {renderMobileProfileDrawer()}
         {sharedModals}
       </ThemedBackground>
@@ -1113,7 +1170,6 @@ const styles = StyleSheet.create({
     width: "100%",
     flexDirection: "row",
     padding: 18,
-    paddingBottom: 80,
     gap: 22,
   },
 
@@ -1123,7 +1179,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
     paddingHorizontal: 8,
     paddingTop: 8,
-    paddingBottom: 80,
     gap: 8,
   },
 
@@ -1151,7 +1206,7 @@ const styles = StyleSheet.create({
     backgroundColor: datingColors.surface,
     borderWidth: 1,
     borderColor: datingColors.border,
-    padding: 20,
+    paddingHorizontal: 20,
     ...datingShadow,
   },
 
@@ -1168,6 +1223,7 @@ const styles = StyleSheet.create({
     height: 260,
     borderRadius: 24,
     backgroundColor: datingColors.surfaceSoft,
+    marginTop: 20,
   },
 
   webProfileName: {
@@ -1223,6 +1279,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: 20,
+    marginBottom: 40,
   },
 
   webProfileButtonText: {
@@ -1253,8 +1310,8 @@ const styles = StyleSheet.create({
   },
 
   backButton: {
-    width: 42,
-    height: 42,
+    width: 32,
+    height: 32,
     borderRadius: 21,
     alignItems: "center",
     justifyContent: "center",
@@ -1417,7 +1474,6 @@ const styles = StyleSheet.create({
   chatSurface: {
     flex: 1,
     marginHorizontal: isWeb ? 20 : 14,
-    marginBottom: isWeb ? 80 : 100,
     borderRadius: isWeb ? 30 : 28,
     backgroundColor: datingColors.backgroundSoft,
     borderWidth: 1,
@@ -1629,8 +1685,10 @@ const styles = StyleSheet.create({
 
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(16, 24, 32, 0.42)",
-    justifyContent: "flex-end",
+    backgroundColor: "rgba(0, 0, 0, 0.04)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
   },
 
   attachmentSheet: {
@@ -1680,16 +1738,13 @@ const styles = StyleSheet.create({
   },
 
   pickerWindow: {
-    maxWidth: isWeb ? 520 : undefined,
-    width: isWeb ? "94%" : undefined,
-    alignSelf: "center",
-    margin: 14,
-    borderRadius: 30,
-    backgroundColor: premiumColors.porcelain,
+    width: "100%",
+    maxWidth: 420,
+    borderRadius: 28,
+    padding: 16,
+    backgroundColor: "rgba(255, 252, 247, 0.92)",
     borderWidth: 1,
-    borderColor: premiumColors.hairline,
-    padding: 18,
-    ...premiumShadow,
+    borderColor: "rgba(255,255,255,0.7)",
   },
 
   windowHeader: {
@@ -1778,22 +1833,24 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
     marginTop: 14,
+    padding: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.72)",
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: "rgba(230, 224, 216, 0.9)",
   },
 
   emojiOption: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: premiumColors.white,
-    borderWidth: 1,
-    borderColor: premiumColors.hairline,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
 
   emojiOptionText: {
-    fontSize: 13,
-    lineHeight: 16,
+    fontSize: 26,
+    lineHeight: 32,
   },
 
   reactionSheet: {
