@@ -13,8 +13,10 @@ import {
 const webScrollableBackground =
   Platform.OS === "web"
     ? ({
-        minHeight: "100vh",
+        height: "100dvh",
+        minHeight: "100svh",
         overflow: "auto",
+        overscrollBehavior: "none",
       } as unknown as ViewStyle)
     : null;
 
@@ -46,14 +48,6 @@ export function ThemedBackground({ children, style, ...props }: ViewProps) {
           styles.content,
           {
             opacity: reveal,
-            transform: [
-              {
-                translateY: reveal.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [10, 0],
-                }),
-              },
-            ],
           },
         ]}
       >

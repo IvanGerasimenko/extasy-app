@@ -9,6 +9,7 @@ import {
   getMatchById,
   getSessionUser,
   getUserKey,
+  markChatRead,
   reactToChatMessage,
   sendChatMessage,
   type ChatMessage,
@@ -24,6 +25,7 @@ import * as ExpoImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  AppState,
   Animated,
   Image,
   KeyboardAvoidingView,
@@ -104,6 +106,51 @@ function formatLastSeen(lastSeenAt: string | null) {
   }).format(lastSeen)}`;
 }
 
+function realtimeRecordToChatMessage(
+  record: Record<string, unknown>,
+): ChatMessage | null {
+  if (
+    typeof record.id !== "string" ||
+    typeof record.match_id !== "string" ||
+    typeof record.sender_id !== "string" ||
+    typeof record.created_at !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    id: record.id,
+    matchId: record.match_id,
+    senderKey: record.sender_id,
+    text: typeof record.text === "string" ? record.text : undefined,
+    imageUri:
+      typeof record.image_url === "string" ? record.image_url : undefined,
+    emoji: typeof record.emoji === "string" ? record.emoji : undefined,
+    photoReaction:
+      typeof record.photo_reaction === "string"
+        ? record.photo_reaction
+        : undefined,
+    createdAt: record.created_at,
+  };
+}
+
+function mergeChatMessage(
+  currentMessages: ChatMessage[],
+  nextMessage: ChatMessage,
+) {
+  const existingIndex = currentMessages.findIndex(
+    (message) => message.id === nextMessage.id,
+  );
+
+  if (existingIndex === -1) {
+    return [...currentMessages, nextMessage];
+  }
+
+  const nextMessages = [...currentMessages];
+  nextMessages[existingIndex] = nextMessage;
+  return nextMessages;
+}
+
 export default function ChatScreen() {
   const { matchId } = useLocalSearchParams<{ matchId?: string }>();
   const { width: viewportWidth } = useWindowDimensions();
@@ -124,33 +171,112 @@ export default function ChatScreen() {
   const [otherUserLastSeen, setOtherUserLastSeen] = useState<string | null>(
     null,
   );
+  const [webVisualViewport, setWebVisualViewport] = useState<{
+    height: number;
+    offsetTop: number;
+  } | null>(null);
   const [, setPresenceClock] = useState(0);
   const profileDrawerProgress = React.useRef(new Animated.Value(1)).current;
+  const messagesScrollRef = React.useRef<ScrollView>(null);
   const otherUser = match ? getOtherUser(match, currentUserKey) : null;
   const otherUserId = otherUser?.id ?? "";
+
+  function scrollMessagesToEnd(animated = true) {
+    messagesScrollRef.current?.scrollToEnd({ animated });
+  }
+
+  async function markVisibleMessagesRead() {
+    if (!matchId) {
+      return;
+    }
+    if (
+      isWeb &&
+      typeof document !== "undefined" &&
+      document.visibilityState !== "visible"
+    ) {
+      return;
+    }
+    if (!isWeb && AppState.currentState !== "active") {
+      return;
+    }
+
+    try {
+      await markChatRead(matchId);
+    } catch (error) {
+      if (__DEV__) {
+        console.warn("Chat read receipt failed:", error);
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (!isWeb || !webVisualViewport) {
+      return;
+    }
+
+    const animationFrame = requestAnimationFrame(() => {
+      scrollMessagesToEnd(false);
+    });
+
+    return () => cancelAnimationFrame(animationFrame);
+  }, [webVisualViewport]);
+
+  useEffect(() => {
+    if (!isWeb || typeof window === "undefined") {
+      return;
+    }
+
+    function syncVisualViewport() {
+      const visualViewport = window.visualViewport;
+
+      setWebVisualViewport({
+        height: visualViewport?.height ?? window.innerHeight,
+        offsetTop: visualViewport?.offsetTop ?? 0,
+      });
+    }
+
+    syncVisualViewport();
+    window.visualViewport?.addEventListener("resize", syncVisualViewport);
+    window.visualViewport?.addEventListener("scroll", syncVisualViewport);
+    window.addEventListener("resize", syncVisualViewport);
+
+    return () => {
+      window.visualViewport?.removeEventListener("resize", syncVisualViewport);
+      window.visualViewport?.removeEventListener("scroll", syncVisualViewport);
+      window.removeEventListener("resize", syncVisualViewport);
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadChat() {
-      const user = await getSessionUser();
-
-      if (!user || !matchId) {
+      if (!matchId) {
         router.replace("/welcome");
         return;
       }
 
-      const foundMatch = await getMatchById(matchId);
-      const chatMessages = await getChatMessages(matchId);
+      const [user, foundMatch, chatMessages] = await Promise.all([
+        getSessionUser(),
+        getMatchById(matchId),
+        getChatMessages(matchId),
+      ]);
 
       if (!isMounted) {
         return;
       }
 
-      setCurrentUserKey(getUserKey(user));
+      if (!user || !foundMatch) {
+        router.replace("/welcome");
+        return;
+      }
+
+      const userKey = getUserKey(user);
+      setCurrentUserKey(userKey);
       setMatch(foundMatch);
       setMessages(chatMessages);
       setIsLoading(false);
+      void markVisibleMessagesRead();
     }
 
     loadChat();
@@ -175,14 +301,63 @@ export default function ChatScreen() {
           table: "messages",
           filter: `match_id=eq.${matchId}`,
         },
-        async () => {
-          setMessages(await getChatMessages(matchId));
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            const deletedId = payload.old.id;
+            if (typeof deletedId === "string") {
+              setMessages((currentMessages) =>
+                currentMessages.filter((message) => message.id !== deletedId),
+              );
+            }
+            return;
+          }
+
+          const nextMessage = realtimeRecordToChatMessage(payload.new);
+          if (nextMessage) {
+            setMessages((currentMessages) =>
+              mergeChatMessage(currentMessages, nextMessage),
+            );
+            if (
+              payload.eventType === "INSERT" &&
+              nextMessage.senderKey !== currentUserKey
+            ) {
+              void markVisibleMessagesRead();
+            }
+          }
         },
       )
       .subscribe();
 
     return () => {
       void supabase.removeChannel(channel);
+    };
+  }, [currentUserKey, matchId]);
+
+  useEffect(() => {
+    if (!matchId) {
+      return;
+    }
+
+    const appStateSubscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        void markVisibleMessagesRead();
+      }
+    });
+    const visibilityHandler = () => {
+      if (document.visibilityState === "visible") {
+        void markVisibleMessagesRead();
+      }
+    };
+
+    if (isWeb && typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", visibilityHandler);
+    }
+
+    return () => {
+      appStateSubscription.remove();
+      if (isWeb && typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", visibilityHandler);
+      }
     };
   }, [matchId]);
 
@@ -232,22 +407,47 @@ export default function ChatScreen() {
   }, [profileDrawerProgress, profileDrawerVisible]);
 
   async function handleSendText() {
-    if (!matchId || !draft.trim()) {
+    const text = draft.trim();
+
+    if (!matchId || !text || !currentUserKey) {
       return;
     }
 
-    const message = await sendChatMessage(matchId, draft);
+    const pendingId = `pending:${Date.now()}:${Math.random()}`;
+    const pendingMessage: ChatMessage = {
+      id: pendingId,
+      matchId,
+      senderKey: currentUserKey,
+      text,
+      createdAt: new Date().toISOString(),
+    };
 
-    if (!message) {
-      return;
-    }
-
-    setMessages((currentMessages) =>
-      currentMessages.some((item) => item.id === message.id)
-        ? currentMessages
-        : [...currentMessages, message],
-    );
     setDraft("");
+    setMessages((currentMessages) => [...currentMessages, pendingMessage]);
+
+    try {
+      const message = await sendChatMessage(matchId, text);
+
+      if (!message) {
+        throw new Error("Message could not be sent");
+      }
+
+      setMessages((currentMessages) =>
+        mergeChatMessage(
+          currentMessages.filter((item) => item.id !== pendingId),
+          message,
+        ),
+      );
+    } catch (error) {
+      setMessages((currentMessages) =>
+        currentMessages.filter((item) => item.id !== pendingId),
+      );
+      setDraft((currentDraft) => currentDraft || text);
+
+      if (__DEV__) {
+        console.warn("Message send failed:", error);
+      }
+    }
   }
 
   async function handlePickImage() {
@@ -371,12 +571,14 @@ export default function ChatScreen() {
   const photo = otherUser?.photos?.[0] ?? otherUser?.picture;
   const isNarrowWeb = isWeb && viewportWidth < 1120;
   const isCompactWeb = isWeb && viewportWidth < 760;
-
   function renderMessages() {
     return (
       <ScrollView
+        ref={messagesScrollRef}
         style={styles.messages}
         contentContainerStyle={styles.messagesContent}
+        keyboardShouldPersistTaps="handled"
+        onContentSizeChange={() => scrollMessagesToEnd()}
         showsVerticalScrollIndicator={false}
       >
         {messages.length ? (
@@ -835,8 +1037,16 @@ export default function ChatScreen() {
   );
 
   if (isWeb) {
+    const compactViewportStyle =
+      isCompactWeb && webVisualViewport
+        ? {
+            height: webVisualViewport.height,
+            transform: [{ translateY: webVisualViewport.offsetTop }],
+          }
+        : null;
+
     return (
-      <ThemedBackground style={styles.background}>
+      <ThemedBackground style={[styles.background, compactViewportStyle]}>
         <View
           style={[
             styles.webContainer,
@@ -867,8 +1077,11 @@ export default function ChatScreen() {
         <View style={styles.chatSurface}>
           {renderChatHeader()}
           <ScrollView
+            ref={messagesScrollRef}
             style={styles.messages}
             contentContainerStyle={styles.messagesContent}
+            keyboardShouldPersistTaps="handled"
+            onContentSizeChange={() => scrollMessagesToEnd()}
             showsVerticalScrollIndicator={false}
           >
             {messages.length ? (
@@ -1171,6 +1384,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     padding: 18,
     gap: 22,
+    paddingBottom: 80,
   },
 
   webContainerCompact: {
@@ -1179,6 +1393,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
     paddingHorizontal: 8,
     paddingTop: 8,
+    paddingBottom: 8,
     gap: 8,
   },
 
@@ -1656,7 +1871,7 @@ const styles = StyleSheet.create({
     backgroundColor: datingColors.surface,
     paddingHorizontal: 16,
     color: datingColors.text,
-    fontSize: 15,
+    fontSize: isWeb ? 16 : 15,
   },
 
   sendButton: {

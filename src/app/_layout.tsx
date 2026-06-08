@@ -3,7 +3,9 @@ import { clearLegacyStorage } from "@/services/clearLegacyStorage";
 import { PresenceTracker } from "@/components/PresenceTracker";
 import { Stack } from "expo-router";
 import React from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Platform, Text, TextInput } from "react-native";
+import "../global.css";
 
 void clearLegacyStorage();
 
@@ -45,28 +47,30 @@ if (__DEV__ && Platform.OS === "ios") {
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <PresenceTracker />
-      <Stack>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="Splash" options={{ headerShown: false }} />
-        <Stack.Screen name="welcome" options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        <Stack.Screen name="profileSaving" options={{ headerShown: false }} />
-        <Stack.Screen name="registration" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="emailVerification"
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="auth/callback"
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="userProfile" options={{ headerShown: false }} />
-        <Stack.Screen name="chat" options={{ headerShown: false }} />
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-      </Stack>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <PresenceTracker />
+        <Stack>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="Splash" options={{ headerShown: false }} />
+          <Stack.Screen name="welcome" options={{ headerShown: false }} />
+          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+          <Stack.Screen name="profileSaving" options={{ headerShown: false }} />
+          <Stack.Screen name="registration" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="emailVerification"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="auth/callback"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="userProfile" options={{ headerShown: false }} />
+          <Stack.Screen name="chat" options={{ headerShown: false }} />
+          <Stack.Screen name="login" options={{ headerShown: false }} />
+        </Stack>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

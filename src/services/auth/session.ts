@@ -48,6 +48,12 @@ export type ChatMessagePayload = {
   emoji?: string;
 };
 
+export type ChatReadReceipt = {
+  matchId: string;
+  userKey: string;
+  lastReadAt: string;
+};
+
 export type LikeRequestStatus = "pending" | "accepted" | "skipped";
 
 export type LikeRequestRecord = {
@@ -227,11 +233,11 @@ function userToProfile(user: SessionUser) {
 }
 
 async function getAuthUserId() {
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) {
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data.session?.user) {
     return null;
   }
-  return data.user.id;
+  return data.session.user.id;
 }
 
 async function getProfilesByIds(ids: string[]) {
@@ -1192,6 +1198,54 @@ export async function getChatMessages(matchId: string) {
     photoReaction: row.photo_reaction ?? undefined,
     createdAt: row.created_at,
   }));
+}
+
+export async function getChatReadReceipts(matchId: string) {
+  const result = await supabase
+    .from("chat_reads")
+    .select("match_id, user_id, last_read_at")
+    .eq("match_id", matchId);
+  const rows = requireData(
+    result.data as
+      | {
+          match_id: string;
+          user_id: string;
+          last_read_at: string;
+        }[]
+      | null,
+    result.error,
+  );
+
+  return rows.map(
+    (row) =>
+      ({
+        matchId: row.match_id,
+        userKey: row.user_id,
+        lastReadAt: row.last_read_at,
+      }) satisfies ChatReadReceipt,
+  );
+}
+
+export async function markChatRead(matchId: string) {
+  const result = await supabase.rpc("mark_chat_read", {
+    target_match_id: matchId,
+  });
+  const row = requireData(
+    result.data as
+      | {
+          match_id: string;
+          user_id: string;
+          last_read_at: string;
+        }
+      | null,
+    result.error,
+  );
+
+  return {
+    matchId: row.match_id,
+    userKey: row.user_id,
+    lastReadAt: row.last_read_at,
+  } satisfies ChatReadReceipt;
 }
 
 export async function sendChatMessage(

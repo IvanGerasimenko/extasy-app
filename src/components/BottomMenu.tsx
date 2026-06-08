@@ -167,17 +167,13 @@ function MenuButton({
 
 const styles = StyleSheet.create({
   menuShell: {
-    position: "absolute",
-    left: 12,
-    right: 12,
-    bottom: 12,
-    zIndex: 100,
     alignItems: "center",
+    backgroundColor: "rgba(11, 21, 29, 0.94)",
   },
 
   menu: {
-    width: "100%",
-    maxWidth: 320,
+    width: "90%",
+    paddingHorizontal: 20,
     minHeight: 68,
     backgroundColor: "rgba(11, 21, 29, 0.94)",
     borderColor: "rgba(255, 255, 255, 0.09)",

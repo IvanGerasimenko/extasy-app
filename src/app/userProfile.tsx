@@ -23,6 +23,7 @@ import React, {
   useState,
 } from "react";
 import {
+  Animated,
   Image,
   Modal,
   PanResponder,
@@ -34,6 +35,11 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from "react-native-gesture-handler";
 
 const systemFont = Platform.select({
   ios: "System",
@@ -45,13 +51,195 @@ const systemFontBold = Platform.select({
   web: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif",
 });
 
+function ZoomableFullscreenImage({
+  uri,
+  width,
+  height,
+  onZoomChange,
+}: {
+  uri: string;
+  width: number;
+  height: number;
+  onZoomChange: (isZoomed: boolean) => void;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const translateX = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
+  const currentScale = useRef(1);
+  const currentTranslateX = useRef(0);
+  const currentTranslateY = useRef(0);
+  const pinchStartScale = useRef(1);
+  const panStartX = useRef(0);
+  const panStartY = useRef(0);
+  const [isZoomed, setIsZoomed] = useState(false);
+
+  const setZoomed = useCallback(
+    (nextZoomed: boolean) => {
+      setIsZoomed(nextZoomed);
+      onZoomChange(nextZoomed);
+    },
+    [onZoomChange],
+  );
+
+  const clampTranslation = useCallback(
+    (value: number, axisSize: number, nextScale = currentScale.current) => {
+      const limit = Math.max(0, (axisSize * (nextScale - 1)) / 2);
+      return Math.min(limit, Math.max(-limit, value));
+    },
+    [],
+  );
+
+  const animateScale = useCallback(
+    (nextScale: number) => {
+      currentScale.current = nextScale;
+      const nextZoomed = nextScale > 1.01;
+      const nextX = nextZoomed
+        ? clampTranslation(currentTranslateX.current, width, nextScale)
+        : 0;
+      const nextY = nextZoomed
+        ? clampTranslation(currentTranslateY.current, height, nextScale)
+        : 0;
+
+      currentTranslateX.current = nextX;
+      currentTranslateY.current = nextY;
+      setZoomed(nextZoomed);
+      Animated.parallel([
+        Animated.spring(scale, {
+          toValue: nextScale,
+          friction: 8,
+          tension: 90,
+          useNativeDriver: true,
+        }),
+        Animated.spring(translateX, {
+          toValue: nextX,
+          friction: 8,
+          tension: 90,
+          useNativeDriver: true,
+        }),
+        Animated.spring(translateY, {
+          toValue: nextY,
+          friction: 8,
+          tension: 90,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    },
+    [
+      clampTranslation,
+      height,
+      scale,
+      setZoomed,
+      translateX,
+      translateY,
+      width,
+    ],
+  );
+
+  const zoomGesture = useMemo(() => {
+    const pinchGesture = Gesture.Pinch()
+      .runOnJS(true)
+      .onBegin(() => {
+        pinchStartScale.current = currentScale.current;
+      })
+      .onUpdate((event) => {
+        const nextScale = Math.min(
+          4,
+          Math.max(1, pinchStartScale.current * event.scale),
+        );
+        scale.setValue(nextScale);
+        setZoomed(nextScale > 1.01);
+      })
+      .onEnd((event) => {
+        const nextScale = Math.min(
+          4,
+          Math.max(1, pinchStartScale.current * event.scale),
+        );
+        animateScale(nextScale < 1.08 ? 1 : nextScale);
+      });
+
+    const panGesture = Gesture.Pan()
+      .enabled(isZoomed)
+      .runOnJS(true)
+      .onBegin(() => {
+        panStartX.current = currentTranslateX.current;
+        panStartY.current = currentTranslateY.current;
+      })
+      .onUpdate((event) => {
+        translateX.setValue(
+          clampTranslation(panStartX.current + event.translationX, width),
+        );
+        translateY.setValue(
+          clampTranslation(panStartY.current + event.translationY, height),
+        );
+      })
+      .onEnd((event) => {
+        currentTranslateX.current = clampTranslation(
+          panStartX.current + event.translationX,
+          width,
+        );
+        currentTranslateY.current = clampTranslation(
+          panStartY.current + event.translationY,
+          height,
+        );
+      });
+
+    const doubleTapGesture = Gesture.Tap()
+      .numberOfTaps(2)
+      .runOnJS(true)
+      .onEnd(() => {
+        animateScale(currentScale.current > 1.01 ? 1 : 2.5);
+      });
+
+    return isZoomed
+      ? Gesture.Simultaneous(pinchGesture, panGesture, doubleTapGesture)
+      : Gesture.Simultaneous(pinchGesture, doubleTapGesture);
+  }, [
+    animateScale,
+    clampTranslation,
+    height,
+    isZoomed,
+    scale,
+    setZoomed,
+    translateX,
+    translateY,
+    width,
+  ]);
+
+  useEffect(() => {
+    return () => onZoomChange(false);
+  }, [onZoomChange]);
+
+  return (
+    <GestureDetector gesture={zoomGesture}>
+      <Animated.View style={styles.zoomSurface}>
+        <Animated.View
+          style={[
+            styles.zoomSurface,
+            {
+              transform: [{ translateX }, { translateY }, { scale }],
+            },
+          ]}
+        >
+          <Image
+            source={{ uri }}
+            style={[styles.fullscreenImage, { width }]}
+            resizeMode="contain"
+          />
+        </Animated.View>
+      </Animated.View>
+    </GestureDetector>
+  );
+}
+
 export default function UserProfileScreen() {
-  const { width: screenWidth } = useWindowDimensions();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const { userKey } = useLocalSearchParams<{ userKey?: string }>();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
+  const [fullscreenWidth, setFullscreenWidth] = useState(screenWidth);
+  const [fullscreenZoomed, setFullscreenZoomed] = useState(false);
   const fullscreenCarouselRef = useRef<ScrollView | null>(null);
 
   const photos = useMemo(() => {
@@ -103,18 +291,44 @@ export default function UserProfileScreen() {
     [changePhoto, photos.length],
   );
 
+  function openFullscreen(index = photoIndex) {
+    const viewportWidth =
+      Platform.OS === "web" && typeof window !== "undefined"
+        ? (window.visualViewport?.width ?? window.innerWidth)
+        : screenWidth;
+
+    setPhotoIndex(index);
+    setFullscreenWidth(viewportWidth);
+    setFullscreenZoomed(false);
+    setFullscreenOpen(true);
+  }
+
+  function showFullscreenPhoto(direction: -1 | 1) {
+    if (fullscreenZoomed || photos.length < 2) {
+      return;
+    }
+
+    const nextIndex =
+      (photoIndex + direction + photos.length) % photos.length;
+    setPhotoIndex(nextIndex);
+    fullscreenCarouselRef.current?.scrollTo({
+      x: nextIndex * fullscreenWidth,
+      animated: true,
+    });
+  }
+
   useEffect(() => {
     if (fullscreenOpen) {
       const frame = requestAnimationFrame(() => {
         fullscreenCarouselRef.current?.scrollTo({
-          x: photoIndex * screenWidth,
+          x: photoIndex * fullscreenWidth,
           animated: false,
         });
       });
 
       return () => cancelAnimationFrame(frame);
     }
-  }, [fullscreenOpen, photoIndex]);
+  }, [fullscreenOpen, fullscreenWidth, photoIndex]);
 
   useEffect(() => {
     let isMounted = true;
@@ -168,7 +382,7 @@ export default function UserProfileScreen() {
                 <TouchableOpacity
                   activeOpacity={0.94}
                   style={styles.photoTapArea}
-                  onPress={() => setFullscreenOpen(true)}
+                  onPress={() => openFullscreen()}
                 >
                   <Image
                     source={{ uri: photos[photoIndex] ?? photos[0] }}
@@ -240,10 +454,7 @@ export default function UserProfileScreen() {
                     <TouchableOpacity
                       key={`${photo}-${index}`}
                       style={styles.photoTile}
-                      onPress={() => {
-                        setPhotoIndex(index);
-                        setFullscreenOpen(true);
-                      }}
+                      onPress={() => openFullscreen(index)}
                     >
                       <Image
                         source={{ uri: photo }}
@@ -264,7 +475,10 @@ export default function UserProfileScreen() {
       <BottomMenu />
 
       <Modal visible={fullscreenOpen} transparent animationType="fade">
-        <View style={styles.fullscreen}>
+        <GestureHandlerRootView
+          nativeID="user-profile-fullscreen"
+          style={styles.fullscreen}
+        >
           <TouchableOpacity
             style={styles.fullscreenClose}
             onPress={() => setFullscreenOpen(false)}
@@ -277,14 +491,15 @@ export default function UserProfileScreen() {
               ref={fullscreenCarouselRef}
               horizontal
               pagingEnabled
+              scrollEnabled={!fullscreenZoomed}
               bounces={false}
               decelerationRate="fast"
               showsHorizontalScrollIndicator={false}
               style={styles.fullscreenImageWrap}
-              contentOffset={{ x: photoIndex * screenWidth, y: 0 }}
+              contentOffset={{ x: photoIndex * fullscreenWidth, y: 0 }}
               onMomentumScrollEnd={(event) => {
                 const nextIndex = Math.round(
-                  event.nativeEvent.contentOffset.x / screenWidth,
+                  event.nativeEvent.contentOffset.x / fullscreenWidth,
                 );
 
                 if (nextIndex >= 0 && nextIndex < photos.length) {
@@ -295,16 +510,38 @@ export default function UserProfileScreen() {
               {photos.map((photo, index) => (
                 <View
                   key={`${photo}-${index}`}
-                  style={[styles.fullscreenSlide, { width: screenWidth }]}
+                  style={[styles.fullscreenSlide, { width: fullscreenWidth }]}
                 >
-                  <Image
-                    source={{ uri: photo }}
-                    style={[styles.fullscreenImage, { width: screenWidth }]}
-                    resizeMode="contain"
+                  <ZoomableFullscreenImage
+                    uri={photo}
+                    width={fullscreenWidth}
+                    height={screenHeight * 0.76}
+                    onZoomChange={
+                      index === photoIndex
+                        ? setFullscreenZoomed
+                        : () => undefined
+                    }
                   />
                 </View>
               ))}
             </ScrollView>
+          ) : null}
+
+          {photos.length > 1 && !fullscreenZoomed ? (
+            <>
+              <TouchableOpacity
+                style={[styles.fullscreenArrow, styles.fullscreenArrowLeft]}
+                onPress={() => showFullscreenPhoto(-1)}
+              >
+                <Text style={styles.fullscreenArrowText}>‹</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.fullscreenArrow, styles.fullscreenArrowRight]}
+                onPress={() => showFullscreenPhoto(1)}
+              >
+                <Text style={styles.fullscreenArrowText}>›</Text>
+              </TouchableOpacity>
+            </>
           ) : null}
 
           {photos.length > 1 ? (
@@ -314,7 +551,7 @@ export default function UserProfileScreen() {
               </Text>
             </View>
           ) : null}
-        </View>
+        </GestureHandlerRootView>
       </Modal>
     </ThemedBackground>
   );
@@ -607,6 +844,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
+  zoomSurface: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
   fullscreenImage: {
     height: "100%",
   },
@@ -627,6 +871,33 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontSize: 14,
     fontFamily: systemFontBold,
+  },
+
+  fullscreenArrow: {
+    position: "absolute",
+    top: "50%",
+    zIndex: 3,
+    width: 48,
+    height: 56,
+    marginTop: -28,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  fullscreenArrowLeft: {
+    left: 14,
+  },
+
+  fullscreenArrowRight: {
+    right: 14,
+  },
+
+  fullscreenArrowText: {
+    color: "#FFF",
+    fontSize: 42,
+    lineHeight: 46,
   },
 
   fullscreenCounterWrap: {

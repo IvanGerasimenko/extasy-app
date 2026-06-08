@@ -12,13 +12,17 @@ import {
 } from "@/constants/premiumDesign";
 import { getCountryLabel } from "@/constants/germanLabels";
 import {
+  getChatMessages,
+  getChatReadReceipts,
   getCurrentUserMatches,
   getSessionUser,
   getUserKey,
+  type ChatMessage,
   type MatchRecord,
 } from "@/services/auth/session";
-import { router, usePathname } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { supabase } from "@/services/supabase";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Image,
   Platform,
@@ -32,6 +36,12 @@ import {
 
 const isWeb = Platform.OS === "web";
 
+type ChatSummary = {
+  lastMessage: ChatMessage | null;
+  currentUserLastReadAt: string | null;
+  otherUserLastReadAt: string | null;
+};
+
 function getOtherUser(match: MatchRecord, currentUserKey: string) {
   const otherUserKey = match.userKeys.find(
     (userKey) => userKey !== currentUserKey,
@@ -39,41 +49,168 @@ function getOtherUser(match: MatchRecord, currentUserKey: string) {
   return otherUserKey ? match.users[otherUserKey] : null;
 }
 
+async function getChatSummary(
+  match: MatchRecord,
+  currentUserKey: string,
+): Promise<ChatSummary> {
+  const otherUser = getOtherUser(match, currentUserKey);
+  const [messages, readReceipts] = await Promise.all([
+    getChatMessages(match.id),
+    getChatReadReceipts(match.id),
+  ]);
+
+  return {
+    lastMessage: messages.at(-1) ?? null,
+    currentUserLastReadAt:
+      readReceipts.find((receipt) => receipt.userKey === currentUserKey)
+        ?.lastReadAt ?? null,
+    otherUserLastReadAt:
+      readReceipts.find((receipt) => receipt.userKey === otherUser?.id)
+        ?.lastReadAt ?? null,
+  };
+}
+
+function getMessagePreview(message: ChatMessage | null) {
+  if (!message) return "Ihr mögt euch beide. Sag ehrlich Hallo.";
+  if (message.text) return message.text;
+  if (message.emoji) return message.emoji;
+  if (message.imageUri) return "Foto";
+  return "Neue Nachricht";
+}
+
+function formatMessageTime(createdAt?: string) {
+  if (!createdAt) return "";
+
+  const date = new Date(createdAt);
+  const today = new Date();
+  const isToday = date.toDateString() === today.toDateString();
+
+  if (isToday) {
+    return new Intl.DateTimeFormat("de-DE", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  }
+
+  return new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+  }).format(date);
+}
+
+function getRealtimeMatchId(
+  nextRecord: Record<string, unknown>,
+  previousRecord: Record<string, unknown>,
+) {
+  const matchId = nextRecord.match_id ?? previousRecord.match_id;
+  return typeof matchId === "string" ? matchId : null;
+}
+
 export default function ChatsScreen() {
   const [matches, setMatches] = useState<MatchRecord[]>([]);
+  const [chatSummaries, setChatSummaries] = useState<
+    Record<string, ChatSummary>
+  >({});
   const [currentUserKey, setCurrentUserKey] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const pathname = usePathname();
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      async function loadChats() {
+        const [user, userMatches] = await Promise.all([
+          getSessionUser(),
+          getCurrentUserMatches(),
+        ]);
+
+        if (!user) {
+          router.replace("/welcome");
+          return;
+        }
+
+        if (!isActive) {
+          return;
+        }
+
+        const userKey = getUserKey(user);
+        setCurrentUserKey(userKey);
+        setMatches(userMatches);
+        setIsLoading(false);
+
+        await Promise.all(
+          userMatches.map(async (match) => {
+            const summary = await getChatSummary(match, userKey);
+
+            if (!isActive) {
+              return;
+            }
+
+            setChatSummaries((current) => ({
+              ...current,
+              [match.id]: summary,
+            }));
+          }),
+        );
+      }
+
+      void loadChats();
+
+      return () => {
+        isActive = false;
+      };
+    }, []),
+  );
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function loadChats() {
-      const user = await getSessionUser();
-
-      if (!user) {
-        router.replace("/welcome");
-        return;
-      }
-
-      const userMatches = await getCurrentUserMatches();
-
-      if (!isMounted) {
-        return;
-      }
-
-      setCurrentUserKey(getUserKey(user));
-      setMatches(userMatches);
-      setIsLoading(false);
+    if (!currentUserKey || !matches.length) {
+      return;
     }
 
-    loadChats();
+    async function refreshSummary(matchId: string) {
+      const match = matches.find((item) => item.id === matchId);
+      if (!match) return;
+
+      const summary = await getChatSummary(match, currentUserKey);
+      setChatSummaries((current) => ({
+        ...current,
+        [matchId]: summary,
+      }));
+    }
+
+    const messagesChannel = supabase
+      .channel("chat-list-messages")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "messages" },
+        (payload) => {
+          const matchId = getRealtimeMatchId(payload.new, payload.old);
+          if (matchId) {
+            void refreshSummary(matchId);
+          }
+        },
+      )
+      .subscribe();
+    const readsChannel = supabase
+      .channel("chat-list-reads")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "chat_reads" },
+        (payload) => {
+          const matchId = getRealtimeMatchId(payload.new, payload.old);
+          if (matchId) {
+            void refreshSummary(matchId);
+          }
+        },
+      )
+      .subscribe();
 
     return () => {
-      isMounted = false;
+      void supabase.removeChannel(messagesChannel);
+      void supabase.removeChannel(readsChannel);
     };
-  }, [pathname]);
+  }, [currentUserKey, matches]);
 
   if (isLoading) {
     return (
@@ -115,6 +252,19 @@ export default function ChatsScreen() {
           visibleMatches.map((match, index) => {
             const otherUser = getOtherUser(match, currentUserKey);
             const photo = otherUser?.photos?.[0] ?? otherUser?.picture;
+            const summary = chatSummaries[match.id];
+            const lastMessage = summary?.lastMessage ?? null;
+            const isLastMessageMine =
+              lastMessage?.senderKey === currentUserKey;
+            const isLastMessageRead =
+              Boolean(lastMessage && summary?.otherUserLastReadAt) &&
+              new Date(summary?.otherUserLastReadAt ?? 0).getTime() >=
+                new Date(lastMessage?.createdAt ?? 0).getTime();
+            const hasUnreadIncoming =
+              Boolean(lastMessage && !isLastMessageMine) &&
+              (!summary?.currentUserLastReadAt ||
+                new Date(summary.currentUserLastReadAt).getTime() <
+                  new Date(lastMessage?.createdAt ?? 0).getTime());
 
             return (
               <FadeIn key={match.id} delay={80 + index * 55}>
@@ -155,7 +305,7 @@ export default function ChatsScreen() {
                       {otherUser?.name ?? "Match"}
                     </Text>
                     <Text style={styles.timeText}>
-                      {index ? "Gestern" : "Jetzt"}
+                      {formatMessageTime(lastMessage?.createdAt)}
                     </Text>
                   </View>
                   {otherUser?.city && otherUser.country ? (
@@ -164,13 +314,24 @@ export default function ChatsScreen() {
                     </Text>
                   ) : null}
                   <Text style={styles.chatPreview}>
-                    {index
-                      ? "Ein wertvolles Gespräch wartet auf dich."
-                      : "Ihr mögt euch beide. Sag ehrlich Hallo."}
+                    {getMessagePreview(lastMessage)}
                   </Text>
                 </View>
 
-                {!index ? <View style={styles.unreadBadge} /> : null}
+                {isLastMessageMine ? (
+                  <Text
+                    style={[
+                      styles.sessionReceipt,
+                      isLastMessageRead
+                        ? styles.sessionReceiptRead
+                        : styles.sessionReceiptUnread,
+                    ]}
+                  >
+                    ✓
+                  </Text>
+                ) : hasUnreadIncoming ? (
+                  <View style={styles.unreadBadge} />
+                ) : null}
                 </ScalePressable>
               </FadeIn>
             );
@@ -354,5 +515,22 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: datingColors.accent,
     marginLeft: 10,
+  },
+
+  sessionReceipt: {
+    width: 22,
+    marginLeft: 8,
+    textAlign: "center",
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: "900",
+  },
+
+  sessionReceiptRead: {
+    color: datingColors.accent,
+  },
+
+  sessionReceiptUnread: {
+    color: datingColors.textMuted,
   },
 });
