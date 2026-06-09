@@ -10,7 +10,7 @@ export const datingColors = {
   accent: "#E83E7C",
   accentDark: "#C92D68",
   accentSoft: "rgba(232, 62, 124, 0.16)",
-  online: "#39D879",
+  online: "#852665",
 };
 
 export const datingShadow = {

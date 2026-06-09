@@ -1,17 +1,30 @@
 import { ThemedBackground } from "@/components/ThemedBackground";
+import {
+  premiumColors,
+  premiumShadow,
+} from "@/constants/premiumDesign";
 import { getCountryLabel } from "@/constants/germanLabels";
 import {
   acceptIncomingLikeRequest,
   getIncomingLikeRequestsForCurrentUser,
+  getLikedProfilesForCurrentUser,
   getLikeResponseNotificationsForCurrentUser,
   getUnreadAcceptedLikeResponseForCurrentUser,
   getUserKey,
   markNotificationsSeenForCurrentUser,
+  openAcceptedLikedProfileChat,
+  type LikedProfileRecord,
   skipIncomingLikeRequest,
   type LikeRequestRecord,
 } from "@/services/auth/session";
-import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import {
+  disableWebPush,
+  enableWebPush,
+  getWebPushState,
+  type WebPushState,
+} from "@/services/webPush";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -28,27 +41,97 @@ const isWeb = Platform.OS === "web";
 export default function NotificationsScreen() {
   const [incomingLikes, setIncomingLikes] = useState<LikeRequestRecord[]>([]);
   const [responses, setResponses] = useState<LikeRequestRecord[]>([]);
+  const [matches, setMatches] = useState<LikedProfileRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [pushState, setPushState] = useState<WebPushState>("default");
+  const [pushPending, setPushPending] = useState(false);
 
-  useEffect(() => {
-    loadNotifications();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
 
-  async function loadNotifications() {
-    const [incomingRecords, responseRecords, unreadAcceptedResponse] =
+      loadNotifications(() => isActive);
+      if (isWeb) {
+        void getWebPushState()
+          .then((state) => {
+            if (isActive) {
+              setPushState(state);
+            }
+          })
+          .catch(() => {
+            if (isActive) {
+              setPushState("unsupported");
+            }
+          });
+      }
+
+      return () => {
+        isActive = false;
+      };
+    }, []),
+  );
+
+  async function handlePushToggle() {
+    setPushPending(true);
+    setMessage("");
+
+    try {
+      const nextState =
+        pushState === "enabled"
+          ? await disableWebPush()
+          : await enableWebPush();
+      setPushState(nextState);
+
+      if (nextState === "enabled") {
+        setMessage("Push-Mitteilungen sind jetzt aktiviert.");
+      } else if (nextState === "denied") {
+        setMessage(
+          "Push wurde blockiert. Erlaube Mitteilungen in den Website-Einstellungen.",
+        );
+      } else if (nextState === "unsupported") {
+        setMessage(
+          "Installiere Extasy zuerst über „Zum Home-Bildschirm“, um Push auf iPhone zu verwenden.",
+        );
+      } else {
+        setMessage("Push-Mitteilungen wurden deaktiviert.");
+      }
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Push-Mitteilungen konnten nicht geändert werden.",
+      );
+    } finally {
+      setPushPending(false);
+    }
+  }
+
+  async function loadNotifications(isActive = () => true) {
+    const [
+      incomingRecords,
+      responseRecords,
+      matchRecords,
+      unreadAcceptedResponse,
+    ] =
       await Promise.all([
         getIncomingLikeRequestsForCurrentUser(),
         getLikeResponseNotificationsForCurrentUser(),
+        getLikedProfilesForCurrentUser(),
         getUnreadAcceptedLikeResponseForCurrentUser(),
       ]);
 
+    if (!isActive()) {
+      return;
+    }
+
     setIncomingLikes(incomingRecords);
     setResponses(responseRecords);
+    setMatches(matchRecords);
     setIsLoading(false);
     await markNotificationsSeenForCurrentUser();
 
-    if (unreadAcceptedResponse?.matchId) {
+    if (isActive() && unreadAcceptedResponse?.matchId) {
       router.push(`/chat?matchId=${unreadAcceptedResponse.matchId}`);
     }
   }
@@ -69,6 +152,19 @@ export default function NotificationsScreen() {
     await skipIncomingLikeRequest(request.id);
     await loadNotifications();
     setMessage(`${request.fromUser.name ?? "Jemand"} übersprungen.`);
+  }
+
+  async function handleOpenMatch(record: LikedProfileRecord) {
+    if (record.status === "accepted") {
+      const match = await openAcceptedLikedProfileChat(getUserKey(record.user));
+
+      if (match) {
+        router.push(`/chat?matchId=${match.id}`);
+        return;
+      }
+    }
+
+    router.push(`/userProfile?userKey=${getUserKey(record.user)}`);
   }
 
   function LikeCard({ request }: { request: LikeRequestRecord }) {
@@ -140,8 +236,36 @@ export default function NotificationsScreen() {
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>Benachrichtigungen</Text>
         <Text style={styles.subtitle}>
-          Nimm Likes an, um einen Chat zu öffnen, oder überspringe sie.
+          Deine Matches, neue Likes und alle Antworten an einem Ort.
         </Text>
+
+        {isWeb ? (
+          <View style={styles.pushCard}>
+            <View style={styles.pushCopy}>
+              <Text style={styles.pushTitle}>Browser Push</Text>
+              <Text style={styles.pushText}>
+                Neue Likes, Matches und Nachrichten auch bei geschlossener Seite.
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.pushButton,
+                pushState === "enabled" && styles.pushButtonEnabled,
+                pushPending && styles.pushButtonDisabled,
+              ]}
+              disabled={pushPending}
+              onPress={handlePushToggle}
+            >
+              <Text style={styles.pushButtonText}>
+                {pushPending
+                  ? "..."
+                  : pushState === "enabled"
+                    ? "Aktiv"
+                    : "Aktivieren"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         {message ? <Text style={styles.message}>{message}</Text> : null}
 
@@ -188,6 +312,87 @@ export default function NotificationsScreen() {
               <Text style={styles.emptyTitle}>Noch keine Antworten</Text>
               <Text style={styles.emptyText}>
                 Wenn jemand deinen Like annimmt oder überspringt, erscheint es hier.
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Meine Matches</Text>
+          {matches.length ? (
+            matches.map((record) => {
+              const photo = record.user.photos?.[0] ?? record.user.picture;
+              const statusLabel =
+                record.status === "accepted"
+                  ? "Angenommen"
+                  : record.status === "skipped"
+                    ? "Übersprungen"
+                    : "Wartet";
+
+              return (
+                <TouchableOpacity
+                  key={record.user.id}
+                  style={styles.matchCard}
+                  onPress={() => handleOpenMatch(record)}
+                >
+                  {photo ? (
+                    <Image source={{ uri: photo }} style={styles.matchAvatar} />
+                  ) : (
+                    <View style={styles.matchAvatarPlaceholder}>
+                      <Text style={styles.avatarInitial}>
+                        {record.user.name?.slice(0, 1).toUpperCase() ?? "E"}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={styles.copy}>
+                    <Text style={styles.name} numberOfLines={1}>
+                      {record.user.name}
+                      {record.user.age ? `, ${record.user.age}` : ""}
+                    </Text>
+                    {record.user.city && record.user.country ? (
+                      <Text style={styles.location} numberOfLines={1}>
+                        {record.user.city},{" "}
+                        {getCountryLabel(record.user.country)}
+                      </Text>
+                    ) : null}
+                    <Text style={styles.body} numberOfLines={2}>
+                      {record.user.about}
+                    </Text>
+                  </View>
+
+                  <View style={styles.matchActions}>
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        record.status === "accepted" && styles.mutualBadge,
+                        record.status === "pending" && styles.waitingBadge,
+                        record.status === "skipped" && styles.skippedBadge,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.statusText,
+                          record.status === "accepted" && styles.mutualText,
+                          record.status === "pending" && styles.waitingText,
+                          record.status === "skipped" && styles.skippedText,
+                        ]}
+                      >
+                        {statusLabel}
+                      </Text>
+                    </View>
+                    {record.status === "accepted" ? (
+                      <Text style={styles.matchOpenText}>Chat ›</Text>
+                    ) : null}
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          ) : (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>Noch keine Matches</Text>
+              <Text style={styles.emptyText}>
+                Deine Likes und bestätigten Kontakte erscheinen hier.
               </Text>
             </View>
           )}
@@ -252,6 +457,58 @@ const styles = StyleSheet.create({
     marginTop: 14,
     color: "#111",
     fontSize: 14,
+  },
+
+  pushCard: {
+    marginTop: 18,
+    borderRadius: 22,
+    backgroundColor: "rgba(255, 255, 255, 0.84)",
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+
+  pushCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+  pushTitle: {
+    color: "#111",
+    fontSize: 17,
+    fontWeight: "800",
+  },
+
+  pushText: {
+    color: "#6E6E73",
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 4,
+  },
+
+  pushButton: {
+    minWidth: 94,
+    height: 42,
+    borderRadius: 15,
+    backgroundColor: "#111",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 14,
+  },
+
+  pushButtonEnabled: {
+    backgroundColor: premiumColors.emerald,
+  },
+
+  pushButtonDisabled: {
+    opacity: 0.55,
+  },
+
+  pushButtonText: {
+    color: "#FFF",
+    fontSize: 13,
+    fontWeight: "800",
   },
 
   section: {
@@ -409,5 +666,79 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: "center",
     marginTop: 8,
+  },
+
+  matchCard: {
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 252, 247, 0.9)",
+    borderWidth: 1,
+    borderColor: premiumColors.hairline,
+    padding: 14,
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    ...premiumShadow,
+  },
+
+  matchAvatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: premiumColors.champagneSoft,
+  },
+
+  matchAvatarPlaceholder: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: premiumColors.navy,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  matchActions: {
+    alignItems: "flex-end",
+    gap: 8,
+  },
+
+  statusBadge: {
+    minHeight: 32,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    justifyContent: "center",
+  },
+
+  mutualBadge: {
+    backgroundColor: premiumColors.emeraldSoft,
+  },
+
+  waitingBadge: {
+    backgroundColor: premiumColors.champagneSoft,
+  },
+
+  skippedBadge: {
+    backgroundColor: "#F4E0DD",
+  },
+
+  statusText: {
+    fontSize: 12,
+  },
+
+  mutualText: {
+    color: premiumColors.emerald,
+  },
+
+  waitingText: {
+    color: "#7A5A12",
+  },
+
+  skippedText: {
+    color: "#7A1F1F",
+  },
+
+  matchOpenText: {
+    color: premiumColors.ink,
+    fontSize: 13,
   },
 });

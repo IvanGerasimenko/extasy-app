@@ -5,6 +5,7 @@ import { datingColors, datingShadow } from "@/constants/datingDesign";
 import { getCountryLabel, getInterestLabel } from "@/constants/germanLabels";
 import { premiumColors, premiumShadow } from "@/constants/premiumDesign";
 import {
+  deleteChatMessage,
   getChatMessages,
   getMatchById,
   getSessionUser,
@@ -25,8 +26,9 @@ import * as ExpoImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  AppState,
+  Alert,
   Animated,
+  AppState,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -40,6 +42,9 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
+  type AlertButton,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native";
 
 const isWeb = Platform.OS === "web";
@@ -70,6 +75,14 @@ const emojiOptions = [
   "👏",
   "🙌",
   "🫶",
+  "😒",
+  "😢",
+  "💁",
+  "🤨",
+  "🤮",
+  "😳",
+  "🤯",
+  "😰",
 ];
 
 function getOtherUser(match: MatchRecord, currentUserKey: string) {
@@ -151,6 +164,142 @@ function mergeChatMessage(
   return nextMessages;
 }
 
+function getMessagePreview(message: ChatMessage) {
+  return message.text || message.emoji || (message.imageUri ? "Foto" : "Nachricht");
+}
+
+function SpringMessage({
+  children,
+  style,
+  onLongPress,
+}: {
+  children: React.ReactNode;
+  style: StyleProp<ViewStyle>;
+  onLongPress: () => void;
+}) {
+  const scale = React.useRef(new Animated.Value(1)).current;
+  const longPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const longPressTriggered = React.useRef(false);
+  const pressStart = React.useRef({ x: 0, y: 0 });
+
+  React.useEffect(
+    () => () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+      }
+    },
+    [],
+  );
+
+  function animate(value: number) {
+    Animated.spring(scale, {
+      toValue: value,
+      friction: 4,
+      tension: 220,
+      useNativeDriver: true,
+    }).start();
+  }
+
+  function triggerLongPress() {
+    if (longPressTriggered.current) return;
+
+    longPressTriggered.current = true;
+    animate(0.94);
+    setTimeout(() => animate(1), 120);
+    onLongPress();
+  }
+
+  function startNativePress() {
+    longPressTriggered.current = false;
+    animate(0.96);
+  }
+
+  function clearLongPressTimer() {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }
+
+  function endNativePress() {
+    clearLongPressTimer();
+    if (!longPressTriggered.current) {
+      animate(1);
+    }
+  }
+
+  function startWebPress(event: {
+    nativeEvent: { pageX?: number; pageY?: number };
+  }) {
+    clearLongPressTimer();
+    longPressTriggered.current = false;
+    pressStart.current = {
+      x: event.nativeEvent.pageX ?? 0,
+      y: event.nativeEvent.pageY ?? 0,
+    };
+    longPressTimer.current = setTimeout(triggerLongPress, 360);
+  }
+
+  function moveWebPress(event: {
+    nativeEvent: { pageX?: number; pageY?: number };
+  }) {
+    const movedX = Math.abs(
+      (event.nativeEvent.pageX ?? pressStart.current.x) -
+        pressStart.current.x,
+    );
+    const movedY = Math.abs(
+      (event.nativeEvent.pageY ?? pressStart.current.y) -
+        pressStart.current.y,
+    );
+
+    if (movedX > 14 || movedY > 14) {
+      clearLongPressTimer();
+    }
+  }
+
+  const animatedStyle = [
+    style,
+    styles.messageInteraction,
+    { transform: [{ scale }] },
+  ];
+
+  if (isWeb) {
+    return (
+      <Animated.View
+        style={animatedStyle}
+        onPointerDown={startWebPress}
+        onPointerMove={moveWebPress}
+        onPointerUp={clearLongPressTimer}
+        onPointerCancel={clearLongPressTimer}
+        onPointerLeave={clearLongPressTimer}
+        {...({
+          onContextMenu: (event: { preventDefault(): void }) => {
+            event.preventDefault();
+            triggerLongPress();
+          },
+        } as object)}
+      >
+        {children}
+      </Animated.View>
+    );
+  }
+
+  return (
+    <Animated.View style={animatedStyle}>
+      <Pressable
+        onPressIn={startNativePress}
+        onPressOut={endNativePress}
+        onLongPress={triggerLongPress}
+        delayLongPress={350}
+      >
+        {children}
+      </Pressable>
+    </Animated.View>
+  );
+}
+
 export default function ChatScreen() {
   const { matchId } = useLocalSearchParams<{ matchId?: string }>();
   const { width: viewportWidth } = useWindowDimensions();
@@ -166,6 +315,12 @@ export default function ChatScreen() {
   const [selectedImageUri, setSelectedImageUri] = useState("");
   const [fullscreenImageUri, setFullscreenImageUri] = useState("");
   const [reactionMessageId, setReactionMessageId] = useState("");
+  const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
+  const [webActionMessage, setWebActionMessage] =
+    useState<ChatMessage | null>(null);
+  const [webReactionMessage, setWebReactionMessage] =
+    useState<ChatMessage | null>(null);
+  const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
   const [profileDrawerVisible, setProfileDrawerVisible] = useState(false);
   const [otherUserOnline, setOtherUserOnline] = useState(false);
   const [otherUserLastSeen, setOtherUserLastSeen] = useState<string | null>(
@@ -178,6 +333,15 @@ export default function ChatScreen() {
   const [, setPresenceClock] = useState(0);
   const profileDrawerProgress = React.useRef(new Animated.Value(1)).current;
   const messagesScrollRef = React.useRef<ScrollView>(null);
+  const typingChannelRef = React.useRef<
+    ReturnType<typeof supabase.channel> | null
+  >(null);
+  const typingStopTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const remoteTypingTimerRef = React.useRef<
+    ReturnType<typeof setTimeout> | null
+  >(null);
   const otherUser = match ? getOtherUser(match, currentUserKey) : null;
   const otherUserId = otherUser?.id ?? "";
 
@@ -292,7 +456,7 @@ export default function ChatScreen() {
     }
 
     const channel = supabase
-      .channel(`messages:${matchId}`)
+      .channel(`chat-messages:${matchId}:${currentUserKey}`)
       .on(
         "postgres_changes",
         {
@@ -334,15 +498,60 @@ export default function ChatScreen() {
   }, [currentUserKey, matchId]);
 
   useEffect(() => {
+    if (!matchId || !currentUserKey) {
+      return;
+    }
+
+    const channel = supabase.channel(`typing:${matchId}`);
+
+    channel.on("broadcast", { event: "typing" }, ({ payload }) => {
+      if (payload.userId === currentUserKey) {
+        return;
+      }
+
+      const nextIsTyping = Boolean(payload.isTyping);
+      setIsOtherUserTyping(nextIsTyping);
+
+      if (remoteTypingTimerRef.current) {
+        clearTimeout(remoteTypingTimerRef.current);
+      }
+      if (nextIsTyping) {
+        remoteTypingTimerRef.current = setTimeout(
+          () => setIsOtherUserTyping(false),
+          3_000,
+        );
+      }
+    });
+
+    channel.subscribe();
+    typingChannelRef.current = channel;
+
+    return () => {
+      if (typingStopTimerRef.current) {
+        clearTimeout(typingStopTimerRef.current);
+      }
+      if (remoteTypingTimerRef.current) {
+        clearTimeout(remoteTypingTimerRef.current);
+      }
+      typingChannelRef.current = null;
+      setIsOtherUserTyping(false);
+      void supabase.removeChannel(channel);
+    };
+  }, [currentUserKey, matchId]);
+
+  useEffect(() => {
     if (!matchId) {
       return;
     }
 
-    const appStateSubscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") {
-        void markVisibleMessagesRead();
-      }
-    });
+    const appStateSubscription = AppState.addEventListener(
+      "change",
+      (state) => {
+        if (state === "active") {
+          void markVisibleMessagesRead();
+        }
+      },
+    );
     const visibilityHandler = () => {
       if (document.visibilityState === "visible") {
         void markVisibleMessagesRead();
@@ -419,14 +628,27 @@ export default function ChatScreen() {
       matchId,
       senderKey: currentUserKey,
       text,
+      replyTo: replyTarget
+        ? {
+            id: replyTarget.id,
+            text: getMessagePreview(replyTarget),
+            senderName:
+              match?.users[replyTarget.senderKey]?.name ?? "Nachricht",
+          }
+        : undefined,
       createdAt: new Date().toISOString(),
     };
 
     setDraft("");
+    sendTypingState(false);
+    setReplyTarget(null);
     setMessages((currentMessages) => [...currentMessages, pendingMessage]);
 
     try {
-      const message = await sendChatMessage(matchId, text);
+      const message = await sendChatMessage(matchId, {
+        text,
+        replyTo: pendingMessage.replyTo,
+      });
 
       if (!message) {
         throw new Error("Message could not be sent");
@@ -443,9 +665,156 @@ export default function ChatScreen() {
         currentMessages.filter((item) => item.id !== pendingId),
       );
       setDraft((currentDraft) => currentDraft || text);
+      setReplyTarget((currentTarget) => currentTarget ?? replyTarget);
 
       if (__DEV__) {
         console.warn("Message send failed:", error);
+      }
+    }
+  }
+
+  function sendTypingState(isTyping: boolean) {
+    if (!currentUserKey || !typingChannelRef.current) {
+      return;
+    }
+
+    void typingChannelRef.current.send({
+      type: "broadcast",
+      event: "typing",
+      payload: {
+        userId: currentUserKey,
+        isTyping,
+      },
+    });
+  }
+
+  function handleDraftChange(nextDraft: string) {
+    setDraft(nextDraft);
+
+    if (typingStopTimerRef.current) {
+      clearTimeout(typingStopTimerRef.current);
+    }
+
+    const hasText = Boolean(nextDraft.trim());
+    sendTypingState(hasText);
+
+    if (hasText) {
+      typingStopTimerRef.current = setTimeout(
+        () => sendTypingState(false),
+        1_500,
+      );
+    }
+  }
+
+  function stopTyping() {
+    if (typingStopTimerRef.current) {
+      clearTimeout(typingStopTimerRef.current);
+    }
+    sendTypingState(false);
+  }
+
+  function openReactionMenu(message: ChatMessage) {
+    if (isWeb) {
+      setWebActionMessage(null);
+      setWebReactionMessage(message);
+      return;
+    }
+
+    const reactionActions: AlertButton[] = ["👍", "❤️", "😂"].map(
+      (emoji) => ({
+        text: emoji,
+        onPress: () => void handleReactToMessage(message.id, emoji),
+      }),
+    );
+
+    Alert.alert(
+      "Reaktion",
+      "Wähle eine Reaktion",
+      [...reactionActions, { text: "Abbrechen", style: "cancel" }],
+    );
+  }
+
+  function openMessageActions(message: ChatMessage) {
+    if (isWeb) {
+      setWebActionMessage(message);
+      return;
+    }
+
+    const actions: AlertButton[] = [
+      {
+        text: "Antworten",
+        onPress: () => setReplyTarget(message),
+      },
+      {
+        text: "Reaktion",
+        onPress: () => openReactionMenu(message),
+      },
+    ];
+
+    if (message.senderKey === currentUserKey) {
+      actions.push({
+        text: "Löschen",
+        onPress: () => void handleDeleteMessage(message.id),
+      });
+    }
+
+    Alert.alert("Nachricht", getMessagePreview(message), [
+      ...actions,
+      { text: "Abbrechen", style: "cancel" },
+    ]);
+  }
+
+  async function handleReactToMessage(messageId: string, emoji: string) {
+    const updatedMessage = await reactToChatMessage(messageId, emoji);
+    if (!updatedMessage) return;
+
+    setMessages((current) =>
+      current.map((message) =>
+        message.id === updatedMessage.id ? updatedMessage : message,
+      ),
+    );
+    setWebReactionMessage(null);
+  }
+
+  async function handleDeleteMessage(messageId: string) {
+    const deletedMessage = messages.find((message) => message.id === messageId);
+    if (!deletedMessage) return;
+
+    setMessages((current) =>
+      current.filter((message) => message.id !== messageId),
+    );
+    setReplyTarget((current) => (current?.id === messageId ? null : current));
+    setWebActionMessage(null);
+
+    try {
+      const deletedId = await deleteChatMessage(messageId);
+      if (!deletedId) {
+        throw new Error("Message was not deleted");
+      }
+    } catch (error) {
+      setMessages((current) =>
+        current.some((message) => message.id === deletedMessage.id)
+          ? current
+          : [...current, deletedMessage].sort(
+              (first, second) =>
+                new Date(first.createdAt).getTime() -
+                new Date(second.createdAt).getTime(),
+            ),
+      );
+
+      if (isWeb && typeof window !== "undefined") {
+        window.alert(
+          "Die Nachricht konnte nicht gelöscht werden. Prüfe, ob die Supabase-Migration angewendet wurde.",
+        );
+      } else {
+        Alert.alert(
+          "Löschen fehlgeschlagen",
+          "Die Nachricht konnte nicht gelöscht werden.",
+        );
+      }
+
+      if (__DEV__) {
+        console.warn("Message delete failed:", error);
       }
     }
   }
@@ -571,6 +940,17 @@ export default function ChatScreen() {
   const photo = otherUser?.photos?.[0] ?? otherUser?.picture;
   const isNarrowWeb = isWeb && viewportWidth < 1120;
   const isCompactWeb = isWeb && viewportWidth < 760;
+
+  function handleComposerFocus() {
+    if (!isCompactWeb) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => scrollMessagesToEnd(false));
+    });
+  }
+
   function renderMessages() {
     return (
       <ScrollView
@@ -586,8 +966,9 @@ export default function ChatScreen() {
             const isMine = message.senderKey === currentUserKey;
 
             return (
-              <View
+              <SpringMessage
                 key={message.id}
+                onLongPress={() => openMessageActions(message)}
                 style={[
                   styles.messageBubble,
                   message.imageUri && styles.imageBubble,
@@ -596,16 +977,23 @@ export default function ChatScreen() {
                   message.imageUri && styles.transparentBubble,
                 ]}
               >
+                {message.replyTo ? (
+                  <View style={styles.replyQuote}>
+                    <Text style={styles.replyQuoteName}>
+                      {message.replyTo.senderName}
+                    </Text>
+                    <Text style={styles.replyQuoteText} numberOfLines={2}>
+                      {message.replyTo.text}
+                    </Text>
+                  </View>
+                ) : null}
                 {message.imageUri ? (
                   <TouchableOpacity
                     activeOpacity={0.9}
                     onPress={() =>
                       setFullscreenImageUri(message.imageUri ?? "")
                     }
-                    onLongPress={() => {
-                      setReactionMessageId(message.id);
-                      setPhotoReactionOpen(true);
-                    }}
+                    onLongPress={() => openMessageActions(message)}
                   >
                     <Image
                       source={{ uri: message.imageUri }}
@@ -640,7 +1028,10 @@ export default function ChatScreen() {
                     {message.text}
                   </Text>
                 ) : null}
-              </View>
+                {message.reaction ? (
+                  <Text style={styles.inlineReaction}>{message.reaction}</Text>
+                ) : null}
+              </SpringMessage>
             );
           })
         ) : (
@@ -659,7 +1050,7 @@ export default function ChatScreen() {
         <TouchableOpacity
           activeOpacity={0.78}
           style={styles.backButton}
-          onPress={() => router.replace("/chats")}
+          onPress={() => router.back()}
         >
           <Text style={styles.backButtonText}>‹</Text>
         </TouchableOpacity>
@@ -707,29 +1098,69 @@ export default function ChatScreen() {
 
   function renderComposer() {
     return (
-      <View style={[styles.composer, isCompactWeb && styles.compactComposer]}>
-        <TouchableOpacity
-          style={[
-            styles.attachButton,
-            isCompactWeb && styles.compactComposerButton,
-          ]}
-          onPress={() => setAttachmentOpen(true)}
-        >
-          <Text style={styles.attachText}>＋</Text>
+      <View>
+        {renderReplyBar()}
+        <View style={[styles.composer, isCompactWeb && styles.compactComposer]}>
+          <TouchableOpacity
+            style={[
+              styles.attachButton,
+              isCompactWeb && styles.compactComposerButton,
+            ]}
+            onPress={() => setAttachmentOpen(true)}
+          >
+            <Text style={styles.attachText}>＋</Text>
+          </TouchableOpacity>
+          <TextInput
+            style={styles.input}
+            placeholder="Nachricht schreiben..."
+            placeholderTextColor="#888"
+            value={draft}
+            onChangeText={handleDraftChange}
+            onFocus={handleComposerFocus}
+            onBlur={stopTyping}
+          />
+          <TouchableOpacity
+            style={[
+              styles.sendButton,
+              isCompactWeb && styles.compactSendButton,
+            ]}
+            onPress={handleSendText}
+          >
+            <Text style={styles.sendText}>
+              {isCompactWeb ? "➤" : "Senden"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  function renderReplyBar() {
+    if (!replyTarget) return null;
+
+    return (
+      <View style={styles.replyBar}>
+        <View style={styles.replyBarCopy}>
+          <Text style={styles.replyBarTitle}>Antwort</Text>
+          <Text style={styles.replyBarText} numberOfLines={1}>
+            {getMessagePreview(replyTarget)}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={() => setReplyTarget(null)}>
+          <Text style={styles.replyBarClose}>×</Text>
         </TouchableOpacity>
-        <TextInput
-          style={styles.input}
-          placeholder="Nachricht schreiben..."
-          placeholderTextColor="#888"
-          value={draft}
-          onChangeText={setDraft}
-        />
-        <TouchableOpacity
-          style={[styles.sendButton, isCompactWeb && styles.compactSendButton]}
-          onPress={handleSendText}
-        >
-          <Text style={styles.sendText}>{isCompactWeb ? "➤" : "Senden"}</Text>
-        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  function renderTypingIndicator() {
+    if (!isOtherUserTyping) return null;
+
+    return (
+      <View style={styles.liveTypingIndicator}>
+        <Text style={styles.liveTypingText}>
+          {otherUser?.name ?? "Dein Match"} schreibt...
+        </Text>
       </View>
     );
   }
@@ -885,6 +1316,88 @@ export default function ChatScreen() {
 
   const sharedModals = (
     <>
+      <Modal
+        visible={Boolean(webActionMessage)}
+        transparent
+        animationType="fade"
+      >
+        <View style={styles.modalBackdrop}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setWebActionMessage(null)}
+          />
+          <View style={styles.webMessageMenu}>
+            <Text style={styles.sheetTitle}>Nachricht</Text>
+            <Text style={styles.webMessagePreview} numberOfLines={2}>
+              {webActionMessage
+                ? getMessagePreview(webActionMessage)
+                : ""}
+            </Text>
+            <TouchableOpacity
+              style={styles.webMessageAction}
+              onPress={() => {
+                if (webActionMessage) {
+                  setReplyTarget(webActionMessage);
+                }
+                setWebActionMessage(null);
+              }}
+            >
+              <Text style={styles.webMessageActionText}>Antworten</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.webMessageAction}
+              onPress={() => {
+                if (webActionMessage) {
+                  openReactionMenu(webActionMessage);
+                }
+              }}
+            >
+              <Text style={styles.webMessageActionText}>Reaktion</Text>
+            </TouchableOpacity>
+            {webActionMessage?.senderKey === currentUserKey ? (
+              <TouchableOpacity
+                style={styles.webMessageAction}
+                onPress={() =>
+                  void handleDeleteMessage(webActionMessage.id)
+                }
+              >
+                <Text style={styles.webDeleteActionText}>Löschen</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={Boolean(webReactionMessage)}
+        transparent
+        animationType="fade"
+      >
+        <View style={styles.modalBackdrop}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setWebReactionMessage(null)}
+          />
+          <View style={styles.webMessageMenu}>
+            <Text style={styles.sheetTitle}>Reaktion</Text>
+            <View style={styles.webReactionRow}>
+              {["👍", "❤️", "😂"].map((emoji) => (
+                <TouchableOpacity
+                  key={emoji}
+                  style={styles.webReactionButton}
+                  onPress={() =>
+                    webReactionMessage &&
+                    void handleReactToMessage(webReactionMessage.id, emoji)
+                  }
+                >
+                  <Text style={styles.webReactionText}>{emoji}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={attachmentOpen} transparent animationType="fade">
         <View style={styles.modalBackdrop}>
           <TouchableOpacity
@@ -1041,7 +1554,10 @@ export default function ChatScreen() {
       isCompactWeb && webVisualViewport
         ? {
             height: webVisualViewport.height,
+            minHeight: webVisualViewport.height,
+            maxHeight: webVisualViewport.height,
             transform: [{ translateY: webVisualViewport.offsetTop }],
+            overflow: "hidden" as const,
           }
         : null;
 
@@ -1057,6 +1573,7 @@ export default function ChatScreen() {
             <View style={styles.webChatSurface}>
               {renderChatHeader()}
               {renderMessages()}
+              {renderTypingIndicator()}
               {renderComposer()}
             </View>
           </View>
@@ -1089,8 +1606,9 @@ export default function ChatScreen() {
                 const isMine = message.senderKey === currentUserKey;
 
                 return (
-                  <View
+                  <SpringMessage
                     key={message.id}
+                    onLongPress={() => openMessageActions(message)}
                     style={[
                       styles.messageBubble,
                       message.imageUri && styles.imageBubble,
@@ -1099,16 +1617,23 @@ export default function ChatScreen() {
                       message.imageUri && styles.transparentBubble,
                     ]}
                   >
+                    {message.replyTo ? (
+                      <View style={styles.replyQuote}>
+                        <Text style={styles.replyQuoteName}>
+                          {message.replyTo.senderName}
+                        </Text>
+                        <Text style={styles.replyQuoteText} numberOfLines={2}>
+                          {message.replyTo.text}
+                        </Text>
+                      </View>
+                    ) : null}
                     {message.imageUri ? (
                       <TouchableOpacity
                         activeOpacity={0.9}
                         onPress={() =>
                           setFullscreenImageUri(message.imageUri ?? "")
                         }
-                        onLongPress={() => {
-                          setReactionMessageId(message.id);
-                          setPhotoReactionOpen(true);
-                        }}
+                        onLongPress={() => openMessageActions(message)}
                       >
                         <Image
                           source={{ uri: message.imageUri }}
@@ -1145,7 +1670,12 @@ export default function ChatScreen() {
                         {message.text}
                       </Text>
                     ) : null}
-                  </View>
+                    {message.reaction ? (
+                      <Text style={styles.inlineReaction}>
+                        {message.reaction}
+                      </Text>
+                    ) : null}
+                  </SpringMessage>
                 );
               })
             ) : (
@@ -1156,6 +1686,8 @@ export default function ChatScreen() {
             )}
           </ScrollView>
 
+          {renderTypingIndicator()}
+          {renderReplyBar()}
           <View style={styles.composer}>
             <TouchableOpacity
               style={styles.attachButton}
@@ -1168,7 +1700,8 @@ export default function ChatScreen() {
               placeholder="Nachricht schreiben..."
               placeholderTextColor="#888"
               value={draft}
-              onChangeText={setDraft}
+              onChangeText={handleDraftChange}
+              onBlur={stopTyping}
             />
             <TouchableOpacity
               style={styles.sendButton}
@@ -1391,6 +1924,7 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     width: "100%",
     minWidth: 0,
+    minHeight: 0,
     paddingHorizontal: 8,
     paddingTop: 8,
     paddingBottom: 8,
@@ -1400,12 +1934,14 @@ const styles = StyleSheet.create({
   webMainContent: {
     flex: 1,
     minWidth: 0,
+    minHeight: 0,
   },
 
   webChatSurface: {
     flex: 1,
     width: "100%",
     minWidth: 0,
+    minHeight: 0,
     borderRadius: 30,
     backgroundColor: datingColors.backgroundSoft,
     borderWidth: 1,
@@ -1744,6 +2280,13 @@ const styles = StyleSheet.create({
     marginBottom: isWeb ? 12 : 10,
   },
 
+  messageInteraction: {
+    userSelect: "none",
+    WebkitUserSelect: "none",
+    WebkitTouchCallout: "none",
+    touchAction: "pan-y",
+  } as never,
+
   imageBubble: {
     paddingHorizontal: 5,
     paddingVertical: 5,
@@ -1789,6 +2332,82 @@ const styles = StyleSheet.create({
     width: isWeb ? 284 : 238,
     height: isWeb ? 220 : 190,
     borderRadius: 18,
+  },
+
+  replyQuote: {
+    borderLeftWidth: 3,
+    borderLeftColor: "rgba(255,255,255,0.7)",
+    backgroundColor: "rgba(0,0,0,0.12)",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginBottom: 8,
+  },
+
+  replyQuoteName: {
+    color: datingColors.text,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+
+  replyQuoteText: {
+    color: datingColors.textMuted,
+    fontSize: 12,
+    marginTop: 2,
+  },
+
+  inlineReaction: {
+    alignSelf: "flex-end",
+    fontSize: 16,
+    marginTop: 5,
+  },
+
+  replyBar: {
+    minHeight: 56,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: isWeb ? 20 : 14,
+    paddingTop: 9,
+    backgroundColor: datingColors.backgroundSoft,
+  },
+
+  replyBarCopy: {
+    flex: 1,
+    borderLeftWidth: 3,
+    borderLeftColor: datingColors.accent,
+    paddingLeft: 10,
+  },
+
+  replyBarTitle: {
+    color: datingColors.accent,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+
+  replyBarText: {
+    color: datingColors.textMuted,
+    fontSize: 13,
+    marginTop: 2,
+  },
+
+  replyBarClose: {
+    color: datingColors.textMuted,
+    fontSize: 25,
+    paddingHorizontal: 10,
+  },
+
+  liveTypingIndicator: {
+    minHeight: 30,
+    justifyContent: "center",
+    paddingHorizontal: isWeb ? 20 : 18,
+    backgroundColor: datingColors.backgroundSoft,
+  },
+
+  liveTypingText: {
+    color: datingColors.online,
+    fontSize: 13,
+    fontStyle: "italic",
+    fontWeight: "700",
   },
 
   photoReaction: {
@@ -1904,6 +2523,63 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
+  },
+
+  webMessageMenu: {
+    width: "100%",
+    maxWidth: 360,
+    borderRadius: 24,
+    backgroundColor: premiumColors.porcelain,
+    borderWidth: 1,
+    borderColor: premiumColors.hairline,
+    padding: 16,
+    gap: 9,
+    ...premiumShadow,
+  },
+
+  webMessagePreview: {
+    color: premiumColors.muted,
+    fontSize: 13,
+    marginBottom: 5,
+  },
+
+  webMessageAction: {
+    minHeight: 48,
+    borderRadius: 16,
+    backgroundColor: premiumColors.white,
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+
+  webMessageActionText: {
+    color: premiumColors.ink,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+
+  webDeleteActionText: {
+    color: "#C53B4D",
+    fontSize: 15,
+    fontWeight: "800",
+  },
+
+  webReactionRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+  },
+
+  webReactionButton: {
+    width: 62,
+    height: 54,
+    borderRadius: 17,
+    backgroundColor: premiumColors.white,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  webReactionText: {
+    fontSize: 26,
   },
 
   attachmentSheet: {

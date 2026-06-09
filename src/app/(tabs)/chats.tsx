@@ -1,16 +1,9 @@
-import {
-  PremiumEmptyState,
-  PremiumLoadingState,
-} from "@/components/PremiumUI";
 import { FadeIn, ScalePressable } from "@/components/Motion";
+import { PremiumEmptyState, PremiumLoadingState } from "@/components/PremiumUI";
 import { ThemedBackground } from "@/components/ThemedBackground";
 import { datingColors, datingShadow } from "@/constants/datingDesign";
-import {
-  premiumColors,
-  premiumShadow,
-  premiumSpacing,
-} from "@/constants/premiumDesign";
 import { getCountryLabel } from "@/constants/germanLabels";
+import { premiumColors, premiumSpacing } from "@/constants/premiumDesign";
 import {
   getChatMessages,
   getChatReadReceipts,
@@ -22,7 +15,7 @@ import {
 } from "@/services/auth/session";
 import { supabase } from "@/services/supabase";
 import { router, useFocusEffect } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Image,
   Platform,
@@ -114,6 +107,12 @@ export default function ChatsScreen() {
   const [currentUserKey, setCurrentUserKey] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const [typingByMatch, setTypingByMatch] = useState<Record<string, boolean>>(
+    {},
+  );
+  const typingTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>(
+    {},
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -168,19 +167,28 @@ export default function ChatsScreen() {
       return;
     }
 
+    let isActive = true;
+
     async function refreshSummary(matchId: string) {
       const match = matches.find((item) => item.id === matchId);
       if (!match) return;
 
       const summary = await getChatSummary(match, currentUserKey);
+
+      if (!isActive) {
+        return;
+      }
+
       setChatSummaries((current) => ({
         ...current,
         [matchId]: summary,
       }));
     }
 
-    const messagesChannel = supabase
-      .channel("chat-list-messages")
+    const channel = supabase
+      .channel(
+        `chat-list:${currentUserKey}:${Date.now()}:${Math.random().toString(36).slice(2)}`,
+      )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "messages" },
@@ -191,9 +199,6 @@ export default function ChatsScreen() {
           }
         },
       )
-      .subscribe();
-    const readsChannel = supabase
-      .channel("chat-list-reads")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "chat_reads" },
@@ -207,15 +212,59 @@ export default function ChatsScreen() {
       .subscribe();
 
     return () => {
-      void supabase.removeChannel(messagesChannel);
-      void supabase.removeChannel(readsChannel);
+      isActive = false;
+      void supabase.removeChannel(channel);
     };
   }, [currentUserKey, matches]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!currentUserKey || !matches.length) {
+        return;
+      }
+
+      const channels = matches.map((match) =>
+        supabase
+          .channel(`typing:${match.id}`)
+          .on("broadcast", { event: "typing" }, ({ payload }) => {
+            if (payload.userId === currentUserKey) {
+              return;
+            }
+
+            setTypingByMatch((current) => ({
+              ...current,
+              [match.id]: Boolean(payload.isTyping),
+            }));
+
+            const currentTimer = typingTimersRef.current[match.id];
+            if (currentTimer) {
+              clearTimeout(currentTimer);
+            }
+            if (payload.isTyping) {
+              typingTimersRef.current[match.id] = setTimeout(() => {
+                setTypingByMatch((current) => ({
+                  ...current,
+                  [match.id]: false,
+                }));
+              }, 3_000);
+            }
+          })
+          .subscribe(),
+      );
+
+      return () => {
+        Object.values(typingTimersRef.current).forEach(clearTimeout);
+        typingTimersRef.current = {};
+        setTypingByMatch({});
+        channels.forEach((channel) => void supabase.removeChannel(channel));
+      };
+    }, [currentUserKey, matches]),
+  );
 
   if (isLoading) {
     return (
       <ThemedBackground style={styles.background}>
-        <PremiumLoadingState label="Gespräche werden geladen" />
+        <PremiumLoadingState label="Loading" />
       </ThemedBackground>
     );
   }
@@ -254,8 +303,7 @@ export default function ChatsScreen() {
             const photo = otherUser?.photos?.[0] ?? otherUser?.picture;
             const summary = chatSummaries[match.id];
             const lastMessage = summary?.lastMessage ?? null;
-            const isLastMessageMine =
-              lastMessage?.senderKey === currentUserKey;
+            const isLastMessageMine = lastMessage?.senderKey === currentUserKey;
             const isLastMessageRead =
               Boolean(lastMessage && summary?.otherUserLastReadAt) &&
               new Date(summary?.otherUserLastReadAt ?? 0).getTime() >=
@@ -265,6 +313,7 @@ export default function ChatsScreen() {
               (!summary?.currentUserLastReadAt ||
                 new Date(summary.currentUserLastReadAt).getTime() <
                   new Date(lastMessage?.createdAt ?? 0).getTime());
+            const isTyping = Boolean(typingByMatch[match.id]);
 
             return (
               <FadeIn key={match.id} delay={80 + index * 55}>
@@ -272,66 +321,73 @@ export default function ChatsScreen() {
                   style={styles.chatRow}
                   onPress={() => router.push(`/chat?matchId=${match.id}`)}
                 >
-                {photo ? (
-                  <TouchableOpacity
-                    onPress={() =>
-                      otherUser &&
-                      router.push(
-                        `/userProfile?userKey=${getUserKey(otherUser)}`,
-                      )
-                    }
-                  >
-                    <Image source={{ uri: photo }} style={styles.avatar} />
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.avatarPlaceholder}
-                    onPress={() =>
-                      otherUser &&
-                      router.push(
-                        `/userProfile?userKey=${getUserKey(otherUser)}`,
-                      )
-                    }
-                  >
-                    <Text style={styles.avatarInitial}>
-                      {otherUser?.name?.slice(0, 1).toUpperCase() ?? "E"}
-                    </Text>
-                  </TouchableOpacity>
-                )}
+                  {photo ? (
+                    <TouchableOpacity
+                      onPress={() =>
+                        otherUser &&
+                        router.push(
+                          `/userProfile?userKey=${getUserKey(otherUser)}`,
+                        )
+                      }
+                    >
+                      <Image source={{ uri: photo }} style={styles.avatar} />
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.avatarPlaceholder}
+                      onPress={() =>
+                        otherUser &&
+                        router.push(
+                          `/userProfile?userKey=${getUserKey(otherUser)}`,
+                        )
+                      }
+                    >
+                      <Text style={styles.avatarInitial}>
+                        {otherUser?.name?.slice(0, 1).toUpperCase() ?? "E"}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
 
-                <View style={styles.chatCopy}>
-                  <View style={styles.chatTitleRow}>
-                    <Text style={styles.chatName}>
-                      {otherUser?.name ?? "Match"}
-                    </Text>
-                    <Text style={styles.timeText}>
-                      {formatMessageTime(lastMessage?.createdAt)}
+                  <View style={styles.chatCopy}>
+                    <View style={styles.chatTitleRow}>
+                      <Text style={styles.chatName}>
+                        {otherUser?.name ?? "Match"}
+                      </Text>
+                      <Text style={styles.timeText}>
+                        {formatMessageTime(lastMessage?.createdAt)}
+                      </Text>
+                    </View>
+                    {otherUser?.city && otherUser.country ? (
+                      <Text style={styles.chatLocation} numberOfLines={1}>
+                        {otherUser.city}, {getCountryLabel(otherUser.country)}
+                      </Text>
+                    ) : null}
+                    <Text
+                      style={[
+                        styles.chatPreview,
+                        isTyping && styles.typingPreview,
+                      ]}
+                    >
+                      {isTyping
+                        ? "Schreibt..."
+                        : getMessagePreview(lastMessage)}
                     </Text>
                   </View>
-                  {otherUser?.city && otherUser.country ? (
-                    <Text style={styles.chatLocation} numberOfLines={1}>
-                      {otherUser.city}, {getCountryLabel(otherUser.country)}
-                    </Text>
-                  ) : null}
-                  <Text style={styles.chatPreview}>
-                    {getMessagePreview(lastMessage)}
-                  </Text>
-                </View>
 
-                {isLastMessageMine ? (
-                  <Text
-                    style={[
-                      styles.sessionReceipt,
-                      isLastMessageRead
-                        ? styles.sessionReceiptRead
-                        : styles.sessionReceiptUnread,
-                    ]}
-                  >
-                    ✓
-                  </Text>
-                ) : hasUnreadIncoming ? (
-                  <View style={styles.unreadBadge} />
-                ) : null}
+                  {isLastMessageMine ? (
+                    <Text
+                      style={[
+                        styles.sessionReceipt,
+                        isLastMessageRead
+                          ? styles.sessionReceiptRead
+                          : styles.sessionReceiptUnread,
+                      ]}
+                    >
+                      ✓
+                    </Text>
+                  ) : hasUnreadIncoming ? (
+                    <View style={styles.unreadBadge} />
+                  ) : null}
                 </ScalePressable>
               </FadeIn>
             );
@@ -500,6 +556,12 @@ const styles = StyleSheet.create({
     color: datingColors.textMuted,
     fontSize: 14,
     marginTop: 4,
+  },
+
+  typingPreview: {
+    color: datingColors.online,
+    fontStyle: "italic",
+    fontWeight: "700",
   },
 
   chatLocation: {

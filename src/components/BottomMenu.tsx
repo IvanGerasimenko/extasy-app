@@ -13,17 +13,17 @@ const menuItems = [
     icon: require("../../assets/lovesearch.png"),
   },
   {
-    route: "/liked",
-    label: "Matches",
-    emoji: "👩‍❤️‍💋‍👨",
+    route: "/notifications",
+    label: "like",
+    emoji: "🔔",
     icon: require("../../assets/liked.png"),
+    showsBadge: true,
   },
   {
     route: "/chats",
     label: "Chat",
     emoji: "💬",
     icon: require("../../assets/chat.png"),
-    showsBadge: true,
   },
   {
     route: "/profile",
@@ -47,6 +47,11 @@ export default function BottomMenu() {
     let isMounted = true;
 
     async function loadNotificationCount() {
+      if (pathname === "/notifications") {
+        setNotificationCount(0);
+        return;
+      }
+
       const unreadCount = await getUnreadNotificationCountForCurrentUser();
 
       if (!isMounted) {

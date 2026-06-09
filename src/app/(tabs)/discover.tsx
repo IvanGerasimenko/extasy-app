@@ -133,6 +133,50 @@ function isNearbyProfile(currentUser: SessionUser, localUser: SessionUser) {
   );
 }
 
+function getCompatibility(
+  currentUser: SessionUser | null,
+  candidateUser: SessionUser,
+) {
+  if (!currentUser) {
+    return "0%";
+  }
+
+  const currentInterests = new Set(
+    (currentUser.interests ?? []).map((interest) =>
+      interest.trim().toLowerCase(),
+    ),
+  );
+  const candidateInterests = new Set(
+    (candidateUser.interests ?? []).map((interest) =>
+      interest.trim().toLowerCase(),
+    ),
+  );
+  const allInterests = new Set([...currentInterests, ...candidateInterests]);
+  const sharedInterests = [...currentInterests].filter((interest) =>
+    candidateInterests.has(interest),
+  ).length;
+  const interestScore = allInterests.size
+    ? Math.round((sharedInterests / allInterests.size) * 35)
+    : 0;
+  const sameCountry =
+    currentUser.country?.trim().toLowerCase() ===
+    candidateUser.country?.trim().toLowerCase();
+  const sameCity =
+    currentUser.city?.trim().toLowerCase() ===
+    candidateUser.city?.trim().toLowerCase();
+
+  const percentage = Math.min(
+    99,
+    20 +
+      (isCompatibleMatch(currentUser, candidateUser) ? 30 : 0) +
+      interestScore +
+      (sameCountry ? 10 : 0) +
+      (sameCity ? 5 : 0),
+  );
+
+  return `${percentage}%`;
+}
+
 function profileFromUser(user: SessionUser): DiscoverProfile {
   let rawPhotos: string[] = [];
 
@@ -394,19 +438,6 @@ export default function DiscoverScreen() {
         >
           <Text style={styles.extasytitle}>Extasy</Text>
         </View>
-        <View
-          style={[
-            styles.headerPill,
-            isDesktopWeb && {
-              width: desktopCardWidth,
-              alignSelf: "center",
-            },
-          ]}
-        >
-          <Text style={styles.headerPillText}>
-            {remainingProfiles} verfügbar
-          </Text>
-        </View>
 
         {activeMatch ? (
           <Animated.View
@@ -466,7 +497,7 @@ export default function DiscoverScreen() {
                 style={styles.expandButton}
                 onPress={() => setFullscreenOpen(true)}
               >
-                <Text style={styles.expandText}>Galerie</Text>
+                <Text style={styles.expandText}>Open</Text>
               </TouchableOpacity>
 
               <View style={styles.matchInfo}>
@@ -474,7 +505,9 @@ export default function DiscoverScreen() {
                   <Text style={styles.matchName}>
                     {activeMatch.name}, {activeMatch.age}
                   </Text>
-                  <CompatibilityBadge value="86%" />
+                  <CompatibilityBadge
+                    value={getCompatibility(user, activeMatch.user)}
+                  />
                 </View>
 
                 <View style={styles.matchMetaRow}>
@@ -633,16 +666,6 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
 
-  headerPill: {
-    height: 40,
-    borderRadius: 18,
-    backgroundColor: premiumColors.white,
-    borderWidth: 1,
-    borderColor: premiumColors.hairline,
-    paddingHorizontal: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   extasytitle: {
     color: "#ff9189",
     fontSize: 13,

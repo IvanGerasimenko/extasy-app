@@ -66,13 +66,6 @@ export default function SettingsScreen() {
   };
   const settingActions = [
     {
-      emoji: "🔔",
-      title: "Benachrichtigungen",
-      text: "Likes, Matches und neue Nachrichten.",
-      status: "Aktiv",
-      onPress: () => router.push("/notifications"),
-    },
-    {
       emoji: "🎯",
       title: "Suchpräferenzen",
       text: "Geschlecht, Land, Interessen und Profil.",

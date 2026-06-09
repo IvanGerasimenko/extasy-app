@@ -13,7 +13,6 @@ export default function TabsLayout() {
       tabBar={() => <BottomMenu />}
     >
       <Tabs.Screen name="discover" />
-      <Tabs.Screen name="liked" />
       <Tabs.Screen name="notifications" />
       <Tabs.Screen name="chats" />
       <Tabs.Screen name="profile" />

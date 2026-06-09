@@ -1,5 +1,6 @@
 import { clearLegacyStorage } from "@/services/clearLegacyStorage";
 import { supabase } from "@/services/supabase";
+import { sendWebPushEvent } from "@/services/webPush";
 import { Platform } from "react-native";
 
 export type SessionUser = {
@@ -38,7 +39,13 @@ export type ChatMessage = {
   text?: string;
   imageUri?: string;
   emoji?: string;
+  reaction?: string;
   photoReaction?: string;
+  replyTo?: {
+    id: string;
+    text: string;
+    senderName: string;
+  };
   createdAt: string;
 };
 
@@ -46,6 +53,7 @@ export type ChatMessagePayload = {
   text?: string;
   imageUri?: string;
   emoji?: string;
+  replyTo?: ChatMessage["replyTo"];
 };
 
 export type ChatReadReceipt = {
@@ -923,6 +931,7 @@ export async function recordProfileLike(targetUser: SessionUser) {
       .single();
     const row = requireData(inserted.data as LikeRow | null, inserted.error);
     const match = await createOrGetMatch(currentUser.id, targetUser.id);
+    void sendWebPushEvent({ type: "like", id: row.id });
     return {
       isMatch: true,
       match,
@@ -941,6 +950,7 @@ export async function recordProfileLike(targetUser: SessionUser) {
     .select("*")
     .single();
   const row = requireData(inserted.data as LikeRow | null, inserted.error);
+  void sendWebPushEvent({ type: "like", id: row.id });
   return {
     isMatch: false,
     match: null,
@@ -1097,6 +1107,7 @@ export async function acceptIncomingLikeRequest(requestId: string) {
   const row = requireData(result.data as LikeRow | null, result.error);
   if (!row) return null;
   const match = await createOrGetMatch(row.from_user_id, row.to_user_id);
+  void sendWebPushEvent({ type: "like", id: row.id });
   return { match, user: await getSessionUser() };
 }
 
@@ -1183,6 +1194,9 @@ export async function getChatMessages(matchId: string) {
           image_url: string | null;
           emoji: string | null;
           photo_reaction: string | null;
+          reply_to_id: string | null;
+          reply_to_text: string | null;
+          reply_to_sender_name: string | null;
           created_at: string;
         }[]
       | null,
@@ -1195,7 +1209,16 @@ export async function getChatMessages(matchId: string) {
     text: row.text ?? undefined,
     imageUri: row.image_url ?? undefined,
     emoji: row.emoji ?? undefined,
+    reaction: row.photo_reaction ?? undefined,
     photoReaction: row.photo_reaction ?? undefined,
+    replyTo:
+      row.reply_to_id && row.reply_to_text && row.reply_to_sender_name
+        ? {
+            id: row.reply_to_id,
+            text: row.reply_to_text,
+            senderName: row.reply_to_sender_name,
+          }
+        : undefined,
     createdAt: row.created_at,
   }));
 }
@@ -1269,10 +1292,14 @@ export async function sendChatMessage(
       text,
       emoji,
       image_url: imageUrl,
+      reply_to_id: payload.replyTo?.id ?? null,
+      reply_to_text: payload.replyTo?.text ?? null,
+      reply_to_sender_name: payload.replyTo?.senderName ?? null,
     })
     .select("*")
     .single();
   const row = requireData(result.data, result.error);
+  void sendWebPushEvent({ type: "message", id: row.id });
   return {
     id: row.id,
     matchId: row.match_id,
@@ -1280,6 +1307,16 @@ export async function sendChatMessage(
     text: row.text ?? undefined,
     imageUri: row.image_url ?? undefined,
     emoji: row.emoji ?? undefined,
+    reaction: row.photo_reaction ?? undefined,
+    photoReaction: row.photo_reaction ?? undefined,
+    replyTo:
+      row.reply_to_id && row.reply_to_text && row.reply_to_sender_name
+        ? {
+            id: row.reply_to_id,
+            text: row.reply_to_text,
+            senderName: row.reply_to_sender_name,
+          }
+        : undefined,
     createdAt: row.created_at,
   } satisfies ChatMessage;
 }
@@ -1298,9 +1335,25 @@ export async function reactToChatMessage(messageId: string, emoji: string) {
     text: row.text ?? undefined,
     imageUri: row.image_url ?? undefined,
     emoji: row.emoji ?? undefined,
+    reaction: row.photo_reaction ?? undefined,
     photoReaction: row.photo_reaction ?? undefined,
+    replyTo:
+      row.reply_to_id && row.reply_to_text && row.reply_to_sender_name
+        ? {
+            id: row.reply_to_id,
+            text: row.reply_to_text,
+            senderName: row.reply_to_sender_name,
+          }
+        : undefined,
     createdAt: row.created_at,
   } satisfies ChatMessage;
+}
+
+export async function deleteChatMessage(messageId: string) {
+  const result = await supabase.rpc("delete_chat_message", {
+    target_message_id: messageId,
+  });
+  return requireData(result.data as string | null, result.error);
 }
 
 export async function getBlockedUserKeysForCurrentUser() {
