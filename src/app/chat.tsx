@@ -165,7 +165,9 @@ function mergeChatMessage(
 }
 
 function getMessagePreview(message: ChatMessage) {
-  return message.text || message.emoji || (message.imageUri ? "Foto" : "Nachricht");
+  return (
+    message.text || message.emoji || (message.imageUri ? "Foto" : "Nachricht")
+  );
 }
 
 function SpringMessage({
@@ -246,12 +248,10 @@ function SpringMessage({
     nativeEvent: { pageX?: number; pageY?: number };
   }) {
     const movedX = Math.abs(
-      (event.nativeEvent.pageX ?? pressStart.current.x) -
-        pressStart.current.x,
+      (event.nativeEvent.pageX ?? pressStart.current.x) - pressStart.current.x,
     );
     const movedY = Math.abs(
-      (event.nativeEvent.pageY ?? pressStart.current.y) -
-        pressStart.current.y,
+      (event.nativeEvent.pageY ?? pressStart.current.y) - pressStart.current.y,
     );
 
     if (movedX > 14 || movedY > 14) {
@@ -316,8 +316,9 @@ export default function ChatScreen() {
   const [fullscreenImageUri, setFullscreenImageUri] = useState("");
   const [reactionMessageId, setReactionMessageId] = useState("");
   const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
-  const [webActionMessage, setWebActionMessage] =
-    useState<ChatMessage | null>(null);
+  const [webActionMessage, setWebActionMessage] = useState<ChatMessage | null>(
+    null,
+  );
   const [webReactionMessage, setWebReactionMessage] =
     useState<ChatMessage | null>(null);
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
@@ -333,15 +334,15 @@ export default function ChatScreen() {
   const [, setPresenceClock] = useState(0);
   const profileDrawerProgress = React.useRef(new Animated.Value(1)).current;
   const messagesScrollRef = React.useRef<ScrollView>(null);
-  const typingChannelRef = React.useRef<
-    ReturnType<typeof supabase.channel> | null
-  >(null);
+  const typingChannelRef = React.useRef<ReturnType<
+    typeof supabase.channel
+  > | null>(null);
   const typingStopTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
-  const remoteTypingTimerRef = React.useRef<
-    ReturnType<typeof setTimeout> | null
-  >(null);
+  const remoteTypingTimerRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
   const otherUser = match ? getOtherUser(match, currentUserKey) : null;
   const otherUserId = otherUser?.id ?? "";
 
@@ -720,18 +721,15 @@ export default function ChatScreen() {
       return;
     }
 
-    const reactionActions: AlertButton[] = ["👍", "❤️", "😂"].map(
-      (emoji) => ({
-        text: emoji,
-        onPress: () => void handleReactToMessage(message.id, emoji),
-      }),
-    );
+    const reactionActions: AlertButton[] = ["👍", "❤️", "😂"].map((emoji) => ({
+      text: emoji,
+      onPress: () => void handleReactToMessage(message.id, emoji),
+    }));
 
-    Alert.alert(
-      "Reaktion",
-      "Wähle eine Reaktion",
-      [...reactionActions, { text: "Abbrechen", style: "cancel" }],
-    );
+    Alert.alert("Reaktion", "Wähle eine Reaktion", [
+      ...reactionActions,
+      { text: "Abbrechen", style: "cancel" },
+    ]);
   }
 
   function openMessageActions(message: ChatMessage) {
@@ -1126,9 +1124,7 @@ export default function ChatScreen() {
             ]}
             onPress={handleSendText}
           >
-            <Text style={styles.sendText}>
-              {isCompactWeb ? "➤" : "Senden"}
-            </Text>
+            <Text style={styles.sendText}>{isCompactWeb ? "➤" : "Senden"}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1329,9 +1325,7 @@ export default function ChatScreen() {
           <View style={styles.webMessageMenu}>
             <Text style={styles.sheetTitle}>Nachricht</Text>
             <Text style={styles.webMessagePreview} numberOfLines={2}>
-              {webActionMessage
-                ? getMessagePreview(webActionMessage)
-                : ""}
+              {webActionMessage ? getMessagePreview(webActionMessage) : ""}
             </Text>
             <TouchableOpacity
               style={styles.webMessageAction}
@@ -1357,9 +1351,7 @@ export default function ChatScreen() {
             {webActionMessage?.senderKey === currentUserKey ? (
               <TouchableOpacity
                 style={styles.webMessageAction}
-                onPress={() =>
-                  void handleDeleteMessage(webActionMessage.id)
-                }
+                onPress={() => void handleDeleteMessage(webActionMessage.id)}
               >
                 <Text style={styles.webDeleteActionText}>Löschen</Text>
               </TouchableOpacity>
@@ -2519,7 +2511,7 @@ const styles = StyleSheet.create({
 
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.04)",
+    backgroundColor: "rgba(5, 2, 14, 0.84)",
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
@@ -2745,13 +2737,15 @@ const styles = StyleSheet.create({
   },
 
   reactionSheet: {
+    width: "100%",
+    maxWidth: 430,
     margin: 14,
     borderRadius: 28,
-    backgroundColor: premiumColors.porcelain,
+    backgroundColor: "#21101F",
     borderWidth: 1,
-    borderColor: premiumColors.hairline,
+    borderColor: "rgba(227, 55, 116, 0.35)",
     padding: 18,
-    ...premiumShadow,
+    ...datingShadow,
   },
 
   reactionHint: {
