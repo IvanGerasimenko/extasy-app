@@ -1,9 +1,9 @@
+import { FadeIn, ScalePressable } from "@/components/Motion";
 import {
   premiumColors,
   premiumShadow,
   premiumType,
 } from "@/constants/premiumDesign";
-import { FadeIn, ScalePressable } from "@/components/Motion";
 import React from "react";
 import {
   ActivityIndicator,

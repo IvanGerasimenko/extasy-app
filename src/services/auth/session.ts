@@ -705,7 +705,7 @@ export async function completeSessionOnboarding(profile: {
   city?: string;
   country?: string;
   gender?: string;
-  lookingFor?: string;
+  lookingFor?: string[];
   interests?: string[];
 }) {
   const currentUser = await getSessionUser();

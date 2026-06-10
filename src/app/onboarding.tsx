@@ -11,7 +11,7 @@ import {
   getGenderLabel,
   getInterestLabel,
   getLookingForLabel,
-} from "@/constants/germanLabels";
+} from "@/constants/Labels";
 import {
   premiumColors,
   premiumShadow,
@@ -95,7 +95,7 @@ export default function OnboardingScreen() {
   const [country, setCountry] = useState("");
   const [about, setAbout] = useState("");
   const [gender, setGender] = useState("");
-  const [lookingFor, setLookingFor] = useState("");
+  const [lookingFor, setLookingFor] = useState<string[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -151,7 +151,13 @@ export default function OnboardingScreen() {
       setCountry(user.country ?? "");
       setAbout(user.about ?? "");
       setGender(user.gender ?? "");
-      setLookingFor(user.lookingFor ?? "");
+      setLookingFor(
+        Array.isArray(user.lookingFor)
+          ? user.lookingFor
+          : user.lookingFor
+            ? [user.lookingFor]
+            : [],
+      );
       setInterests(user.interests ?? []);
       const savedPhotos = user.photos?.length
         ? user.photos
@@ -177,6 +183,16 @@ export default function OnboardingScreen() {
       }
     };
     setInterests(setInterest);
+  }
+
+  function toggleLookingFor(item: string) {
+    setLookingFor((currentValues) => {
+      if (currentValues.includes(item)) {
+        return currentValues.filter((value) => value !== item);
+      }
+  
+      return [...currentValues, item];
+    });
   }
 
   async function handleStartMatching() {
@@ -236,8 +252,7 @@ export default function OnboardingScreen() {
         picture: storagePhotos[0],
         photos: storagePhotos,
         gender: gender || undefined,
-        lookingFor: lookingFor || undefined,
-        interests,
+        lookingFor: lookingFor.length > 0 ? lookingFor : undefined,
       });
 
       if (
@@ -388,12 +403,12 @@ export default function OnboardingScreen() {
             <Text style={styles.label}>Interessiert an</Text>
             <View style={styles.optionsRow}>
               {lookingForOptions.map((item) => (
-                <Tag
-                  key={item}
-                  title={getLookingForLabel(item)}
-                  selected={lookingFor === item}
-                  onPress={() => setLookingFor(item)}
-                />
+                  <Tag
+                    key={item}
+                    title={getLookingForLabel(item)}
+                    selected={lookingFor.includes(item)}
+                    onPress={() => toggleLookingFor(item)}
+                  />
               ))}
             </View>
           </View>

@@ -1,9 +1,9 @@
 import { ThemedBackground } from "@/components/ThemedBackground";
+import { getCountryLabel } from "@/constants/Labels";
 import {
   premiumColors,
   premiumShadow,
 } from "@/constants/premiumDesign";
-import { getCountryLabel } from "@/constants/germanLabels";
 import {
   acceptIncomingLikeRequest,
   getIncomingLikeRequestsForCurrentUser,
@@ -13,8 +13,8 @@ import {
   getUserKey,
   markNotificationsSeenForCurrentUser,
   openAcceptedLikedProfileChat,
-  type LikedProfileRecord,
   skipIncomingLikeRequest,
+  type LikedProfileRecord,
   type LikeRequestRecord,
 } from "@/services/auth/session";
 import {

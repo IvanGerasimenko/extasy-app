@@ -10,7 +10,7 @@ import {
   getGenderLabel,
   getInterestLabel,
   getLookingForLabel,
-} from "@/constants/germanLabels";
+} from "@/constants/Labels";
 import {
   premiumColors,
   premiumShadow,

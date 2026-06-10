@@ -5,7 +5,7 @@ import {
   getGenderLabel,
   getInterestLabel,
   getLookingForLabel,
-} from "@/constants/germanLabels";
+} from "@/constants/Labels";
 import { getSessionUser, type SessionUser } from "@/services/auth/session";
 import { router } from "expo-router";
 import React, {

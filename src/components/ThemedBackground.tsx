@@ -1,3 +1,4 @@
+import { datingColors } from "@/constants/datingDesign";
 import { useAppTheme } from "@/services/theme/ThemeContext";
 import React from "react";
 import {
@@ -39,8 +40,6 @@ export function ThemedBackground({ children, style, ...props }: ViewProps) {
       style={[
         styles.background,
         webScrollableBackground,
-        { backgroundColor: colors.background },
-        style,
       ]}
     >
       <Animated.View
@@ -62,9 +61,11 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     overflow: "hidden",
+    backgroundColor: datingColors.background,  
   },
   content: {
     flex: 1,
     width: "100%",
+    color: "#ffffff"
   },
 });

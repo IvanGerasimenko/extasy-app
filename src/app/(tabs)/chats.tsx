@@ -2,7 +2,7 @@ import { FadeIn, ScalePressable } from "@/components/Motion";
 import { PremiumEmptyState, PremiumLoadingState } from "@/components/PremiumUI";
 import { ThemedBackground } from "@/components/ThemedBackground";
 import { datingColors, datingShadow } from "@/constants/datingDesign";
-import { getCountryLabel } from "@/constants/germanLabels";
+import { getCountryLabel } from "@/constants/Labels";
 import { premiumColors, premiumSpacing } from "@/constants/premiumDesign";
 import {
   getChatMessages,

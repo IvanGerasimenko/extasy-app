@@ -2,7 +2,7 @@ import BottomMenu from "@/components/BottomMenu";
 import { PremiumEmptyState, PremiumLoadingState } from "@/components/PremiumUI";
 import { ThemedBackground } from "@/components/ThemedBackground";
 import { datingColors, datingShadow } from "@/constants/datingDesign";
-import { getCountryLabel, getInterestLabel } from "@/constants/germanLabels";
+import { getCountryLabel, getInterestLabel } from "@/constants/Labels";
 import { premiumColors, premiumShadow } from "@/constants/premiumDesign";
 import {
   deleteChatMessage,

@@ -307,24 +307,9 @@ export default function SettingsScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[
-            styles.signOutButton,
-            {
-              backgroundColor:
-                colors.mode === "dark" ? colors.surface : colors.text,
-              borderColor: colors.border,
-            },
-          ]}
-          onPress={handleSignOut}
-        >
-          <Text
-            style={[
-              styles.signOutText,
-              {
-                color: colors.mode === "dark" ? colors.surfaceText : "#FFFFFF",
-              },
-            ]}
-          >
+          style={styles.signOutButton}
+          onPress={handleSignOut}>
+          <Text style={styles.signOutText}>
             Abmelden
           </Text>
         </TouchableOpacity>
@@ -620,7 +605,6 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    color: "#111",
     fontSize: 36,
     lineHeight: 40,
     fontWeight: "800",
@@ -668,7 +652,6 @@ const styles = StyleSheet.create({
   secondaryButton: {
     height: 56,
     borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.82)",
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
@@ -683,16 +666,12 @@ const styles = StyleSheet.create({
   signOutButton: {
     height: 58,
     borderRadius: 20,
-    backgroundColor: "#111",
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 18,
-  },
-
-  signOutText: {
-    color: "#FFF",
-    fontSize: 17,
+    color: "#ffffff",
+    backgroundColor: "rgb(142, 49, 93)",
   },
 
   settingsTags: {
@@ -705,7 +684,7 @@ const styles = StyleSheet.create({
   settingsRow: {
     minHeight: 78,
     borderRadius: 24,
-    backgroundColor: "rgba(255, 255, 255, 0.46)",
+    backgroundColor: "rgb(255, 255, 255)",
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.74)",
     flexDirection: "row",
@@ -812,11 +791,18 @@ const styles = StyleSheet.create({
     paddingBottom: 18,
   },
 
+  signOutText:{
+    color: "#ffffff",
+    fontSize: 17,
+    fontWeight: "bold",
+    padding: 10,
+  },
+
   safetyHandle: {
     width: 42,
     height: 5,
     borderRadius: 999,
-    backgroundColor: "rgba(16, 24, 32, 0.18)",
+    backgroundColor: "rgba(121, 25, 94, 0.18)",
     alignSelf: "center",
     marginBottom: 18,
   },
@@ -1020,7 +1006,7 @@ const styles = StyleSheet.create({
   },
 
   blockContactAction: {
-    color: premiumColors.danger,
+    color: "#ffffff",
     fontSize: 12,
     fontWeight: "900",
     flexShrink: 0,
@@ -1029,9 +1015,9 @@ const styles = StyleSheet.create({
 
   blockEmptyState: {
     borderRadius: 20,
-    backgroundColor: "rgba(16, 24, 32, 0.06)",
+    backgroundColor: "rgba(66, 29, 64, 0.06)",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.72)",
+    borderColor: "rgba(66, 29, 64, 0.72)",
     alignItems: "center",
     padding: 16,
   },
