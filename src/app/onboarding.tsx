@@ -228,7 +228,7 @@ export default function OnboardingScreen() {
       return;
     }
 
-    if (!lookingFor) {
+    if (lookingFor.length === 0) {
       setError("Wähle aus, wen du kennenlernen möchtest.");
       return;
     }
@@ -253,8 +253,8 @@ export default function OnboardingScreen() {
         photos: storagePhotos,
         gender: gender || undefined,
         lookingFor: lookingFor.length > 0 ? lookingFor : undefined,
+        interests,
       });
-
       if (
         !savedUser?.photos?.length ||
         savedUser.photos.length !== storagePhotos.length

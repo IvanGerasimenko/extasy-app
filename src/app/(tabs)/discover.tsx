@@ -53,23 +53,27 @@ type DiscoverProfile = {
   city: string;
   country: string;
   gender: string;
-  lookingFor: string;
+  lookingFor: string[];
   interests: string[];
   photos: ImageSourcePropType[];
   user: SessionUser;
 };
 
 function hasCompleteProfile(user: SessionUser | null) {
+  const hasLookingFor = Array.isArray(user?.lookingFor)
+    ? user.lookingFor.length > 0
+    : Boolean(user?.lookingFor);
+
   return Boolean(
     user?.onboardingCompleted &&
-    user.name &&
-    user.age &&
-    user.about &&
-    (user.picture || user.photos?.[0]) &&
-    user.gender &&
-    user.lookingFor &&
-    user.interests &&
-    user.interests.length >= 3,
+      user.name &&
+      user.age &&
+      user.about &&
+      (user.picture || user.photos?.[0]) &&
+      user.gender &&
+      hasLookingFor &&
+      user.interests &&
+      user.interests.length >= 3,
   );
 }
 
@@ -105,14 +109,30 @@ function normalizeGender(value?: string) {
   return normalizedValue ?? "";
 }
 
-function acceptsGender(lookingFor?: string, gender?: string) {
-  const normalizedLookingFor = normalizeGender(lookingFor);
+function acceptsGender(
+  lookingFor?: string[] | string,
+  gender?: string,
+) {
+  const selectedGenders = Array.isArray(lookingFor)
+    ? lookingFor
+    : lookingFor
+      ? [lookingFor]
+      : [];
+
   const normalizedGender = normalizeGender(gender);
 
-  return (
-    normalizedLookingFor === "everyone" ||
-    normalizedLookingFor === normalizedGender
-  );
+  return selectedGenders.some((value) => {
+    const normalizedValue = normalizeGender(value);
+
+    return (
+      normalizedValue === "everyone" ||
+      normalizedValue === normalizedGender
+    );
+  });
+}
+
+function formatLookingFor(lookingFor: string[]) {
+  return lookingFor.map((value) => getLookingForLabel(value)).join(", ");
 }
 
 function isCompatibleMatch(currentUser: SessionUser, localUser: SessionUser) {
@@ -194,7 +214,11 @@ function profileFromUser(user: SessionUser): DiscoverProfile {
     city: user.city ?? "",
     country: user.country ?? "",
     gender: user.gender ?? "",
-    lookingFor: user.lookingFor ?? "",
+    lookingFor: Array.isArray(user.lookingFor)
+      ? user.lookingFor
+      : user.lookingFor
+        ? [user.lookingFor]
+        : [],
     interests: user.interests ?? [],
     photos: rawPhotos.map((photo) => ({ uri: photo })),
     user,
@@ -513,7 +537,7 @@ export default function DiscoverScreen() {
                 <View style={styles.matchMetaRow}>
                   <Text style={styles.matchMeta}>
                     {getGenderLabel(activeMatch.gender)} sucht{" "}
-                    {getLookingForLabel(activeMatch.lookingFor)}
+                    {formatLookingFor(activeMatch.lookingFor)}
                   </Text>
                   <Text style={styles.intentPill}>Bewusst</Text>
                 </View>

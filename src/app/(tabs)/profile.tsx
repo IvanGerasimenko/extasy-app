@@ -415,9 +415,11 @@ export default function ProfileScreen() {
             {user?.age ? `, ${user.age}` : ""}
           </Text>
           <Text style={styles.meta}>
-            {getGenderLabel(user?.gender) || "Profil"} sucht{" "}
-            {getLookingForLabel(user?.lookingFor) || "Matches"}
-          </Text>
+              {getGenderLabel(user?.gender) || "Profil"} sucht{" "}
+              {user?.lookingFor?.length
+                ? user.lookingFor.map((value) => getLookingForLabel(value)).join(", ")
+                : "Matches"}
+            </Text>
           <Text style={styles.summaryLocation}>{locationText}</Text>
           <View style={styles.moodRow}>
             <Text style={styles.moodChip}>🩶</Text>

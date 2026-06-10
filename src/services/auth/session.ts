@@ -16,7 +16,7 @@ export type SessionUser = {
   city?: string;
   country?: string;
   gender?: string;
-  lookingFor?: string;
+  lookingFor?: string[];
   interests?: string[];
   likesCount?: number;
   matchesCount?: number;
@@ -96,7 +96,7 @@ type ProfileRow = {
   city: string | null;
   country: string | null;
   gender: string | null;
-  looking_for: string | null;
+  looking_for: string[] | null;
   interests: string[] | null;
   likes_count: number;
   matches_count: number;
