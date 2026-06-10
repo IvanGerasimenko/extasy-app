@@ -5,9 +5,9 @@ const genderLabels: Record<string, string> = {
 };
 
 const lookingForLabels: Record<string, string> = {
-  Women: "Frauen",
-  Men: "Männer",
-  "Non-binary": "nichtbinäre Menschen",
+  Women: "Weibliche",
+  Men: "Männliche",
+  Divers: "Divers",
 };
 
 const countryLabels: Record<string, string> = {

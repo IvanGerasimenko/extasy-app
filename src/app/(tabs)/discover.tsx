@@ -60,20 +60,22 @@ type DiscoverProfile = {
 };
 
 function hasCompleteProfile(user: SessionUser | null) {
-  const hasLookingFor = Array.isArray(user?.lookingFor)
-    ? user.lookingFor.length > 0
-    : Boolean(user?.lookingFor);
+  if (!user) {
+    return false;
+  }
+
+  const hasLookingFor = toStringList(user.lookingFor).length > 0;
+  const interests = toStringList(user.interests);
 
   return Boolean(
-    user?.onboardingCompleted &&
+    user.onboardingCompleted &&
     user.name &&
     user.age &&
     user.about &&
     (user.picture || user.photos?.[0]) &&
     user.gender &&
     hasLookingFor &&
-    user.interests &&
-    user.interests.length >= 3,
+    interests.length >= 3,
   );
 }
 
@@ -87,36 +89,92 @@ function isSameUser(firstUser: SessionUser, secondUser: SessionUser) {
   );
 }
 
-function normalizeGender(value?: string) {
-  const normalizedValue = value?.trim().toLowerCase();
+function toStringList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .flat(Infinity)
+      .filter((item): item is string => typeof item === "string")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
 
-  if (normalizedValue === "women" || normalizedValue === "woman") {
+  if (typeof value === "string") {
+    const trimmedValue = value.trim();
+
+    if (!trimmedValue) {
+      return [];
+    }
+
+    if (trimmedValue.startsWith("[") && trimmedValue.endsWith("]")) {
+      try {
+        return toStringList(JSON.parse(trimmedValue));
+      } catch {
+        return [trimmedValue];
+      }
+    }
+
+    return [trimmedValue];
+  }
+
+  return [];
+}
+
+function normalizeGender(value: unknown) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  const normalizedValue = value.trim().toLowerCase();
+
+  if (
+    normalizedValue === "women" ||
+    normalizedValue === "woman" ||
+    normalizedValue === "weibliche" ||
+    normalizedValue === "weiblich" ||
+    normalizedValue === "frau" ||
+    normalizedValue === "frauen"
+  ) {
     return "woman";
   }
 
-  if (normalizedValue === "men" || normalizedValue === "man") {
+  if (
+    normalizedValue === "men" ||
+    normalizedValue === "man" ||
+    normalizedValue === "männliche" ||
+    normalizedValue === "männlich" ||
+    normalizedValue === "mann" ||
+    normalizedValue === "männer"
+  ) {
     return "man";
   }
 
-  if (normalizedValue === "non-binary") {
+  if (
+    normalizedValue === "non-binary" ||
+    normalizedValue === "nonbinary" ||
+    normalizedValue === "divers" ||
+    normalizedValue === "nichtbinär"
+  ) {
     return "non-binary";
   }
 
-  if (normalizedValue === "everyone") {
+  if (
+    normalizedValue === "everyone" ||
+    normalizedValue === "alle" ||
+    normalizedValue === "all"
+  ) {
     return "everyone";
   }
 
-  return normalizedValue ?? "";
+  return normalizedValue;
 }
 
-function acceptsGender(lookingFor?: string[] | string, gender?: string) {
-  const selectedGenders = Array.isArray(lookingFor)
-    ? lookingFor
-    : lookingFor
-      ? [lookingFor]
-      : [];
-
+function acceptsGender(lookingFor: unknown, gender: unknown) {
+  const selectedGenders = toStringList(lookingFor);
   const normalizedGender = normalizeGender(gender);
+
+  if (!normalizedGender) {
+    return false;
+  }
 
   return selectedGenders.some((value) => {
     const normalizedValue = normalizeGender(value);
@@ -127,8 +185,12 @@ function acceptsGender(lookingFor?: string[] | string, gender?: string) {
   });
 }
 
-function formatLookingFor(lookingFor: string[]) {
-  return lookingFor.map((value) => getLookingForLabel(value)).join(", ");
+function formatLookingFor(lookingFor: unknown) {
+  const values = toStringList(lookingFor);
+
+  return values.length
+    ? values.map((value) => getLookingForLabel(value)).join(", ")
+    : "Matches";
 }
 
 function isCompatibleMatch(currentUser: SessionUser, localUser: SessionUser) {
@@ -138,15 +200,19 @@ function isCompatibleMatch(currentUser: SessionUser, localUser: SessionUser) {
   );
 }
 
+function normalizeText(value: unknown) {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
 function isNearbyProfile(currentUser: SessionUser, localUser: SessionUser) {
-  if (!currentUser.country || !localUser.country) {
+  const currentCountry = normalizeText(currentUser.country);
+  const localCountry = normalizeText(localUser.country);
+
+  if (!currentCountry || !localCountry) {
     return true;
   }
 
-  return (
-    currentUser.country?.trim().toLowerCase() ===
-    localUser.country?.trim().toLowerCase()
-  );
+  return currentCountry === localCountry;
 }
 
 function getCompatibility(
@@ -158,13 +224,13 @@ function getCompatibility(
   }
 
   const currentInterests = new Set(
-    (currentUser.interests ?? []).map((interest) =>
-      interest.trim().toLowerCase(),
+    toStringList(currentUser.interests).map((interest) =>
+      interest.toLowerCase(),
     ),
   );
   const candidateInterests = new Set(
-    (candidateUser.interests ?? []).map((interest) =>
-      interest.trim().toLowerCase(),
+    toStringList(candidateUser.interests).map((interest) =>
+      interest.toLowerCase(),
     ),
   );
   const allInterests = new Set([...currentInterests, ...candidateInterests]);
@@ -175,11 +241,9 @@ function getCompatibility(
     ? Math.round((sharedInterests / allInterests.size) * 35)
     : 0;
   const sameCountry =
-    currentUser.country?.trim().toLowerCase() ===
-    candidateUser.country?.trim().toLowerCase();
+    normalizeText(currentUser.country) === normalizeText(candidateUser.country);
   const sameCity =
-    currentUser.city?.trim().toLowerCase() ===
-    candidateUser.city?.trim().toLowerCase();
+    normalizeText(currentUser.city) === normalizeText(candidateUser.city);
 
   const percentage = Math.min(
     99,
@@ -210,12 +274,8 @@ function profileFromUser(user: SessionUser): DiscoverProfile {
     city: user.city ?? "",
     country: user.country ?? "",
     gender: user.gender ?? "",
-    lookingFor: Array.isArray(user.lookingFor)
-      ? user.lookingFor
-      : user.lookingFor
-        ? [user.lookingFor]
-        : [],
-    interests: user.interests ?? [],
+    lookingFor: toStringList(user.lookingFor),
+    interests: toStringList(user.interests),
     photos: rawPhotos.map((photo) => ({ uri: photo })),
     user,
   };
