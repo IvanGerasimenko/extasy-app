@@ -66,14 +66,14 @@ function hasCompleteProfile(user: SessionUser | null) {
 
   return Boolean(
     user?.onboardingCompleted &&
-      user.name &&
-      user.age &&
-      user.about &&
-      (user.picture || user.photos?.[0]) &&
-      user.gender &&
-      hasLookingFor &&
-      user.interests &&
-      user.interests.length >= 3,
+    user.name &&
+    user.age &&
+    user.about &&
+    (user.picture || user.photos?.[0]) &&
+    user.gender &&
+    hasLookingFor &&
+    user.interests &&
+    user.interests.length >= 3,
   );
 }
 
@@ -109,10 +109,7 @@ function normalizeGender(value?: string) {
   return normalizedValue ?? "";
 }
 
-function acceptsGender(
-  lookingFor?: string[] | string,
-  gender?: string,
-) {
+function acceptsGender(lookingFor?: string[] | string, gender?: string) {
   const selectedGenders = Array.isArray(lookingFor)
     ? lookingFor
     : lookingFor
@@ -125,8 +122,7 @@ function acceptsGender(
     const normalizedValue = normalizeGender(value);
 
     return (
-      normalizedValue === "everyone" ||
-      normalizedValue === normalizedGender
+      normalizedValue === "everyone" || normalizedValue === normalizedGender
     );
   });
 }
@@ -265,6 +261,7 @@ export default function DiscoverScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [reaction, setReaction] = useState("");
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [isDeciding, setIsDeciding] = useState(false);
@@ -309,31 +306,55 @@ export default function DiscoverScreen() {
     let isMounted = true;
 
     async function loadProfile() {
-      const sessionUser = await getSessionUser();
+      try {
+        setIsLoading(true);
+        setLoadError("");
 
-      if (!isMounted) {
-        return;
+        const sessionUser = await getSessionUser();
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (!sessionUser || !sessionUser.onboardingCompleted) {
+          router.replace("/onboarding");
+          return;
+        }
+
+        const localUsers = await getLocalAccountUsers();
+
+        const unavailableUserKeys =
+          await getUnavailableDiscoverUserKeysForCurrentUser();
+
+        const discoverProfiles = getDiscoverProfiles(
+          sessionUser,
+          localUsers,
+          unavailableUserKeys,
+        );
+
+        if (!isMounted) {
+          return;
+        }
+
+        setUser(sessionUser);
+        setDeck(discoverProfiles);
+        setActiveIndex(0);
+        setPhotoIndex(0);
+      } catch (error) {
+        console.error("DISCOVER LOAD ERROR:", error);
+
+        if (isMounted) {
+          setLoadError(
+            error instanceof Error
+              ? error.message
+              : "Profile konnten nicht geladen werden.",
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
-
-      if (!sessionUser || !sessionUser.onboardingCompleted) {
-        router.replace("/onboarding");
-        return;
-      }
-
-      const localUsers = await getLocalAccountUsers();
-      const unavailableUserKeys =
-        await getUnavailableDiscoverUserKeysForCurrentUser();
-      const discoverProfiles = getDiscoverProfiles(
-        sessionUser,
-        localUsers,
-        unavailableUserKeys,
-      );
-
-      setUser(sessionUser);
-      setDeck(discoverProfiles);
-      setActiveIndex(0);
-      setPhotoIndex(0);
-      setIsLoading(false);
     }
 
     loadProfile();
@@ -439,6 +460,17 @@ export default function DiscoverScreen() {
     return (
       <ThemedBackground style={styles.background}>
         <PremiumLoadingState />
+      </ThemedBackground>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <ThemedBackground style={styles.background}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>Fehler beim Laden</Text>
+          <Text style={styles.errorMessage}>{loadError}</Text>
+        </View>
       </ThemedBackground>
     );
   }
@@ -776,6 +808,44 @@ const styles = StyleSheet.create({
     height: 34,
     justifyContent: "center",
     zIndex: 3,
+  },
+
+  errorContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+
+  errorTitle: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+
+  errorMessage: {
+    color: "rgba(255, 255, 255, 0.72)",
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+    marginTop: 12,
+  },
+
+  retryButton: {
+    marginTop: 20,
+    paddingHorizontal: 20,
+    height: 46,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  retryText: {
+    color: "#111111",
+    fontSize: 14,
+    fontWeight: "800",
   },
 
   expandText: {

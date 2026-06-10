@@ -7,7 +7,7 @@ export type PendingOnboardingProfile = {
   city?: string;
   country?: string;
   gender?: string;
-  lookingFor?: string;
+  lookingFor?: string[];
   interests?: string[];
 };
 
