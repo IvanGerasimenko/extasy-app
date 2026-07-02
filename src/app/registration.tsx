@@ -76,7 +76,9 @@ export default function RegisterScreen() {
       });
     } catch (error) {
       setError(
-        error instanceof Error ? error.message : "Das Konto konnte nicht erstellt werden.",
+        error instanceof Error
+          ? error.message
+          : "Das Konto konnte nicht erstellt werden.",
       );
     } finally {
       setIsLoading(false);
@@ -97,7 +99,8 @@ export default function RegisterScreen() {
 
           <Text style={styles.title}>Konto erstellen</Text>
           <Text style={styles.subtitle}>
-            Starte mit deiner E-Mail und vervollständige danach dein Dating-Profil.
+            Starte mit deiner E-Mail und vervollständige danach dein
+            Dating-Profil.
           </Text>
 
           <View style={styles.form}>
